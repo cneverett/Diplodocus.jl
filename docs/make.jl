@@ -1,4 +1,4 @@
-#using DiplodocusDocs
+using Diplodocus
 using Documenter
 using DocumenterVitepress
 
@@ -6,14 +6,14 @@ using DocumenterVitepress
 # build local docs but don't deploy
 makedocs(;
     modules = Module[],
-    repo = Remotes.GitHub("cneverett","DiplodocusDocs"),
+    repo = Remotes.GitHub("cneverett","Diplodocus"),
     authors = "Christopher Everett",
-    sitename = "DiplodocusDocs",
+    sitename = "Diplodocus",
     format = DocumenterVitepress.MarkdownVitepress(
-        repo = "https://github.com/cneverett/DiplodocusDocs",
+        repo = "https://github.com/cneverett/Diplodocus",
         devurl = "dev",
         devbranch = "main",
-        deploy_url = "https://cneverett.github.io/DiplodocusDocs",
+        deploy_url = "https://cneverett.github.io/Diplodocus",
         # for liveServer, COMMENT OUT BEFORE DEPLOYING
         #md_outpath = ".",
         #build_vitepress = false,
@@ -45,7 +45,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo= "github.com/cneverett/DiplodocusDocs",    
+    repo= "github.com/cneverett/Diplodocus",    
     target = "build",
     devbranch = "main",
     branch = "gh-pages",
