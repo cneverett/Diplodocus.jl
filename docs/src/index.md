@@ -5,8 +5,8 @@ layout: home
 
 hero:
     name: "Diplodocus"
-    text: "Particle transport and emission modelling"
-    tagline: A Julia framework for evaluating particle transport through phasespace
+    text: "Particle transport for Astrophysics"
+    tagline: A Julia framework for evaluating particle transport through phase space for emission modelling of astrophysical sources
     image:
         src: assets/diplodocus_sphere.png
         alt: Diplodocus
