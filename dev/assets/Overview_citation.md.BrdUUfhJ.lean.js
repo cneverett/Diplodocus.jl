@@ -1,0 +1,1 @@
+import{_ as t,c as e,o as a}from"./chunks/framework.BbLD1qPh.js";const l=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"Overview/citation.md","filePath":"Overview/citation.md","lastUpdated":null}'),i={name:"Overview/citation.md"};function o(r,n,c,s,d,p){return a(),e("div")}const m=t(i,[["render",o]]);export{l as __pageData,m as default};
