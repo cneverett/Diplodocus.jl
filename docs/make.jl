@@ -6,14 +6,14 @@ using DocumenterVitepress
 # build local docs but don't deploy
 makedocs(;
     modules = Module[],
-    repo = Remotes.GitHub("cneverett","Diplodocus"),
+    repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
     authors = "Christopher Everett",
-    sitename = "Diplodocus",
+    sitename = "Diplodocus.jl",
     format = DocumenterVitepress.MarkdownVitepress(
-        repo = "https://github.com/cneverett/Diplodocus",
+        repo = "https://github.com/cneverett/Diplodocus.jl",
         devurl = "dev",
         devbranch = "main",
-        deploy_url = "https://cneverett.github.io/Diplodocus",
+        deploy_url = "https://cneverett.github.io/Diplodocus.jl",
         # for liveServer, COMMENT OUT BEFORE DEPLOYING
         #md_outpath = ".",
         #build_vitepress = false,
@@ -45,7 +45,7 @@ makedocs(;
 )
 
 deploydocs(;
-    repo= "github.com/cneverett/Diplodocus",    
+    repo= "github.com/cneverett/Diplodocus.jl",    
     target = "build",
     devbranch = "main",
     branch = "gh-pages",
