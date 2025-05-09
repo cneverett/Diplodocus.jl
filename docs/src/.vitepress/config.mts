@@ -11,29 +11,11 @@ function getBaseRepository(base: string): string {
 }
 
 const baseTemp = {
-  base: '/cneverett.github.io\DiplodocusDocs/',// TODO: replace this in makedocs!
+  base: 'REPLACE_ME_DOCUMENTER_VITEPRESS',// TODO: replace this in makedocs!
 }
 
 const navTemp = {
-  nav: [
-{ text: 'Overview', collapsed: false, items: [
-{ text: 'Overview', link: '/Overview/overview' },
-{ text: 'Installation', link: '/Overview/installation' },
-{ text: 'Examples', collapsed: false, items: [
-{ text: 'Examples', link: '/Overview/Examples/examples' }]
- }]
- },
-{ text: 'Collisions', collapsed: false, items: [
-{ text: 'Overview', link: '/DiplodocusCollisions/overview' }]
- },
-{ text: 'Transport', collapsed: false, items: [
-{ text: 'Overview', link: '/DiplodocusTransport/overview' }]
- },
-{ text: 'Plots', collapsed: false, items: [
-{ text: 'Overview', link: '/DiplodocusPlots/overview' }]
- }
-]
-,
+  nav: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
 }
 
 const nav = [
@@ -45,14 +27,14 @@ const nav = [
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  base: '/cneverett.github.io\DiplodocusDocs/',// TODO: replace this in makedocs!
-  title: 'DiplodocusDocs',
-  description: 'Documentation for DiplodocusDocs',
+  base: 'REPLACE_ME_DOCUMENTER_VITEPRESS',// TODO: replace this in makedocs!
+  title: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
+  description: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
   lastUpdated: true,
   cleanUrls: true,
-  outDir: '../final_site', // This is required for MarkdownVitepress to work correctly...
+  outDir: 'REPLACE_ME_DOCUMENTER_VITEPRESS', // This is required for MarkdownVitepress to work correctly...
   head: [
-    
+    ['link', { rel: 'icon', href: 'REPLACE_ME_DOCUMENTER_VITEPRESS_FAVICON' }],
     ['script', {src: `${getBaseRepository(baseTemp.base)}versions.js`}],
     // ['script', {src: '/versions.js'], for custom domains, I guess if deploy_url is available.
     ['script', {src: `${baseTemp.base}siteinfo.js`}]
@@ -92,7 +74,7 @@ export default defineConfig({
   },
   themeConfig: {
     outline: 'deep',
-    
+    logo: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     search: {
       provider: 'local',
       options: {
@@ -100,28 +82,10 @@ export default defineConfig({
       }
     },
     nav,
-    sidebar: [
-{ text: 'Overview', collapsed: false, items: [
-{ text: 'Overview', link: '/Overview/overview' },
-{ text: 'Installation', link: '/Overview/installation' },
-{ text: 'Examples', collapsed: false, items: [
-{ text: 'Examples', link: '/Overview/Examples/examples' }]
- }]
- },
-{ text: 'Collisions', collapsed: false, items: [
-{ text: 'Overview', link: '/DiplodocusCollisions/overview' }]
- },
-{ text: 'Transport', collapsed: false, items: [
-{ text: 'Overview', link: '/DiplodocusTransport/overview' }]
- },
-{ text: 'Plots', collapsed: false, items: [
-{ text: 'Overview', link: '/DiplodocusPlots/overview' }]
- }
-]
-,
-    editLink: { pattern: "https://https://github.com/cneverett/DiplodocusDocs/edit/main/docs/src/:path" },
+    sidebar: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
+    editLink: 'REPLACE_ME_DOCUMENTER_VITEPRESS',
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/cneverett/DiplodocusDocs' }
+      { icon: 'github', link: 'REPLACE_ME_DOCUMENTER_VITEPRESS' }
     ],
     footer: {
       message: 'Made with <a href="https://luxdl.github.io/DocumenterVitepress.jl/dev/" target="_blank"><strong>DocumenterVitepress.jl</strong></a><br>',
