@@ -1,4 +1,3 @@
-using Diplodocus
 using Documenter
 using DocumenterVitepress
 
