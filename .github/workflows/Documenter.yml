@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main # update to match your development branch (master, main, dev, trunk, ...)
-    tags: '*'
+    tags: ['*']
   pull_request:
 
   # Allows you to run this workflow manually from the Actions tab
@@ -31,12 +31,10 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Julia
         uses: julia-actions/setup-julia@v1
-        #with:
-          #version: '1.10'
       - name: Pull Julia cache
         uses: julia-actions/cache@v1
-      #- name: Install dependencies
-      #  run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: Install dependencies
+        run: julia --project=docs/ -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
       - name: Build and deploy
         uses: julia-actions/julia-docdeploy@v1
         env:
