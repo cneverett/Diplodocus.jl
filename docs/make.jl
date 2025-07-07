@@ -9,7 +9,7 @@ using DiplodocusPlots
 # build local docs but don't deploy
 makedocs(;
     modules = [Diplodocus],
-    repo = Remotes.GitHub("cneverett","DiplodocusTransport.jl#dev"),
+    repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
     authors = "Christopher Everett",
     sitename = "Diplodocus.jl",
     format = DocumenterVitepress.MarkdownVitepress(
