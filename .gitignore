@@ -5,3 +5,5 @@
 #/docs/src/.vitepress/
 /docs/package-lock.json
 #/docs/package.json
+
+*.jld2

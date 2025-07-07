@@ -13,7 +13,7 @@ hero:
     actions:
         -   theme: alt
             text: View on Github
-            link: https://github.com/cneverett/DiplodocusDocs
+            link: https://github.com/cneverett/Diplodocus
 
 features:
     -   title: Overview

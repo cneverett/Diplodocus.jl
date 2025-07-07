@@ -173,3 +173,28 @@ mjx-container > svg {
   margin: auto;
   display: inline-block;
 }
+
+/* light and dark mode images */
+:root.dark .light-only {
+  display: none !important;
+}
+
+:root:not(.dark) .dark-only {
+  display: none !important;
+}
+
+.display-light-only {
+    display: block;
+}
+
+.display-dark-only {
+    display: none;
+}
+
+.theme--documenter-dark .display-light-only {
+    display: none;
+}
+
+.theme--documenter-dark .display-dark-only {
+    display: block;
+}

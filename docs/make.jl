@@ -1,11 +1,15 @@
 using Documenter
 using DocumenterVitepress
+using Diplodocus
+using DiplodocusCollisions
+using DiplodocusTransport
+using DiplodocusPlots
 
 
 # build local docs but don't deploy
 makedocs(;
-    modules = Module[],
-    repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
+    modules = [Diplodocus],
+    repo = Remotes.GitHub("cneverett","DiplodocusTransport.jl#dev"),
     authors = "Christopher Everett",
     sitename = "Diplodocus.jl",
     format = DocumenterVitepress.MarkdownVitepress(
@@ -24,12 +28,13 @@ makedocs(;
         "Overview" => [
             "Overview" => "Overview/overview.md"
             "Installation" => "Overview/installation.md"
-            "Examples" => [
-                "Examples" => "Overview/Examples/examples.md"
+            "Tutorials" => [
+                "Hard Spheres" => "Overview/Examples/hardsphere.md"
             ]
         ],
         "Collisions" => [
-            "Overview" => "DiplodocusCollisions/overview.md"
+            "Overview" => "DiplodocusCollisions/overview.md",
+            "Cross Sections" => "DiplodocusCollisions/cross sections.md",
         ],
         "Transport" => [
             "Overview" => "DiplodocusTransport/overview.md"
@@ -38,7 +43,11 @@ makedocs(;
             "Overview" => "DiplodocusPlots/overview.md"
         ],
     ],
-    #warnonly = true,
+    #linkcheck = true,
+    doctest = false,
+    warnonly = [:missing_docs],
+    clean = true,
+    checkdocs = :none
     # for liveServer, COMMENT OUT BEFORE DEPLOYING
     #clean = false,
 )
