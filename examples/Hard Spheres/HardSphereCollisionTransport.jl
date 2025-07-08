@@ -80,25 +80,34 @@ using Diplodocus
 # Plot results 
 
     (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
-
-# Get scaling for plots (initial values)
-
-    (numInit_list,engInit_list,tempInit_list) = Diplodocus.DiplodocusTransport.getInitialScaling(sol,PhaseSpace);
     
-# Plotting
+    fig = MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(1,1000,10000),order=1)
+
+    MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,thermal=true,order=1)
+    
+    fig = IsThermalAndIsotropicPlot(sol,PhaseSpace)
+    fig = FracNumberDensityPlot(sol,PhaseSpace)
+    fig = FracEnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusLight())
+
+
+    ####
 
     Diplodocus.DiplodocusTransport.AllPlots_Ani(sol,PhaseSpace,numInit_list,engInit_list,tempInit_list,"test1.mp4";fps=12,istart=1,istop=1000,iframe=nothing,step=5)
 
+    
+
     #DT.PDistributionPlot_AllSpecies(sol,num_species,name_list,meanp_list,dp_list,du_list,tempInit_list,mass_list,p_num_list,u_num_list,dt*100)
 
-    NumberDensityPlot(sol,PhaseSpace,theme=DP.DiplodocusLight())
+    NumberDensityPlot(sol,PhaseSpace,theme=DiplodocusLight())
     fig = FracNumberDensityPlot(sol,PhaseSpace,theme=DiplodocusLight())
     Diplodocus.DiplodocusPlots.save("HardSphereFracNumLight.png",fig)
 
     EnergyDensityPlot(sol,PhaseSpace)
     FracEnergyDensityPlot(sol,PhaseSpace)
 
-    MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,uDis=false,logt=false,thermal=true,order=1)
+    fig = MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,uDis=false,logt=false,thermal=true,order=1,theme=DiplodocusLight())
+    
+    
 
 
     fig = MomentumDistributionPlot(sol,"Sph",PhaseSpace,uDis=false,step=100,logt=false,plot_limits=(-4.0,5.0,-10.0,0.0))
@@ -109,3 +118,6 @@ using Diplodocus
 
     Diplodocus.DiplodocusTransport.FracNumPlot(sol,"Sph",PhaseSpace,fig=nothing)
     DT.FracNumPlot(sol,"Ele",PhaseSpace,fig=nothing)
+
+
+    Diplodocus.DiplodocusPlots.save("IsTAndIPlotDark.png",fig)
