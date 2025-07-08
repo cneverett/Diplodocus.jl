@@ -1,10 +1,11 @@
 using Documenter
 using DocumenterVitepress
 using Diplodocus
-using DiplodocusCollisions
-using DiplodocusTransport
-using DiplodocusPlots
+#using DiplodocusCollisions
+#using DiplodocusTransport
+#using DiplodocusPlots
 
+push!(LOAD_PATH,"../src/")
 
 # build local docs but don't deploy
 makedocs(;

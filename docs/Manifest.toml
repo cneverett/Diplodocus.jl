@@ -356,7 +356,7 @@ version = "1.6.4"
 
 [[deps.Diplodocus]]
 deps = ["DiplodocusCollisions", "DiplodocusPlots", "DiplodocusTransport", "RecursiveArrayTools"]
-git-tree-sha1 = "425621ff013605e26d66aa1b1be0fab565dedc18"
+git-tree-sha1 = "c2fd83c99a2e6894c3eb28cdfb4f201d1fe7afd6"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/Diplodocus.jl"
 uuid = "792d114c-f8c3-4b81-9580-cc03468a5b58"
