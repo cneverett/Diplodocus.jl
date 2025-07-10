@@ -30,6 +30,7 @@ using Diplodocus
     fileLocation = pwd()*"\\examples\\Hard Spheres\\Data"
 
     (Setup,fileName) = UserBinaryParameters()
+    
     BinaryInteractionIntegration(Setup)
 
 # ===== Check Accuracy of  Collision Matrices ===== #

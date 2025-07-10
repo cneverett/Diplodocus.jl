@@ -119,11 +119,11 @@ This will display the plot in a separate window in which you can interact with i
 
 As an example of poor integration, the plots below show a noisy spectra most likely due to insufficient sampling of incoming and outgoing states:
 
-![bad](./assets/BadSphereSpectra.png)
+![bad](./assets/HardSphere/BadSphereSpectra.png)
 
 This noise can be reduced by increasing the number of sampling points (i.e. running the integration again with more `numLoss` and `numGain`). With sufficient sampling the spectra should have much less noise, something like this:
 
-![good](./assets/GoodSphereSpectra.png)
+![good](./assets/HardSphere/GoodSphereSpectra.png)
 
 Generating good spectra involves a bit of trial and error. It is very easy to tell when a spectra is poor but it may take some practice to get used to how increasing the sampling and adjusting the `scale` effect the results.  
 
@@ -308,14 +308,20 @@ As many interactions and forces may be present in a system, rather than dealing 
 :::
 
 ### Initial Conditions
-There are several functions which can be used to generate initial conditions e.g. `Inital_Constant`, `Initial_PowerLaw`, `Initial_MaxwellJuttner`, etc. For this case we want to use `Initial_Constant` to construct an initial distribution that matches our selected initial conditions of: ``p`` between ``10^{3}m_\text{Ele}c`` and ``10^{3.1}m_\text{Ele}c``, angles ``u`` between ``-0.25`` and ``0.25``, angles ``h`` between ``0`` and ``2\pi`` and a number density ``n=1 \mathrm{m}^{-3}``. This can be done as follows:
+There are several functions which can be used to generate initial conditions e.g. `Inital_Constant`, `Initial_PowerLaw`, `Initial_MaxwellJuttner`, etc. For this case we want to use `Initial_Constant` to construct an initial distribution that matches our selected initial conditions of: ``p`` between ``10.0m_\text{Ele}c`` and ``13.3m_\text{Ele}c``, angles ``u`` between ``-0.25`` and ``0.25``, angles ``h`` between ``0`` and ``2\pi`` and a number density ``n=1 \mathrm{m}^{-3}``. This can be done as follows:
 ```julia
 
-    Initial_Sph = Initial_Constant(PhaseSpace,"Sph",3.0,3.1,-0.25,0.25,0.0,2.0,1f0);
+    Initial_Sph = Initial_Constant(PhaseSpace,"Sph",10.0,13.0,-0.25,0.24,0.0,2.0,1f0);
     f_init = ArrayPartition(Initial_Sph,);
 
 ```
 where `f_init` groups all the initial conditions from all the particle species into a form the solver can understand, in this case just the initial conditions of the spheres.
+
+::: warning
+
+The way bin location are calculated rounds up, i.e. if a value is on a grid boundary then it is placed in the next bin.
+
+:::
 
 ### Running the Solver
 With all the grids, interactions and initial conditions defined the last thing to do before solving is pick the evolution scheme and deciding where and with what name the solution will be saved. There are only three schemes for time stepping to choose from within the Diplodocus framework, all held within the `EulerStuct`. The first (and only tested option) is the first order "upwind" (or explicit Euler) scheme, chosen by setting the last option in `EulerStruct` to `false`. The second is the first order "downwind" (or implicit Euler) scheme, chosen by setting the last option in `EulerStruct` to `true`. The third is second order leapfrog in time but this is unstable.
@@ -354,12 +360,12 @@ The particle spectrum can then be plotted as a function of momentum and polar an
 MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(10,1000,10000),order=1)
 ```
 where `(10,1000,10000)` can either be the times in code units or the time steps, and `order` defines the exponent in the particle spectrum ``p^{order}\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}``, where `order=1` is default and corresponds to the number density of particles per bin as a function of momentum and polar angle. (`order=2` is the energy density per bin as a function of momentum and polar angle). The resulting plot is:
-![](./assets/HardSpherePandUDisPlotDark.png)
+![](./assets/HardSphere/HardSpherePandUDisPlotDark.svg)
 This shows the "diffusion" of particles in both momentum and angle as a result of the binary interaction between spheres. Though it may be difficult to interpret the actual shape of the spectrum that is being formed from this 2D heatmap. To get an idea of this spectral shape, we can plot the angle-averaged distribution as a function of momentum:
 ```julia
 MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,thermal=true,order=1)
 ```
-![](./assets/HardSpherePDisPlotDark.png)
+![](./assets/HardSphere/HardSpherePDisPlotDark.svg)
 With the flag `thermal=true` the expected shape of a perfect Mawell-Juttner distribution is over-plotted for comparison. We can see that as time evolves the spheres approach the thermal distribution, but "over-shoot" at momenta away from the peak, this is linked to numerical diffusion due to the finite bin sizes. 
 
 Finally we can plot some statistics to see how well this evolution is converging towards being thermal and isotropic, as well as how well the system conserves particle number and energy density:
@@ -368,5 +374,5 @@ IsThermalAndIsotropicPlot(sol,PhaseSpace)
 FracNumberDensityPlot(sol,PhaseSpace)
 FracEnergyDensityPlot(sol,PhaseSpace)
 ``` 
-![](./assets/HardSphereIsTAndIPlotDark.png) ![](./assets/HardSphereFracNumDenPlotDark.png) ![](./assets/HardSphereFracEngDenPlotDark.png)
+![](./assets/HardSphere/HardSphereIsTAndIPlotDark.svg)![](./assets/HardSphere/HardSphereFracNumDenPlotDark.svg)![](./assets/HardSphere/HardSphereFracEngDenPlotDark.svg)
 Here we can see the distribution exponentially approaching thermalisation and isotropisation, as expected. Further particle number density is conserved between time steps to numerical precisions, while energy density is constantly increasing but at a slow rate due to it not directly being conserved.

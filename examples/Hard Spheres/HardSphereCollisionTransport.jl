@@ -2,9 +2,9 @@ using Diplodocus
 
 # ==== Define domains of time and space ====== #
 
-    t_up::Float64 = 2.5e3 # seconds * (σT*c)
+    t_up::Float64 = 1e3 # seconds * (σT*c)
     t_low::Float64 = 0.0 # seconds * (σT*c)
-    t_num::Int64 = 250000
+    t_num::Int64 = 1000
     t_grid::String = "u"
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
@@ -65,7 +65,7 @@ using Diplodocus
 
 # ===== Set initial conditions ================== #
 
-    Initial_Sph = Initial_Constant(PhaseSpace,"Sph",3.0,3.1,-0.24,0.25,0.0,2.0,1f0);
+    Initial_Sph = Initial_Constant(PhaseSpace,"Sph",10.0,13.0,-0.25,0.24,0.0,2.0,1f0);
     f_init = ArrayPartition(Initial_Sph,);
 
 # Run BoltzmannEquationSolver
@@ -81,43 +81,63 @@ using Diplodocus
 
     (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
     
-    fig = MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(1,1000,10000),order=1)
+    MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(0.0,10.0,1000.0),order=1)
 
     MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,thermal=true,order=1)
     
-    fig = IsThermalAndIsotropicPlot(sol,PhaseSpace)
-    fig = FracNumberDensityPlot(sol,PhaseSpace)
-    fig = FracEnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusLight())
+    IsThermalAndIsotropicPlot(sol,PhaseSpace)
+    FracNumberDensityPlot(sol,PhaseSpace)
+    FracEnergyDensityPlot(sol,PhaseSpace)
+
+    EnergyDensityPlot(sol,PhaseSpace)
 
 
     ####
 
     Diplodocus.DiplodocusTransport.AllPlots_Ani(sol,PhaseSpace,numInit_list,engInit_list,tempInit_list,"test1.mp4";fps=12,istart=1,istop=1000,iframe=nothing,step=5)
 
+
+
+
+# ==== Saving plots for tutorial /paper ==== #
+    #=
+    HardSphereFracEngDenPlotDark = FracEnergyDensityPlot(sol,PhaseSpace,title=false,theme=DiplodocusDark())
+    Diplodocus.DiplodocusPlots.save("HardSphereFracEngDenPlotDark.svg",HardSphereFracEngDenPlotDark)
+    Diplodocus.DiplodocusPlots.save("HardSphereFracEngDenPlotDark.pdf",HardSphereFracEngDenPlotDark)
     
+    HardSphereFracEngDenPlotLight = FracEnergyDensityPlot(sol,PhaseSpace,title=false,theme=DiplodocusLight())
+    Diplodocus.DiplodocusPlots.save("HardSphereFracEngDenPlotLight.svg",HardSphereFracEngDenPlotLight)
+    Diplodocus.DiplodocusPlots.save("HardSphereFracEngDenPlotLight.pdf",HardSphereFracEngDenPlotLight)
 
-    #DT.PDistributionPlot_AllSpecies(sol,num_species,name_list,meanp_list,dp_list,du_list,tempInit_list,mass_list,p_num_list,u_num_list,dt*100)
+    HardSphereFracNumDenPlotDark = FracNumberDensityPlot(sol,PhaseSpace,title=false,theme=DiplodocusDark())
+    Diplodocus.DiplodocusPlots.save("HardSphereFracNumDenPlotDark.svg",HardSphereFracNumDenPlotDark)
+    Diplodocus.DiplodocusPlots.save("HardSphereFracNumDenPlotDark.pdf",HardSphereFracNumDenPlotDark)
 
-    NumberDensityPlot(sol,PhaseSpace,theme=DiplodocusLight())
-    fig = FracNumberDensityPlot(sol,PhaseSpace,theme=DiplodocusLight())
-    Diplodocus.DiplodocusPlots.save("HardSphereFracNumLight.png",fig)
+    HardSphereFracNumDenPlotLight = FracNumberDensityPlot(sol,PhaseSpace,title=false,theme=DiplodocusLight())
+    Diplodocus.DiplodocusPlots.save("HardSphereFracNumDenPlotLight.svg",HardSphereFracNumDenPlotLight)
+    Diplodocus.DiplodocusPlots.save("HardSphereFracNumDenPlotLight.pdf",HardSphereFracNumDenPlotLight)
 
-    EnergyDensityPlot(sol,PhaseSpace)
-    FracEnergyDensityPlot(sol,PhaseSpace)
+    HardSphereIsTAndIPlotDark = IsThermalAndIsotropicPlot(sol,PhaseSpace,title=false,theme=DiplodocusDark())
+    Diplodocus.DiplodocusPlots.save("HardSphereIsTAndIPlotDark.svg",HardSphereIsTAndIPlotDark)
+    Diplodocus.DiplodocusPlots.save("HardSphereIsTAndIPlotDark.pdf",HardSphereIsTAndIPlotDark)
 
-    fig = MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,uDis=false,logt=false,thermal=true,order=1,theme=DiplodocusLight())
-    
-    
+    HardSphereIsTAndIPlotLight = IsThermalAndIsotropicPlot(sol,PhaseSpace,title=false,theme=DiplodocusLight())
+    Diplodocus.DiplodocusPlots.save("HardSphereIsTAndIPlotLight.svg",HardSphereIsTAndIPlotLight)
+    Diplodocus.DiplodocusPlots.save("HardSphereIsTAndIPlotLight.pdf",HardSphereIsTAndIPlotLight)
 
+    HardSpherePAndUDisPlotDark = MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(0.0,10.0,1000.0),order=1,theme=DiplodocusDark())
+    Diplodocus.DiplodocusPlots.save("HardSpherePAndUDisPlotDark.svg",HardSpherePAndUDisPlotDark)
+    Diplodocus.DiplodocusPlots.save("HardSpherePAndUDisPlotDark.pdf",HardSpherePAndUDisPlotDark)
 
-    fig = MomentumDistributionPlot(sol,"Sph",PhaseSpace,uDis=false,step=100,logt=false,plot_limits=(-4.0,5.0,-10.0,0.0))
-    #DT.save("Amsterdam/SyncAmstPlots/PhoUavg.png",fig)
+    HardSpherePAndUDisPlotLight = MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(0.0,10.0,1000.0),order=1,theme=DiplodocusLight())
+    Diplodocus.DiplodocusPlots.save("HardSpherePAndUDisPlotLight.svg",HardSpherePAndUDisPlotLight)
+    Diplodocus.DiplodocusPlots.save("HardSpherePAndUDisPlotLight.pdf",HardSpherePAndUDisPlotLight)
 
+    HardSpherePDisPlotDark = MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,thermal=true,order=1,theme=DiplodocusDark())
+    Diplodocus.DiplodocusPlots.save("HardSpherePDisPlotDark.svg",HardSpherePDisPlotDark)
+    Diplodocus.DiplodocusPlots.save("HardSpherePDisPlotDark.pdf",HardSpherePDisPlotDark)
 
-    
-
-    Diplodocus.DiplodocusTransport.FracNumPlot(sol,"Sph",PhaseSpace,fig=nothing)
-    DT.FracNumPlot(sol,"Ele",PhaseSpace,fig=nothing)
-
-
-    Diplodocus.DiplodocusPlots.save("IsTAndIPlotDark.png",fig)
+    HardSpherePDisPlotLight = MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,thermal=true,order=1,theme=DiplodocusLight())
+    Diplodocus.DiplodocusPlots.save("HardSpherePDisPlotLight.svg",HardSpherePDisPlotLight)
+    Diplodocus.DiplodocusPlots.save("HardSpherePDisPlotLight.pdf",HardSpherePDisPlotLight)
+    =#
