@@ -9,7 +9,7 @@ using Diplodocus
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
 
-    space_coords = Cylindrical()  # x = r, y = phi, z = z
+    space_coords = Cylindrical() # x = r, y = phi, z = z
 
     x_up::Float64 = 1.0
     x_low::Float64 = 0f0
@@ -63,12 +63,12 @@ using Diplodocus
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=false);
     FluxM = BuildFluxMatrices(PhaseSpace);
 
-# ===== Set initial conditions ================== #
+# ===== Set Initial Conditions ================== #
 
     Initial_Sph = Initial_Constant(PhaseSpace,"Sph",10.0,13.0,-0.25,0.24,0.0,2.0,1f0);
     f_init = ArrayPartition(Initial_Sph,);
 
-# Run BoltzmannEquationSolver
+# ===== Run the Solver ================== #
 
     scheme = EulerStruct(f_init,PhaseSpace,BigM,FluxM,false)
 
@@ -77,7 +77,7 @@ using Diplodocus
 
     sol = Solve(f_init,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
 
-# Plot results 
+# ===== Load and Plot Results ================== # 
 
     (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
     

@@ -1,6 +1,6 @@
 # Tutorial 1: Evolution of a Population of Hard Spheres
 
-In this tutorial we will consider a population of hard spheres in a homogenous space. These spheres only interact via perfectly elastic collisions (a binary interaction), the cross section for which is given in [Interaction Cross Sections](@ref). 
+In this tutorial we will consider a population of hard spheres which are homogenous in space. These spheres only interact via perfectly elastic collisions (a binary interaction), the cross section for which is given in [Binary Interaction Cross Sections](@ref). 
 
 ::: info
 

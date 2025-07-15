@@ -2,7 +2,7 @@
 
 julia_version = "1.11.3"
 manifest_format = "2.0"
-project_hash = "6a669072ada5718a6743f724d4d3abac5ebbf68d"
+project_hash = "ed014ae2b6f843b787bff328a136653fc682ecd3"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -154,6 +154,29 @@ version = "1.6.0"
 git-tree-sha1 = "4435559dc39793d53a9e3d278e185e920b4619ef"
 uuid = "0e736298-9ec6-45e8-9647-e4fc86a2fe38"
 version = "0.2.8"
+
+[[deps.BibInternal]]
+deps = ["TestItems"]
+git-tree-sha1 = "b3107800faf461eca3281f89f8d768f4b3e99969"
+uuid = "2027ae74-3657-4b95-ae00-e2f7d55c3e64"
+version = "0.3.7"
+
+[[deps.BibParser]]
+deps = ["BibInternal", "DataStructures", "Dates", "JSONSchema", "TestItems", "YAML"]
+git-tree-sha1 = "33478bed83bd124ea8ecd9161b3918fb4c70e529"
+uuid = "13533e5b-e1c2-4e57-8cef-cac5e52f6474"
+version = "0.2.2"
+
+[[deps.Bibliography]]
+deps = ["BibInternal", "BibParser", "DataStructures", "Dates", "FileIO", "TestItems", "YAML"]
+git-tree-sha1 = "0f25be9708ae20d7b94d3bf9d0a91defcca4c884"
+uuid = "f1be7e48-bf82-45af-a471-ae754a193061"
+version = "0.3.0"
+
+[[deps.Bijections]]
+git-tree-sha1 = "a2d308fcd4c2fb90e943cf9cd2fbfa9c32b69733"
+uuid = "e2ed5e7c-b2de-5872-ae92-c73ca462fb04"
+version = "0.2.2"
 
 [[deps.BitFlags]]
 git-tree-sha1 = "0691e34b3bb8be9307330f88d1a3c3f25466c24d"
@@ -424,6 +447,12 @@ git-tree-sha1 = "e25bc156a7e72f0a9f738815a4426dd01a7e914b"
 uuid = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 version = "1.13.0"
 
+[[deps.DocumenterCitations]]
+deps = ["AbstractTrees", "Bibliography", "Bijections", "Dates", "Documenter", "Logging", "Markdown", "MarkdownAST", "OrderedCollections", "Unicode"]
+git-tree-sha1 = "21a3891173b5ba60777f4a0a1ff1aa23cd3ae792"
+uuid = "daee34ce-89f3-4625-b898-19384cb65244"
+version = "1.4.0"
+
 [[deps.DocumenterTools]]
 deps = ["AbstractTrees", "Base64", "DocStringExtensions", "Documenter", "FileWatching", "Git", "Gumbo", "LibGit2", "OpenSSH_jll", "Sass"]
 git-tree-sha1 = "1eef850e88afab219e555678868d83aa901a360b"
@@ -435,12 +464,10 @@ deps = ["ANSIColoredPrinters", "Base64", "DocInventories", "DocStringExtensions"
 git-tree-sha1 = "75f1217667bad95351da47c80ba3b92b4ea9c58e"
 uuid = "4710194d-e776-4893-9690-8d956a29c365"
 version = "0.2.6"
+weakdeps = ["DocumenterCitations"]
 
     [deps.DocumenterVitepress.extensions]
     DocumenterVitepressDocumenterCitationsExt = "DocumenterCitations"
-
-    [deps.DocumenterVitepress.weakdeps]
-    DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
@@ -885,6 +912,24 @@ deps = ["Dates", "Mmap", "Parsers", "Unicode"]
 git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 version = "0.21.4"
+
+[[deps.JSON3]]
+deps = ["Dates", "Mmap", "Parsers", "PrecompileTools", "StructTypes", "UUIDs"]
+git-tree-sha1 = "411eccfe8aba0814ffa0fdf4860913ed09c34975"
+uuid = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+version = "1.14.3"
+
+    [deps.JSON3.extensions]
+    JSON3ArrowExt = ["ArrowTypes"]
+
+    [deps.JSON3.weakdeps]
+    ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+
+[[deps.JSONSchema]]
+deps = ["Downloads", "JSON", "JSON3", "URIs"]
+git-tree-sha1 = "243f1cdb476835d7c249deb9f29ad6b7827da7d3"
+uuid = "7d188eb4-7ad8-530c-ae41-71a32a6d4692"
+version = "1.4.1"
 
 [[deps.JpegTurbo]]
 deps = ["CEnum", "FileIO", "ImageCore", "JpegTurbo_jll", "TOML"]
@@ -1664,6 +1709,12 @@ weakdeps = ["ChainRulesCore", "InverseFunctions"]
     StatsFunsChainRulesCoreExt = "ChainRulesCore"
     StatsFunsInverseFunctionsExt = "InverseFunctions"
 
+[[deps.StringEncodings]]
+deps = ["Libiconv_jll"]
+git-tree-sha1 = "b765e46ba27ecf6b44faf70df40c57aa3a547dcb"
+uuid = "69024149-9ee7-55f6-a4c4-859efe599b68"
+version = "0.3.7"
+
 [[deps.StringManipulation]]
 deps = ["PrecompileTools"]
 git-tree-sha1 = "725421ae8e530ec29bcbdddbe91ff8053421d023"
@@ -1690,6 +1741,12 @@ version = "0.7.1"
     LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[[deps.StructTypes]]
+deps = ["Dates", "UUIDs"]
+git-tree-sha1 = "159331b30e94d7b11379037feeb9b690950cace8"
+uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+version = "1.11.0"
 
 [[deps.StyledStrings]]
 uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
@@ -1742,6 +1799,11 @@ version = "0.1.1"
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 version = "1.11.0"
+
+[[deps.TestItems]]
+git-tree-sha1 = "42fd9023fef18b9b78c8343a4e2f3813ffbcefcb"
+uuid = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
+version = "1.0.0"
 
 [[deps.TiffImages]]
 deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "Mmap", "OffsetArrays", "PkgVersion", "PrecompileTools", "ProgressMeter", "SIMD", "UUIDs"]
@@ -1916,6 +1978,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "a63799ff68005991f9d9491b6e95bd3478d783cb"
 uuid = "c5fb5394-a638-5e4d-96e5-b29de1b5cf10"
 version = "1.6.0+0"
+
+[[deps.YAML]]
+deps = ["Base64", "Dates", "Printf", "StringEncodings"]
+git-tree-sha1 = "2f58ac39f64b41fb812340347525be3b590cce3b"
+uuid = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
+version = "0.4.14"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]

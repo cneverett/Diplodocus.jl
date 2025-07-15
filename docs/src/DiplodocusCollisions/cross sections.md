@@ -1,4 +1,4 @@
-# Interaction Cross Sections
+# Binary Interaction Cross Sections
 
 ```@meta
 CurrentModule = Diplodocus.DiplodocusCollisions

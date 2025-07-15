@@ -1,5 +1,6 @@
 using Documenter
 using DocumenterVitepress
+using DocumenterCitations
 using Diplodocus
 #using DiplodocusCollisions
 #using DiplodocusTransport
@@ -7,9 +8,15 @@ using Diplodocus
 
 push!(LOAD_PATH,"../src/")
 
+bib = CitationBibliography(
+    joinpath(@__DIR__,"src","refs.bib");
+    style = :authoryear
+)
+
 # build local docs but don't deploy
 makedocs(;
     modules = [Diplodocus],
+    plugins = [bib],
     repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
     authors = "Christopher Everett",
     sitename = "Diplodocus.jl",
@@ -31,6 +38,7 @@ makedocs(;
             "Installation" => "Overview/installation.md"
             "Tutorials" => [
                 "Hard Spheres" => "Overview/Examples/hardsphere.md"
+                "Radiation Reaction" => "Overview/Examples/radreact.md"
             ]
         ],
         "Collisions" => [
@@ -38,7 +46,8 @@ makedocs(;
             "Cross Sections" => "DiplodocusCollisions/cross sections.md",
         ],
         "Transport" => [
-            "Overview" => "DiplodocusTransport/overview.md"
+            "Overview" => "DiplodocusTransport/overview.md",
+            "External Forces" => "DiplodocusTransport/external forces.md",
         ],
         "Plots" => [
             "Overview" => "DiplodocusPlots/overview.md"

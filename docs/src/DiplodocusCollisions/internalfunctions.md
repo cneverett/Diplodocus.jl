@@ -1,11 +1,11 @@
 # DiplodocusCollisions Internal Functions
 
 
-```@meta
+<!-- ```@meta
 CurrentModule = DiplodocusCollisions
 using DiplodocusCollisions
 end
-```
+``` -->
 
 <!-- ```@autodocs
 Modules = [DiplodocusCollisions]

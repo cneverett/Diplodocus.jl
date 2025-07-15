@@ -1,11 +1,11 @@
 # DiplodocusPlots Internal Functions
 
 
-```@meta
+<!-- ```@meta
 CurrentModule = DiplodocusPlots
 using DiplodocusTransport
 end
-```
+``` -->
 
 <!-- ```@autodocs
 Modules = [DiplodocusPlots]
