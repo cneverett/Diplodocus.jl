@@ -119,7 +119,7 @@ using Diplodocus
 
     AM3ElePDisPlotDark = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test.jld2",SIUnitsTime(1e-12),SIUnitsTime(1e-20),"l",wide=true,plot_limits=(-21,8,-0.5345678329467773, 9.465432167053223),theme=DiplodocusDark())
     AM3ElePDisPlotLight = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test.jld2",SIUnitsTime(1e-12),SIUnitsTime(1e-20),"l",wide=true,plot_limits=(-21,9,-0.5345678329467773, 9.465432167053223),theme=DiplodocusLight())
-    Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotDark.png",AM3ElePDisPlotDark)
+    Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotDark.pdf",AM3ElePDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotDark.svg",AM3ElePDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotLight.pdf",AM3ElePDisPlotLight)
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotLight.svg",AM3ElePDisPlotLight)
