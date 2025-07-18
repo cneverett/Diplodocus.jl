@@ -16,14 +16,7 @@ juila> include("HardSphereTransport.jl")
 
 ## Building the Gain and Loss Collision Matrices
 
-
 Before any time evolution can be simulated, the collision matrices for the interactions between hard spheres need to be generated using the functions contained within the `DiplodocusCollisions` package. 
-
-::: tip 
-
-This process only needs to be done once, then the collision matrices can be re-used over multiple simulations.
-
-:::
 
 First thing is to select the names of the four particles involved in the binary interaction ``12\rightarrow34``. In Diplodocus, each particle is designated a unique three letter `string` to identify it. These unique identifiers are then used internally to define the properties of the particles (please refer to [Particles, Grids and Units](@ref) for more details). In binary interactions, we follow the convention that the pairs of names (12) and (34) should be in alphabetical order. Therefore for the interaction between hard spheres the names are declared by:
 
@@ -85,22 +78,24 @@ For the first round of integration it is advised to run with a scale of zero i.e
 
 :::
 
-Then we need to define the `fileLocation` where the collision matrices are going to be saved to, here we assume that there exists a folder named "Data" located in the current working directory
+Then we need to define the `fileLocation` where the collision matrices are going to be saved to, here we assume that there exists a folder named "Data" located in the current working directory. With this we can also generate the integration `Setup` and `fileName` using the function `UserBinaryParameters` 
 
 ```julia
-
     fileLocation = pwd()*"\\Data"
-
+    (Setup,fileName) = UserBinaryParameters()
 ```
 
-Finally, we can generate the setup for integration using the function `UserBinaryParameters` (note that the file name is automatically generated and returned as part of this function) for the Monte-Carlo sampling and run the integration using the function `BinaryInteractionIntegration`. 
+Finally, we can run the integration using the function `BinaryInteractionIntegration`. 
 
 ```julia
-
-    (Setup,fileName) = UserBinaryParameters()
     BinaryInteractionIntegration(Setup)
-
 ```
+
+::: tip
+
+Even on a good system, integration typically takes several hours if not days. But once it's done the matrices can be used over and over again. So don't worry, and while you wait perhaps sit back, relax and read that book  that's been on your shelf for years just waiting to be read.
+
+:::
 
 ## Checking the Gain and Loss Matrices
 
@@ -312,10 +307,10 @@ There are several functions which can be used to generate initial conditions e.g
 ```julia
 
     Initial_Sph = Initial_Constant(PhaseSpace,"Sph",10.0,13.0,-0.25,0.24,0.0,2.0,1f0);
-    f_init = ArrayPartition(Initial_Sph,);
+    Initial = ArrayPartition(Initial_Sph,);
 
 ```
-where `f_init` groups all the initial conditions from all the particle species into a form the solver can understand, in this case just the initial conditions of the spheres.
+where `Initial` groups all the initial conditions from all the particle species into a form the solver can understand, in this case just the initial conditions of the spheres.
 
 ::: warning
 
@@ -336,7 +331,7 @@ Based on this, lets go with explicit time stepping, and store the file with a se
 
 ```julia
 
-    scheme = EulerStruct(f_init,PhaseSpace,BigM,FluxM,false)
+    scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
     fileName = "HardSphere.jld2";
     fileLocation = pwd()*"\\Data";
 
@@ -346,7 +341,7 @@ Now lets evolve this system of particles!
 
 ```julia
 
-    sol = Solve(f_init,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
+    sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
 
 ```
 

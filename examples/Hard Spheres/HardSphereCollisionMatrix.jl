@@ -14,23 +14,23 @@ using Diplodocus
     p_up_Sph = 4.0
     p_grid_Sph = "l"
     p_num_Sph = 72
-
     u_grid_Sph = "u"
     u_num_Sph = 8
-
     h_grid_Sph = "u"
     h_num_Sph = 1
 
+    # number of points to sample
     numLoss = p_num_Sph^2*u_num_Sph^2*h_num_Sph^2
     numGain = p_num_Sph*u_num_Sph*h_num_Sph
     numThreads = 2
-
+    # scale factor range
     scale = 0.0:0.1:0.0
 
+    # file location and setup
     fileLocation = pwd()*"\\examples\\Hard Spheres\\Data"
-
     (Setup,fileName) = UserBinaryParameters()
     
+    # run the integration
     BinaryInteractionIntegration(Setup)
 
 # ===== Check Accuracy of  Collision Matrices ===== #

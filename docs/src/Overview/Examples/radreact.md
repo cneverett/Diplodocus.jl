@@ -77,7 +77,7 @@ We are not including any binary or emissive interactions (we are not evolving th
     Emi_list::Vector{EmiStruct} = [];
     Forces::Vector{ForceType} = [SyncRadReact(Ani(),1e-4),];
 
-    DataDirectory = pwd()*"\\examples\\Radiation Reaction\\Data"
+    DataDirectory = pwd()*"\\Data"
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=false);
     FluxM = BuildFluxMatrices(PhaseSpace);
 ```
@@ -101,7 +101,7 @@ We want the initial population of electrons to be a Maxwell-Juttner (thermal) di
 ### Running the Solver
 We can now run the solver for both sets of initial conditions:
 ```julia
-    fileLocation = pwd() * "/examples/Radiation Reaction/Data/";
+    fileLocation = pwd()*"\\Data"
     fileName_low = "RadReact_low.jld2";
     fileName_med = "RadReact_med.jld2";
     fileName_high = "RadReact_high.jld2";

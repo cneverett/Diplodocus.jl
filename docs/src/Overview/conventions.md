@@ -4,7 +4,7 @@
 Below is a table of the currently implemented particles (i.e. their particle properties are defined within the code)
 
 | Particle | Abr. String | Mass (units of ``m_\text{Ele}``)     |  Charge (units of ``q`` the fundamental charge) |
-| -------- | ----------- | -------------------------------------------- | ---- |
+| -------- | ----------- | ------------------------------- | ---- |
 | Sphere   | `"Sph"`     |  1836.1528 (mass of Proton)     |  0.0 |
 | Electron | `"Ele"`     |                    1.0          | -1.0 |
 | Positron | `"Pos"`     |                    1.0          | 1.0  |

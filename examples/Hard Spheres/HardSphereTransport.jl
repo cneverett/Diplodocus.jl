@@ -66,16 +66,16 @@ using Diplodocus
 # ===== Set Initial Conditions ================== #
 
     Initial_Sph = Initial_Constant(PhaseSpace,"Sph",10.0,13.0,-0.25,0.24,0.0,2.0,1f0);
-    f_init = ArrayPartition(Initial_Sph,);
+    Initial = ArrayPartition(Initial_Sph,);
 
 # ===== Run the Solver ================== #
 
-    scheme = EulerStruct(f_init,PhaseSpace,BigM,FluxM,false)
+    scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
 
     fileName = "HardSphere.jld2";
     fileLocation = pwd()*"\\examples\\Hard Spheres\\Data";
 
-    sol = Solve(f_init,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
+    sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
 
 # ===== Load and Plot Results ================== # 
 

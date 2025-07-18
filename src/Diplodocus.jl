@@ -9,6 +9,9 @@ module Diplodocus
     export UserBinaryParameters
     export BinaryInteractionIntegration
     export BinaryFileLoad_Matrix, BinaryFileLoad_All, DoesConserve
+    export UserEmissionParameters
+    export EmissionInteractionIntegration
+    export EmissionFileLoad_Matrix, EmissionFileLoad_All
 
     # Transport Exports
     export LoadMatrices, BigMatrices, FluxMatrices
@@ -28,6 +31,8 @@ module Diplodocus
     export FracNumberDensityPlot, NumberDensityPlot
     export FracEnergyDensityPlot, EnergyDensityPlot
     export IsThermalPlot, IsIsotropicPlot, IsThermalAndIsotropicPlot
+    export InteractiveEmissionGainLossPlot
+    export CodeUnitsTime, SIUnitsTime
 
     # RecursiveArrayTools
     export ArrayPartition

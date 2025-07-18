@@ -39,6 +39,7 @@ makedocs(;
             "Tutorials" => [
                 "Hard Spheres" => "Overview/Examples/hardsphere.md"
                 "Radiation Reaction" => "Overview/Examples/radreact.md"
+                "Synchrotron" => "Overview/Examples/synchrotron.md"
             ]
         ],
         "Collisions" => [
