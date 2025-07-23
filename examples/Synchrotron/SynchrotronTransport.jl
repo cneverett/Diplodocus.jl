@@ -7,8 +7,8 @@ using Diplodocus
     #t_num::Int64 = 100000
     #t_grid::String = "u"
 
-    t_up::Float64 = -12e0 # seconds * (σT*c)
-    t_low::Float64 = -20e0 # seconds * (σT*c)
+    t_up::Float64 = log10(SIToCodeUnitsTime(1e8)) # -12e0 seconds * (σT*c)
+    t_low::Float64 = log10(SIToCodeUnitsTime(1e0)) #-20e0 seconds * (σT*c)
     t_num::Int64 = 8000
     t_grid::String = "l"
 
@@ -74,6 +74,8 @@ using Diplodocus
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true);
     FluxM = BuildFluxMatrices(PhaseSpace);
 
+    BigM.M_Emi = 2*BigM.M_Emi; 
+
 # Set initial conditions
 
     Initial_Ele = Initial_PowerLaw(PhaseSpace,"Ele",1e3,1e6,-1.0,1.0,0.0,2.0,2.0,1e6);
@@ -83,7 +85,7 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SyncTest.jld2";
+    fileName = "SyncTestIso2.jld2";
     fileLocation = pwd()*"\\examples\\Synchrotron\\Data";
 
     sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
@@ -92,13 +94,10 @@ using Diplodocus
 
     (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
 
-    MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,(1,10,50),order=1)
-    MomentumAndPolarAngleDistributionPlot(sol,"Pho",PhaseSpace,(1,10,50),order=1)
+    MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,(1,400,800),order=1)
+    MomentumAndPolarAngleDistributionPlot(sol,"Pho",PhaseSpace,(1,400,800),order=1)
 
-    MomentumDistributionPlot(sol,"Ele",PhaseSpace,step=10,order=2,plot_limits=(-3,7,0,10),wide=true)
-    MomentumDistributionPlot(sol,"Pho",PhaseSpace,step=10,order=2,plot_limits=(-21,1,-3,10),wide=true)
-
-    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=SIUnitsTime)
+    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
 
     NumberDensityPlot(sol,PhaseSpace,species="Pho",theme=DiplodocusDark(),title=nothing)
     NumberDensityPlot(sol,PhaseSpace,species="Ele",theme=DiplodocusDark(),title=nothing)
@@ -108,17 +107,17 @@ using Diplodocus
 
 # ==== Saving plots for tutorial /paper ==== #
 
-    SyncPDisPlotDark = MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=SIUnitsTime,theme=DiplodocusDark())
-    SyncPDisPlotLight = MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=SIUnitsTime,theme=DiplodocusLight())
+    SyncPDisPlotDark = MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
+    SyncPDisPlotLight = MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight())
     Diplodocus.DiplodocusPlots.save("SyncPDisPlotDark.pdf",SyncPDisPlotDark)
-    Diplodocus.DiplodocusPlots.save("SyncPDisPlotDark.pdf",SyncPDisPlotDark)
+    Diplodocus.DiplodocusPlots.save("SyncPDisPlotDark.svg",SyncPDisPlotDark)
     Diplodocus.DiplodocusPlots.save("SyncPDisPlotLight.pdf",SyncPDisPlotLight)
     Diplodocus.DiplodocusPlots.save("SyncPDisPlotLight.svg",SyncPDisPlotLight)
 
     # ==== AM3 comparison plots ==== # 
 
-    AM3ElePDisPlotDark = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test.jld2",SIUnitsTime(1e-12),SIUnitsTime(1e-20),"l",wide=true,plot_limits=(-21,8,-0.5345678329467773, 9.465432167053223),theme=DiplodocusDark())
-    AM3ElePDisPlotLight = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test.jld2",SIUnitsTime(1e-12),SIUnitsTime(1e-20),"l",wide=true,plot_limits=(-21,9,-0.5345678329467773, 9.465432167053223),theme=DiplodocusLight())
+    AM3ElePDisPlotDark = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test.jld2",1e8,1e0,"l",wide=true,plot_limits=(-21,8,-0.5345678329467773, 9.465432167053223),theme=DiplodocusDark())
+    AM3ElePDisPlotLight = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test.jld2",1e8,1e0,"l",wide=true,plot_limits=(-21,9,-0.5345678329467773, 9.465432167053223),theme=DiplodocusLight())
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotDark.pdf",AM3ElePDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotDark.svg",AM3ElePDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotLight.pdf",AM3ElePDisPlotLight)
