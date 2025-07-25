@@ -31,11 +31,11 @@
     Ext::Vector{Float64} = [1e-4,];
 
     # number of points to sample
-    numLoss = 256*p_num_Pho*u_num_Pho*h_num_Pho
+    numLoss = 512*p_num_Pho*u_num_Pho*h_num_Pho
     numGain = 512*p_num_Pho*u_num_Pho*h_num_Pho
-    numThreads = 1
+    numThreads = 18
     # scale factor range
-    scale = 0.5:0.1:2.0
+    scale = 0.0:0.1:1.5
 
     # file location and setup
     fileLocation = pwd()*"\\examples\\Synchrotron\\Data";

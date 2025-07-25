@@ -74,8 +74,6 @@ using Diplodocus
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true);
     FluxM = BuildFluxMatrices(PhaseSpace);
 
-    BigM.M_Emi = 2*BigM.M_Emi; 
-
 # Set initial conditions
 
     Initial_Ele = Initial_PowerLaw(PhaseSpace,"Ele",1e3,1e6,-1.0,1.0,0.0,2.0,2.0,1e6);
@@ -85,30 +83,55 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SyncTestIso2.jld2";
+    fileName = "SyncIso.jld2";
     fileLocation = pwd()*"\\examples\\Synchrotron\\Data";
 
-    sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
+    sol_Iso = Solve(Initial_Iso,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
 
 # ===== Load and Plot Results ================== # 
 
-    (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
+    (PhaseSpace, sol_Iso) = SolutionFileLoad(fileLocation,fileName);
 
-    MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,(1,400,800),order=1)
-    MomentumAndPolarAngleDistributionPlot(sol,"Pho",PhaseSpace,(1,400,800),order=1)
+    MomentumAndPolarAngleDistributionPlot(sol_Iso,"Ele",PhaseSpace,(1,400,800),order=1)
+    MomentumAndPolarAngleDistributionPlot(sol_Iso,"Pho",PhaseSpace,(1,400,800),order=1)
 
-    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
+    MomentumDistributionPlot(sol_Iso,["Pho","Ele"],PhaseSpace,step=100,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
 
-    NumberDensityPlot(sol,PhaseSpace,species="Pho",theme=DiplodocusDark(),title=nothing)
-    NumberDensityPlot(sol,PhaseSpace,species="Ele",theme=DiplodocusDark(),title=nothing)
-    
-    EnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing)
+    NumberDensityPlot(sol_Iso,PhaseSpace,species="Pho",theme=DiplodocusDark(),title=nothing)
+    NumberDensityPlot(sol_Iso,PhaseSpace,species="Ele",theme=DiplodocusDark(),title=nothing)
 
+    EnergyDensityPlot(sol_Iso,PhaseSpace,theme=DiplodocusDark(),title=nothing)
+    FracEnergyDensityPlot(sol_Iso,PhaseSpace,theme=DiplodocusDark(),title=nothing,only_all=true)
+
+# ====== Anisotropic Observations ====== # 
+
+    Binary_list::Vector{BinaryStruct} = [];
+    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[1e-4],Ani())];
+    Forces::Vector{ForceType} = [SyncRadReact(Ani(),1e-4),];
+
+    PhaseSpace = PhaseSpaceStruct(name_list,time,space,momentum,Binary_list,Emi_list,Forces);
+
+    DataDirectory = pwd()*"\\examples\\Synchrotron\\Data";   
+
+    BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true);
+    FluxM = BuildFluxMatrices(PhaseSpace);
+
+    scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
+    fileName = "SyncAni.jld2";
+    fileLocation = pwd()*"\\examples\\Synchrotron\\Data";
+
+    sol_Ani = Solve(Initial_Ani,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
+
+# ====== Plot Observer angle dependence ======= #
+
+    (PhaseSpace, sol_Ani) = SolutionFileLoad(fileLocation,fileName);
+
+    ObserverFluxPlot(PhaseSpace,sol_Ani,502,[0.1,0.2,0.3,0.4,0.5],1.0,title="hello",TimeUnits=CodeToSIUnitsTime,plot_limits=(-9.5,-1.5,-3,2))
 
 # ==== Saving plots for tutorial /paper ==== #
 
-    SyncPDisPlotDark = MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
-    SyncPDisPlotLight = MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=80,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight())
+    #=SyncPDisPlotDark = MomentumDistributionPlot(sol_Iso,["Pho","Ele"],PhaseSpace,step=100,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
+    SyncPDisPlotLight = MomentumDistributionPlot(sol_Iso,["Pho","Ele"],PhaseSpace,step=100,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight())
     Diplodocus.DiplodocusPlots.save("SyncPDisPlotDark.pdf",SyncPDisPlotDark)
     Diplodocus.DiplodocusPlots.save("SyncPDisPlotDark.svg",SyncPDisPlotDark)
     Diplodocus.DiplodocusPlots.save("SyncPDisPlotLight.pdf",SyncPDisPlotLight)
@@ -116,9 +139,20 @@ using Diplodocus
 
     # ==== AM3 comparison plots ==== # 
 
-    AM3ElePDisPlotDark = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test.jld2",1e8,1e0,"l",wide=true,plot_limits=(-21,8,-0.5345678329467773, 9.465432167053223),theme=DiplodocusDark())
-    AM3ElePDisPlotLight = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test.jld2",1e8,1e0,"l",wide=true,plot_limits=(-21,9,-0.5345678329467773, 9.465432167053223),theme=DiplodocusLight())
+    AM3ElePDisPlotDark = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test_dense.jld2",1e8,1e0,"l",wide=true,plot_limits=(-21,8,-0.5345678329467773, 9.465432167053223),theme=DiplodocusDark())
+    AM3ElePDisPlotLight = Diplodocus.DiplodocusPlots.AM3_MomentumDistributionPlot("./AM3/syn_test_dense.jld2",1e8,1e0,"l",wide=true,plot_limits=(-21,9,-0.5345678329467773, 9.465432167053223),theme=DiplodocusLight())
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotDark.pdf",AM3ElePDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotDark.svg",AM3ElePDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotLight.pdf",AM3ElePDisPlotLight)
     Diplodocus.DiplodocusPlots.save("AM3ElePDisPlotLight.svg",AM3ElePDisPlotLight)
+    =#
+
+    # ==== Observer flux plots ==== #
+    #=ObsPlotDark = ObserverFluxPlot(PhaseSpace,sol_Ani,502,[0.1,0.2,0.3,0.4,0.5],1.0,TimeUnits=CodeToSIUnitsTime,plot_limits=(-9.5,-1.5,-3,2),theme=DiplodocusDark())
+    ObsPlotLight = ObserverFluxPlot(PhaseSpace,sol_Ani,502,[0.1,0.2,0.3,0.4,0.5],1.0,TimeUnits=CodeToSIUnitsTime,plot_limits=(-9.5,-1.5,-3,2),theme=DiplodocusLight())
+    Diplodocus.DiplodocusPlots.save("ObsPlotDark.pdf",ObsPlotDark)
+    Diplodocus.DiplodocusPlots.save("ObsPlotDark.svg",ObsPlotDark)
+    Diplodocus.DiplodocusPlots.save("ObsPlotLight.pdf",ObsPlotLight)
+    Diplodocus.DiplodocusPlots.save("ObsPlotLight.svg",ObsPlotLight)
+    Diplodocus.DiplodocusPlots.save("ObsPlotDark.png",ObsPlotDark)
+    Diplodocus.DiplodocusPlots.save("ObsPlotLight.png",ObsPlotLight)=#

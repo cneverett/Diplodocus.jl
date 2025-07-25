@@ -33,6 +33,7 @@ module Diplodocus
     export IsThermalPlot, IsIsotropicPlot, IsThermalAndIsotropicPlot
     export InteractiveEmissionGainLossPlot
     export CodeToCodeUnitsTime, CodeToSIUnitsTime, SIToCodeUnitsTime
+    export ObserverFluxPlot
 
     # RecursiveArrayTools
     export ArrayPartition
