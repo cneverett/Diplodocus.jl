@@ -4,11 +4,11 @@ using Diplodocus
 
 # ==== Define domains of time and space ====== #
 
-    tau_to_t::Float64 = 3.644e-13
+    tau_to_t::Float64 = 3.644e-13 * 4pi
 
     t_up::Float64 = 3.0tau_to_t # seconds * (σT*c)
     t_low::Float64 = 0.0tau_to_t # seconds * (σT*c)
-    t_num::Int64 = 15000
+    t_num::Int64 = 3000
     t_grid::String = "u"
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
@@ -41,12 +41,12 @@ using Diplodocus
     px_up_list::Vector{Float64} = [5.0,];
     px_low_list::Vector{Float64} = [-10.0,];
     px_grid_list::Vector{String} = ["l",];
-    px_num_list::Vector{Int64} = [1920,];
+    px_num_list::Vector{Int64} = [480,];
 
-    py_up_list::Vector{Float64} = [0.001,];
-    py_low_list::Vector{Float64} = [-0.001,];
+    py_up_list::Vector{Float64} = [1.0,];
+    py_low_list::Vector{Float64} = [-1.0,];
     py_grid_list::Vector{String} = ["u",];
-    py_num_list::Vector{Int64} = [1,];
+    py_num_list::Vector{Int64} = [15,];
 
     pz_up_list::Vector{Float64} = [2.0*pi,];
     pz_low_list::Vector{Float64} = [0.0,];
@@ -73,9 +73,9 @@ using Diplodocus
         return 5.9e9*pth^2
     end
 
-    Initial_low = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(0.5),1,1,1,1,1e0);
-    Initial_med = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(1.0),1,1,1,1,1e0);
-    Initial_high = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(1.5),1,1,1,1,1e0);
+    Initial_low = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(0.5),1,15,1,1,1e0);
+    Initial_med = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(1.0),1,15,1,1,1e0);
+    Initial_high = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(1.5),1,15,1,1,1e0);
     low = ArrayPartition(Initial_low,);
     med = ArrayPartition(Initial_med,);
     high = ArrayPartition(Initial_high,);
@@ -91,13 +91,13 @@ using Diplodocus
     fileName_high = "RadReact_high.jld2";
 
     scheme_low = EulerStruct(low,PhaseSpace,BigM,FluxM,false)
-    sol_low = Solve(low,scheme_low;save_steps=1000,progress=true,fileName=fileName_low,fileLocation=fileLocation);
+    sol_low = Solve(low,scheme_low;save_steps=10,progress=true,fileName=fileName_low,fileLocation=fileLocation);
 
     scheme_med = EulerStruct(med,PhaseSpace,BigM,FluxM,false)
-    sol_med = Solve(med,scheme_med;save_steps=1000,progress=true,fileName=fileName_med,fileLocation=fileLocation);
+    sol_med = Solve(med,scheme_med;save_steps=10,progress=true,fileName=fileName_med,fileLocation=fileLocation);
 
     scheme_high = EulerStruct(high,PhaseSpace,BigM,FluxM,false)
-    sol_high = Solve(high,scheme_high;save_steps=1000,progress=true,fileName=fileName_high,fileLocation=fileLocation);
+    sol_high = Solve(high,scheme_high;save_steps=10,progress=true,fileName=fileName_high,fileLocation=fileLocation);
 
 # ===== Load and Plot Results ================== # 
 
@@ -109,9 +109,9 @@ using Diplodocus
     MomentumAndPolarAngleDistributionPlot(sol_med,"Ele",PhaseSpace_med,(0.0tau_to_t,0.5tau_to_t,1.0tau_to_t),order=1)
     MomentumAndPolarAngleDistributionPlot(sol_high,"Ele",PhaseSpace_high,(0.0tau_to_t,0.5tau_to_t,1.0tau_to_t),order=1)
 
-    MomentumDistributionPlot(sol_low,"Ele",PhaseSpace_low,step=5,perp=true,order=-2,plot_limits=((-5.0,1.0),(-4.0,5.0)))
-    MomentumDistributionPlot(sol_med,"Ele",PhaseSpace_med,step=5,perp=true,order=-2,plot_limits=((-5.0,1.0),(-4.0,5.0)))
-    MomentumDistributionPlot(sol_high,"Ele",PhaseSpace_high,step=5,perp=true,order=-2,plot_limits=((-5.0,1.0),(-4.0,5.0)))
+    MomentumDistributionPlot(sol_low,["Ele"],PhaseSpace_low,Diplodocus.DiplodocusPlots.Static(),step=100,order=-2,plot_limits=((-4.0,1.0),(-2.0,3.5)))
+    MomentumDistributionPlot(sol_med,["Ele"],PhaseSpace_med,Diplodocus.DiplodocusPlots.Static(),step=100,order=-2,plot_limits=((-4.0,1.0),(-2.0,3.5)))
+    MomentumDistributionPlot(sol_high,["Ele"],PhaseSpace_high,Diplodocus.DiplodocusPlots.Static(),step=100,order=-2,plot_limits=((-4.0,1.0),(-2.0,3.5)))
 
     FracNumberDensityPlot(sol_low,PhaseSpace_low)
     EnergyDensityPlot(sol_low,PhaseSpace_low)
@@ -121,8 +121,31 @@ using Diplodocus
 
     FracNumberDensityPlot(sol_high,PhaseSpace_high)
     EnergyDensityPlot(sol_high,PhaseSpace_high)
-    
+
+    MomentumComboAnimation(sol_high,["Ele"],PhaseSpace_high;plot_limits_momentum=(-4.0,1.0,-2.5,2.0),order=-2,thermal=false,filename="RadReactMomentumComboAnimation.mp4")
+
 # ====== Saving Plots for tutorial/paper ======= #
+
+    # Timescale plot
+
+    p_num = PhaseSpace.Momentum.px_num_list[1]
+
+    analytic= ones(length(inv_test))
+    @. analytic /= (1e-4)^2 / (4pi * 1e-7) * 2/3 / (9.11e-31 * 2.99792458e8^2) * PhaseSpace.Grids.dE_list[1] #* PhaseSpace_low.Grids.mpx_list[1] / PhaseSpace_low.Grids.dpx_list[1]
+
+    newT = FluxM.Ap_Flux \ (abs.(FluxM.I_Flux) * ones(Float64,p_num)) ./ PhaseSpace.Grids.mpx_list[1] .* PhaseSpace.Grids.dpx_list[1]
+
+    fig = Diplodocus.DiplodocusPlots.Figure();
+    ax = Diplodocus.DiplodocusPlots.Axis(fig[1,1], xlabel="p", ylabel="(4pi)^2 times Sync timescale log10(s)", title="Sync timescale as a function of p")
+    Diplodocus.DiplodocusPlots.scatter!(ax, log10.(PhaseSpace.Grids.mpx_list[1]), log10.(PhaseSpace.Grids.dt[1] ./ newT))
+    Diplodocus.DiplodocusPlots.scatter!(ax, log10.(PhaseSpace.Grids.mpx_list[1]), log10.(analytic))
+    ax.aspect=Diplodocus.DiplodocusPlots.DataAspect()
+    Diplodocus.DiplodocusPlots.hlines!(ax,log10.(tau_to_t / 24 * 3 * 4pi))
+    Diplodocus.DiplodocusPlots.hlines!(ax,log10.(tau_to_t / 24 * 2 * 4pi))
+    Diplodocus.DiplodocusPlots.hlines!(ax,log10.(tau_to_t / 24 * 1 * 4pi))
+    display(fig)
+
+    hell
 
     #=
     

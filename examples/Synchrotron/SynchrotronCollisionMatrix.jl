@@ -31,15 +31,17 @@
     Ext::Vector{Float64} = [1e-4,];
 
     # number of points to sample
-    numLoss = 512*p_num_Pho*u_num_Pho*h_num_Pho
-    numGain = 512*p_num_Pho*u_num_Pho*h_num_Pho
+    numLoss = 128*p_num_Pho*u_num_Pho*h_num_Pho
+    numGain = 1024*p_num_Pho*u_num_Pho*h_num_Pho
     numThreads = 18
     # scale factor range
-    scale = 0.0:0.1:1.5
+    scale = 0.0:0.1:0.0
 
     # file location and setup
     fileLocation = pwd()*"\\examples\\Synchrotron\\Data";
     (Setup,fileName) = UserEmissionParameters()
+
+    fileName = "SyncEleElePho#-3.0-7.0l80#u15#u1#-3.0-7.0l80#u15#u1#-20.0-0.0l80#u15#u1#0.0001 copy 3.jld2"
 
     #(Parameters,scale, numLoss, numGain, numThreads, fileLocation, fileName) = Setup
 
