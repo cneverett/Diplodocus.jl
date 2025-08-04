@@ -4,4 +4,5 @@
 
 This page holds the documentation for the DIPLODOCUS ecosystem.
 
-Work in Progress!
+> [!CAUTION]
+> This project is currently under development
