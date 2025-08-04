@@ -8,3 +8,6 @@
 #/docs/package.json
 
 *.jld2
+
+/AM3/
+/logo animation/
