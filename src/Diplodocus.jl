@@ -2,7 +2,7 @@ module Diplodocus
 
     using DiplodocusCollisions
     using DiplodocusTransport
-    using DiplodocusPlots
+    #using DiplodocusPlots
     using RecursiveArrayTools
 
     # Collision Exports
@@ -25,16 +25,16 @@ module Diplodocus
     export SolutionFileLoad
 
     # Plot Exports 
-    export DiplodocusDark, DiplodocusLight
-    export Static, Animated, Interactive
-    export MomentumDistributionPlot, MomentumAndPolarAngleDistributionPlot, MomentumComboAnimation
-    export InteractiveBinaryGainLossPlot
-    export FracNumberDensityPlot, NumberDensityPlot
-    export FracEnergyDensityPlot, EnergyDensityPlot
-    export IsThermalPlot, IsIsotropicPlot, IsThermalAndIsotropicPlot
-    export InteractiveEmissionGainLossPlot
-    export CodeToCodeUnitsTime, CodeToSIUnitsTime, SIToCodeUnitsTime
-    export ObserverFluxPlot
+    #export DiplodocusDark, DiplodocusLight
+    #export Static, Animated, Interactive
+    #export MomentumDistributionPlot, MomentumAndPolarAngleDistributionPlot, MomentumComboAnimation
+    #export InteractiveBinaryGainLossPlot
+    #export FracNumberDensityPlot, NumberDensityPlot
+    #export FracEnergyDensityPlot, EnergyDensityPlot
+    #export IsThermalPlot, IsIsotropicPlot, IsThermalAndIsotropicPlot
+    #export InteractiveEmissionGainLossPlot
+    #export CodeToCodeUnitsTime, CodeToSIUnitsTime, SIToCodeUnitsTime
+    #export ObserverFluxPlot
 
     # RecursiveArrayTools
     export ArrayPartition

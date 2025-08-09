@@ -15,7 +15,7 @@ bib = CitationBibliography(
 
 # build local docs but don't deploy
 makedocs(;
-    modules = [#=Diplodocus=#],
+    modules = Module[],
     plugins = [bib],
     repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
     authors = "Christopher Everett",
