@@ -1,9 +1,3 @@
-using Pkg
-cd(@__DIR__)
-Pkg.activate(".")
-Pkg.instantiate()
-Pkg.precompile()
-
 using Documenter
 using DocumenterVitepress
 using DocumenterCitations
@@ -12,7 +6,7 @@ using DocumenterCitations
 #using DiplodocusTransport
 #using DiplodocusPlots
 
-#push!(LOAD_PATH,"../src/")
+push!(LOAD_PATH,"../src/")
 
 bib = CitationBibliography(
     joinpath(@__DIR__,"src","refs.bib");
