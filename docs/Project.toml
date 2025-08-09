@@ -1,6 +1,4 @@
 [deps]
-Diplodocus = "792d114c-f8c3-4b81-9580-cc03468a5b58"
-DiplodocusTransport = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
 DocumenterVitepress = "4710194d-e776-4893-9690-8d956a29c365"
