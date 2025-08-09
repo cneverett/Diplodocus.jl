@@ -7,6 +7,7 @@ using DocumenterCitations
 #using DiplodocusPlots
 
 push!(LOAD_PATH,"../src/")
+push!(LOAD_PATH,"/docs/")
 
 bib = CitationBibliography(
     joinpath(@__DIR__,"src","refs.bib");
