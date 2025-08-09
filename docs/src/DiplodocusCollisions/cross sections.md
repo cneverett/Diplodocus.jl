@@ -1,10 +1,10 @@
 # Binary Interaction Cross Sections
-
+<!-- 
 ```@meta
 CurrentModule = Diplodocus.DiplodocusCollisions
 using Diplodocus.DiplodocusCollisions
 end
-```
+``` -->
 
 <!-- ```@docs
 sigma_SphSphSphSph

@@ -1,3 +1,9 @@
+using Pkg
+cd(@__DIR__)
+Pkg.activate(".")
+Pkg.instantiate()
+Pkg.precompile()
+
 using Documenter
 using DocumenterVitepress
 using DocumenterCitations
@@ -6,7 +12,7 @@ using DocumenterCitations
 #using DiplodocusTransport
 #using DiplodocusPlots
 
-push!(LOAD_PATH,"../src/")
+#push!(LOAD_PATH,"../src/")
 
 bib = CitationBibliography(
     joinpath(@__DIR__,"src","refs.bib");
@@ -15,7 +21,7 @@ bib = CitationBibliography(
 
 # build local docs but don't deploy
 makedocs(;
-    modules = Module[],
+   # modules = Module[],
     plugins = [bib],
     repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
     authors = "Christopher Everett",
