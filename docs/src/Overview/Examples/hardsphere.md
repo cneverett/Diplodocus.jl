@@ -355,12 +355,12 @@ The particle spectrum can then be plotted as a function of momentum and polar an
 MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(10,1000,10000),order=1)
 ```
 where `(10,1000,10000)` can either be the times in code units or the time steps, and `order` defines the exponent in the particle spectrum ``p^{order}\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}``, where `order=1` is default and corresponds to the number density of particles per bin as a function of momentum and polar angle. (`order=2` is the energy density per bin as a function of momentum and polar angle). The resulting plot is:
-![](./assets/HardSphere/HardSpherePandUDisPlotDark.svg)
+![HSPandU](./assets/HardSphere/HardSpherePandUDisPlotDark.svg)
 This shows the "diffusion" of particles in both momentum and angle as a result of the binary interaction between spheres. Though it may be difficult to interpret the actual shape of the spectrum that is being formed from this 2D heatmap. To get an idea of this spectral shape, we can plot the angle-averaged distribution as a function of momentum:
 ```julia
 MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,thermal=true,order=1)
 ```
-![](./assets/HardSphere/HardSpherePDisPlotDark.svg)
+![HSP](./assets/HardSphere/HardSpherePDisPlotDark.svg)
 With the flag `thermal=true` the expected shape of a perfect Mawell-Juttner distribution is over-plotted for comparison. We can see that as time evolves the spheres approach the thermal distribution, but "over-shoot" at momenta away from the peak, this is linked to numerical diffusion due to the finite bin sizes. 
 
 Finally we can plot some statistics to see how well this evolution is converging towards being thermal and isotropic, as well as how well the system conserves particle number and energy density:
@@ -369,5 +369,5 @@ IsThermalAndIsotropicPlot(sol,PhaseSpace)
 FracNumberDensityPlot(sol,PhaseSpace)
 FracEnergyDensityPlot(sol,PhaseSpace)
 ``` 
-![](./assets/HardSphere/HardSphereIsTAndIPlotDark.svg)![](./assets/HardSphere/HardSphereFracNumDenPlotDark.svg)![](./assets/HardSphere/HardSphereFracEngDenPlotDark.svg)
+![HSTandI](./assets/HardSphere/HardSphereIsTAndIPlotDark.svg)![HSNum](./assets/HardSphere/HardSphereFracNumDenPlotDark.svg)![HSEng](./assets/HardSphere/HardSphereFracEngDenPlotDark.svg)
 Here we can see the distribution exponentially approaching thermalisation and isotropisation, as expected. Further particle number density is conserved between time steps to numerical precisions, while energy density is constantly increasing but at a slow rate due to it not directly being conserved.
