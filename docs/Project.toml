@@ -1,6 +1,5 @@
 [deps]
 Diplodocus = "792d114c-f8c3-4b81-9580-cc03468a5b58"
-DiplodocusCollisions = "20179301-8dfd-43f5-a10b-08fddd2c788a"
 DiplodocusPlots = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
 DiplodocusTransport = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
