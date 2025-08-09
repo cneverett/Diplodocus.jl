@@ -5,11 +5,13 @@ version = "0.0.1"
 
 [deps]
 DiplodocusCollisions = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
+DiplodocusPlots = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
 DiplodocusTransport = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 RecursiveArrayTools = "731186ca-8d62-57ce-b412-fbd966d074cd"
 
 [compat]
 DiplodocusCollisions = "0.0.1"
+DiplodocusPlots = "0.0.1"
 DiplodocusTransport = "0.0.1"
 RecursiveArrayTools = "3.33.0"
 julia = "1.6.7"
