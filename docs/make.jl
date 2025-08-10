@@ -25,7 +25,7 @@ makedocs(;
         repo = "https://github.com/cneverett/Diplodocus.jl",
         devurl = "dev",
         devbranch = "main",
-        #deploy_url = "https://cneverett.github.io/Diplodocus.jl/",
+        deploy_url = "https://cneverett.github.io/Diplodocus.jl/",
         # for liveServer, COMMENT OUT BEFORE DEPLOYING
         #md_outpath = ".",
         #build_vitepress = false,
@@ -59,14 +59,14 @@ makedocs(;
     doctest = false,
     warnonly = [:missing_docs],
     clean = true,
-    checkdocs = :none
+    checkdocs = :none,
     # for liveServer, COMMENT OUT BEFORE DEPLOYING
     #clean = false,
 )
 
-deploydocs(;
+DocumenterVitepress.deploydocs(;
     repo= "github.com/cneverett/Diplodocus.jl",    
-    target = "build",
+    target = joinpath(@__DIR__,"build"),
     devbranch = "main",
     branch = "gh-pages",
     push_preview = true,
