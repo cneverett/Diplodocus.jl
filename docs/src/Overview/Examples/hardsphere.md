@@ -356,6 +356,9 @@ MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(10,1000,10000),order
 ```
 where `(10,1000,10000)` can either be the times in code units or the time steps, and `order` defines the exponent in the particle spectrum ``p^{order}\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}``, where `order=1` is default and corresponds to the number density of particles per bin as a function of momentum and polar angle. (`order=2` is the energy density per bin as a function of momentum and polar angle). The resulting plot is:
 
+Missing image!!!!
+
+
 This shows the "diffusion" of particles in both momentum and angle as a result of the binary interaction between spheres. Though it may be difficult to interpret the actual shape of the spectrum that is being formed from this 2D heatmap. To get an idea of this spectral shape, we can plot the angle-averaged distribution as a function of momentum:
 ```julia
 MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,thermal=true,order=1)
