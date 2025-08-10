@@ -1,7 +1,7 @@
 using Documenter
 using DocumenterVitepress
 using DocumenterCitations
-#using Diplodocus
+using Diplodocus
 #using DiplodocusCollisions
 #using DiplodocusTransport
 #using DiplodocusPlots
@@ -16,7 +16,7 @@ bib = CitationBibliography(
 
 # build local docs but don't deploy
 makedocs(;
-   # modules = Module[],
+    modules = [Diplodocus],
     plugins = [bib],
     repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
     authors = "Christopher Everett",
@@ -64,7 +64,7 @@ makedocs(;
     #clean = false,
 )
 
-deploydocs(;
+DocumenterVitepress.deploydocs(;
     repo= "github.com/cneverett/Diplodocus.jl",    
     target = "build",
     devbranch = "main",
