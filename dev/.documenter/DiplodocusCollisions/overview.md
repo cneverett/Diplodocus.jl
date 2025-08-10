@@ -1,2 +1,0 @@
-
-# DiplodocusCollisions.jl {#DiplodocusCollisions.jl}

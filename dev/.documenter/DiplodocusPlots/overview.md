@@ -1,2 +1,0 @@
-
-# DiplodocusPlots.jl {#DiplodocusPlots.jl}
