@@ -1,6 +1,6 @@
-using DiplodocusDocs
+using Diplodocus
 using Test
 
-@testset "DiplodocusDocs.jl" begin
+@testset "Diplodocus.jl" begin
     # Write your tests here.
 end
