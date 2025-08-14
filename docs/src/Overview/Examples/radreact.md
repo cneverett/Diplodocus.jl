@@ -16,17 +16,19 @@ juila> include("RadiationReaction.jl")
 ## Evolving the Electrons Through Phase Space
 As radiation reaction is an external force, no collision matrices need to be generated for this tutorial and we can go straight evolving the electron population with the functions contained within the `DiplodocusTransport` package.
 
-For this tutorial we will attempt to reproduce the feature of population inversion studied by [BilbaoEtAl_2024](@citet). They suggest that for a thermal (Maxwell-Juttner) distribution with ``T>\frac{m_\text{Ele}c^2}{3k_B}`` and ``p_\perp\gg p_\parallel`` population inversion should occur. Through their Fig. 2. this should be observable over a timescale of ``\tau=[0,3]``, which for a magnetic field of ``B=10^{-4}\text{T}`` corresponds to ``t\approx 3.6\times10^{-13}\tau`` where ``t`` is in code units. 
+For this tutorial we will attempt to reproduce the feature of population inversion studied by [BilbaoEtAl_2024](@citet). The cooling of electrons due to a radiation reaction force is non-linear in their momenta and a function of their angle to the magnetic field direction. For an electron propagating perpendicularly to the magnetic field, the characteristic timescale over which it loses its perpendicular momentum is given by ``t_{\perp}=\frac{\mu_0m_ec}{B^2\sigma_T}\frac{1}{\sqrt{p^2+1}}``, where ``p`` is normalised by ``m_ec``, whereas an electron propagating parallel to the magnetic field looses no momentum. ``t_{\perp}`` implies that for relativistic electrons, ``t_{\perp}\propto frac{1}{p}`` while for sub-relativistic electrons ``t_{\perp}\approx {\mu_0m_ec}{B^2\sigma_T}``, independent of their momentum. Therefore if there is a distribution of electrons that's momentum ranges from sub-relativistic to relativistic, the relativistic electrons will cool faster and they will cause a *pile-up* or more technically *Landau population inversion* in the electron distribution defined by ``\frac{\partial f)}{\partial p}>0``. The characteristic time over which this should occur is then ``t={\mu_0m_ec}{B^2\sigma_T}=t_{\text{sync}}`` the characteristic synchrotron timescale.
+
+To explore this we will set up an initial condition of a thermal electron population with its peak around ``p=1 [m_\text{Ele}c]`` such that it contains both sub-relativistic and relativistic populations. We will then evolve that system for one characteristic synchrotron timescale. 
 
 ### Phase Space Setup
-Let's first set up the time and space grids, in the same manor as [Tutorial 1: Evolution of a Population of Hard Spheres](@ref) 
+Let's first set up the time and space grids, in the same manor as [Tutorial 1: Evolution of a Population of Hard Spheres](@ref), but this time also defining a magnetic field strength for the simulation `B` (in Tesla):
 ```julia
 
-    tau_to_t::Float64 = 3.644e-13
+    B = 1e-4;
 
-    t_up::Float64 = 3.0tau_to_t # seconds * (σT*c)
-    t_low::Float64 = 0.0tau_to_t # seconds * (σT*c)
-    t_num::Int64 = 15000
+    t_up::Float64 = SyncToCodeUnitsTime(1.0,B=B) # seconds * (σT*c)
+    t_low::Float64 = SyncToCodeUnitsTime(0.0,B=B) # seconds * (σT*c)
+    t_num::Int64 = 100
     t_grid::String = "u"
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
@@ -50,19 +52,21 @@ Let's first set up the time and space grids, in the same manor as [Tutorial 1: E
 
     space = SpaceStruct(space_coords,x_up,x_low,x_grid,x_num,y_up,y_low,y_grid,y_num,z_up,z_low,z_grid,z_num)
 ```
-Then for the momentum grids we expect the peak of the thermal distribution to be around ``p=1 [m_\text{Ele}c]`` so lets add some decent space around that, with 128 bins per decade in momenta, ``u=[-0.001,0.001]`` such that the distribution has an "infantesimal" ``p_\parallel`` population and is dominated by ``p_\perp``. We will also set the number of ``u`` bins to 1 to enforce this.
+For the time bounds we have used the function `SyncToCodeUnitsTime` which takes the time in units of ``t_{\text{sync}}`` as an input and returns the equivalent time in code units (it assumes a default B field of 1e-4 unless otherwise specified).
+
+Then for the momentum grids we expect the peak of the thermal distribution to be around ``p=1 [m_\text{Ele}c]`` so lets add some decent space around that, with 32 bins per decade in momenta. The angle bounds will be the whole sphere such that ``u=[-1.0,1.0]`` and ``h=[0,2.0pi]`` with 33 ``u`` bins and only 1 ``h`` bin (the system is axisymmetric so no need to include ``h`` dependence):
 ```julia
     momentum_coords = Spherical()  # px = p, py = u, pz = phi
 
     px_up_list::Vector{Float64} = [5.0,];
     px_low_list::Vector{Float64} = [-10.0,];
     px_grid_list::Vector{String} = ["l",];
-    px_num_list::Vector{Int64} = [1920,];
+    px_num_list::Vector{Int64} = [480,];
 
-    py_up_list::Vector{Float64} = [0.001,];
-    py_low_list::Vector{Float64} = [-0.001,];
+    py_up_list::Vector{Float64} = [1.0,];
+    py_low_list::Vector{Float64} = [-1.0,];
     py_grid_list::Vector{String} = ["u",];
-    py_num_list::Vector{Int64} = [1,];
+    py_num_list::Vector{Int64} = [33,];
 
     pz_up_list::Vector{Float64} = [2.0*pi,];
     pz_low_list::Vector{Float64} = [0.0,];
@@ -71,66 +75,59 @@ Then for the momentum grids we expect the peak of the thermal distribution to be
 
     momentum = MomentumStruct(momentum_coords,px_up_list,px_low_list,px_grid_list,px_num_list,py_up_list,py_low_list,py_grid_list,py_num_list,pz_up_list,pz_low_list,pz_grid_list,pz_num_list,"upwind");
 ```
-We are not including any binary or emissive interactions (we are not evolving the photons that are emitted in this tutorial, see Tutorial 3 for that) but we do need to include `SyncRadReact` as the force term. This accepts two arguments, the first is the `mode` which can be either `Ani`, `Axi` or `Iso`. These correspond to different averaging of the force e.g. for `Iso` the force is averaged over all angles, corresponding to a pitch angle averaging of the magnetic field direction. For our case here though we want the field to remain directed so we should choose `Ani`. The second argument `B` indicated the strength of the magnetic field in Tesla, here let's choose ``B=10^{-4}\text{T}``. 
+We are not including any binary or emissive interactions (we are not evolving the photons that are emitted in this tutorial, see Tutorial 3 for that) but we do need to include `SyncRadReact` as the force term. This accepts two arguments, the first is the `mode` which can be either `Ani`, `Axi` or `Iso`. These correspond to different averaging of the force e.g. for `Iso` the force is averaged over all angles, corresponding to a pitch angle averaging of the magnetic field direction. For our case here though we want the field to remain directed so we should choose `Ani`. The second argument `B` indicated the strength of the magnetic field in Tesla, which we have previously defined as ``B=10^{-4}\text{T}``. 
 ```julia
     Binary_list::Vector{BinaryStruct} = [];
     Emi_list::Vector{EmiStruct} = [];
-    Forces::Vector{ForceType} = [SyncRadReact(Ani(),1e-4),];
+    Forces::Vector{ForceType} = [SyncRadReact(Ani(),B),];
 
-    DataDirectory = pwd()*"\\Data"
+    DataDirectory = pwd()*"/Data"
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=false);
     FluxM = BuildFluxMatrices(PhaseSpace);
 ```
 
 ### Initial Conditions
-We want the initial population of electrons to be a Maxwell-Juttner (thermal) distribution with temperature ``T>\frac{m_\text{Ele}c^2}{3k_B}\approx 2\times10^{9}\text{K}`` to see the population inversion. Let's setup three sets of initial conditions `low`, `med`, and `high`, with intial temperatures around this expected temperature for inversion. We will also use a number density of ``n=1 \mathrm{m}^{-3}``, which won't affect the results as the force is independent of ``n``.
+We want the initial population of electrons to be a Maxwell-Juttner (thermal) distribution with temperature such that the peak is just on the relativistic boundary. This corresponds to a thermal momentum ``p_\text{th}=1``. To set up this thermal distribution we will use the function `Initial_MaxwellJuttner!`:
 ```julia
 
     function pth_to_T(pth)
         return 5.9e9*pth^2
     end
-
-    Initial_low = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(0.5),1,1,1,1,1e0);
-    Initial_med = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(1.0),1,1,1,1,1e0);
-    Initial_high = Initial_MaxwellJuttner(PhaseSpace,"Ele",pth_to_T(1.5),1,1,1,1,1e0);
-    low = ArrayPartition(Initial_low,);
-    med = ArrayPartition(Initial_med,);
-    high = ArrayPartition(Initial_high,);
+    Initial = Initialise_Initial_Condition(PhaseSpace)
+    Initial_MaxwellJuttner!(Initial,PhaseSpace,"Ele",T=pth_to_T(1.0),umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1e0);
 ```
+where we will also use a number density of ``n=1 \mathrm{m}^{-3}``, which won't affect the results as the force is independent of ``n``.
 
 ### Running the Solver
 We can now run the solver for both sets of initial conditions:
 ```julia
-    fileLocation = pwd()*"\\Data"
-    fileName_low = "RadReact_low.jld2";
-    fileName_med = "RadReact_med.jld2";
-    fileName_high = "RadReact_high.jld2";
+    fileLocation = pwd() * "/examples/Data/";
+    fileName = "RadReact.jld2"
 
-    scheme = EulerStruct(low,PhaseSpace,BigM,FluxM,false)
-    sol_low = Solve(low,scheme;save_steps=1000,progress=true,fileName=fileName_low,fileLocation=fileLocation);
-
-    scheme = EulerStruct(med,PhaseSpace,BigM,FluxM,false)
-    sol_med = Solve(med,scheme;save_steps=1000,progress=true,fileName=fileName_med,fileLocation=fileLocation);
-
-    scheme = EulerStruct(high,PhaseSpace,BigM,FluxM,false)
-    sol_high = Solve(high,scheme;save_steps=1000,progress=true,fileName=fileName_high,fileLocation=fileLocation);
+    scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
+    sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
 ```
 
 ### Loading and Plotting Results
 We can load the three simulations using 
 ```julia 
-    (PhaseSpace_low, sol_low) = SolutionFileLoad(fileLocation,fileName_low);
-    (PhaseSpace_med, sol_med) = SolutionFileLoad(fileLocation,fileName_med);
-    (PhaseSpace_high, sol_high) = SolutionFileLoad(fileLocation,fileName_high);
+    (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
 ```
-To match Fig 2. of [BilbaoEtAl_2024](@citet), we want to plot the perpendicular component of ``f(\boldsymbol{p})``, which corresponds to an ``order`` of -2:
+
+We can examine whether this inverted population has appeared by plotting the component of the distribution function ``f(\boldsymbol{p})`` (which corresponds to an ``order`` of -2), parallel and perpendicular to the magnetic field using the `paraperp` option:
 ```julia 
-    MomentumDistributionPlot(sol_low,"Ele",PhaseSpace_low,step=50,perp=true,order=-2,plot_limits=((-5.0,1.0),(-4.0,5.0)))
-    MomentumDistributionPlot(sol_med,"Ele",PhaseSpace_med,step=50,perp=true,order=-2,plot_limits=((-5.0,1.0),(-4.0,5.0)))
-    MomentumDistributionPlot(sol_high,"Ele",PhaseSpace_high,step=50,perp=true,order=-2,plot_limits=((-5.0,1.0),(-4.0,5.0)))
+    MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=3,order=-2,paraperp=true,plot_limits=((-4.0,2.0),(-5.0,1.0)))
+
 ```
-![](./assets/RadReact/PDisLowPlotDark.svg)![](./assets/RadReact/PDisMedPlotDark.svg)![](./assets/RadReact/PDisHighPlotDark.svg)
-We can clearly see the process of population inversion where ``\frac{\partial f(\boldsymbol{p})}{\partial p_\perp}>0`` occurring when the population has sufficient thermal energy.
+![](./assets/RadReact/PDisPlotDark.svg)
+from which we can clearly see the process of population inversion where ``\frac{\partial f(\boldsymbol{p})}{\partial p_\perp}>0``.
+
+We can also plot the angular dependence of the distribution:
+```julia
+    MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,7,12),order=-2,TimeUnits=Diplodocus.DiplodocusPlots.CodeToSyncUnitsTime)
+```
+![](./assets/RadReact/PAndUDisPlotDark.svg)
+where we can see the formation of a *ring* in momentum space as a result of this population pile-up.
 
 It is always good to also inspect the energy and number conservation. 
 ```julia
