@@ -70,7 +70,10 @@ using Diplodocus
 # ===== Set Initial Conditions ================== #
 
     function pth_to_T(pth)
-        return 5.9e9*pth^2
+        m = 9.10938356e-31
+        c = Float64(299792458)
+        kb = 1.380649e-23
+        return m*c^2*pth^2/kb
     end
     Initial = Initialise_Initial_Condition(PhaseSpace)
     Initial_MaxwellJuttner!(Initial,PhaseSpace,"Ele",T=pth_to_T(2.0),umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1e0);

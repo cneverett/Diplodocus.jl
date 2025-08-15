@@ -87,14 +87,17 @@ We are not including any binary or emissive interactions (we are not evolving th
 ```
 
 ### Initial Conditions
-We want the initial population of electrons to be a Maxwell-Juttner (thermal) distribution with temperature such that the peak is just on the relativistic boundary. This corresponds to a thermal momentum ``p_\text{th}=1``. To set up this thermal distribution we will use the function `Initial_MaxwellJuttner!`:
+We want the initial population of electrons to be a Maxwell-Juttner (thermal) distribution with temperature such that the peak is just above relativistic boundary. For this example we will take the thermal momentum ``p_\text{th}=2``. To set up this thermal distribution we will use the function `Initial_MaxwellJuttner!`:
 ```julia
 
     function pth_to_T(pth)
-        return 5.9e9*pth^2
+        m = 9.10938356e-31
+        c = Float64(299792458)
+        kb = 1.380649e-23
+        return m*c^2*pth^2/kb
     end
     Initial = Initialise_Initial_Condition(PhaseSpace)
-    Initial_MaxwellJuttner!(Initial,PhaseSpace,"Ele",T=pth_to_T(1.0),umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1e0);
+    Initial_MaxwellJuttner!(Initial,PhaseSpace,"Ele",T=pth_to_T(2.0),umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1e0);
 ```
 where we will also use a number density of ``n=1 \mathrm{m}^{-3}``, which won't affect the results as the force is independent of ``n``.
 
