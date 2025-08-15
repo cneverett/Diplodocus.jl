@@ -36,11 +36,12 @@ makedocs(;
         "Overview" => [
             "Overview" => "Overview/overview.md"
             "Installation" => "Overview/installation.md"
-            "Tutorials" => [
-                "Hard Spheres" => "Overview/Examples/hardsphere.md"
-                "Radiation Reaction" => "Overview/Examples/radreact.md"
-                "Synchrotron" => "Overview/Examples/synchrotron.md"
-            ]
+            "Conventions" => "Overview/conventions.md"
+        ],
+        "Tutorials" => [
+                "Hard Spheres" => "Tutorials/hardsphere.md"
+                "Radiation Reaction" => "Tutorials/radreact.md"
+                "Synchrotron" => "Tutorials/synchrotron.md"
         ],
         "Collisions" => [
             "Overview" => "DiplodocusCollisions/overview.md",
