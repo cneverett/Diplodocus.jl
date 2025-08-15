@@ -59,8 +59,8 @@ using Diplodocus
 # ==== Define Interactions  ====== #
 
     Binary_list::Vector{BinaryStruct} = [];
-    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[1e-4],Iso())];
-    Forces::Vector{ForceType} = [SyncRadReact(Iso(),1e-4),];
+    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[1e-4],Ani())];
+    Forces::Vector{ForceType} = [CoordinateForce(),SyncRadReact(Ani(),1e-4),];
 
     # build phase space
     PhaseSpace = PhaseSpaceStruct(name_list,time,space,momentum,Binary_list,Emi_list,Forces);
@@ -76,14 +76,14 @@ using Diplodocus
 
 # Set initial conditions
 
-    Initial_Ele = Initial_PowerLaw(PhaseSpace,"Ele",1e3,1e6,-1.0,1.0,0.0,2.0,2.0,1e6);
+    Initial_Ele = Initial_PowerLaw(PhaseSpace,"Ele",1e3,1e6,0.0,1.0,0.0,2.0,2.0,1e6);
     Initial_Pho = Initial_Constant(PhaseSpace,"Pho",1,80,1,15,1,1,0.0);
     Initial = ArrayPartition(Initial_Ele,Initial_Pho);
 
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SyncIso_Test.jld2";
+    fileName = "SyncAni_Test.jld2";
     fileLocation = pwd()*"\\examples\\Synchrotron\\Data";
 
     sol_Iso = Solve(Initial,scheme;save_steps=5,progress=true,fileName=fileName,fileLocation=fileLocation);
