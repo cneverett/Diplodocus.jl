@@ -65,8 +65,8 @@ using Diplodocus
 
 # ===== Set Initial Conditions ================== #
 
-    Initial_Sph = Initial_Constant(PhaseSpace,"Sph",10.0,13.0,-0.25,0.24,0.0,2.0,1f0);
-    Initial = ArrayPartition(Initial_Sph,);
+    Initial = Initialise_Initial_Condition(PhaseSpace)
+    Initial_Constant!(Initial,PhaseSpace,"Sph",pmin=10.0,pmax=13.0,umin=-0.25,umax=0.24,hmin=0.0,hmax=2.0,num_Init=1f0);
 
 # ===== Run the Solver ================== #
 
