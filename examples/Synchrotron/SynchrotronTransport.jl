@@ -59,8 +59,8 @@ using Diplodocus
 # ==== Define Interactions  ====== #
 
     Binary_list::Vector{BinaryStruct} = [];
-    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[1e-4],Ani())];
-    Forces::Vector{ForceType} = [CoordinateForce(),SyncRadReact(Ani(),1e-4),];
+    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[1e-4],Iso())];
+    Forces::Vector{ForceType} = [CoordinateForce(),SyncRadReact(Iso(),1e-4),];
 
     # build phase space
     PhaseSpace = PhaseSpaceStruct(name_list,time,space,momentum,Binary_list,Emi_list,Forces);
@@ -76,14 +76,13 @@ using Diplodocus
 
 # Set initial conditions
 
-    Initial_Ele = Initial_PowerLaw(PhaseSpace,"Ele",1e3,1e6,0.0,1.0,0.0,2.0,2.0,1e6);
-    Initial_Pho = Initial_Constant(PhaseSpace,"Pho",1,80,1,15,1,1,0.0);
-    Initial = ArrayPartition(Initial_Ele,Initial_Pho);
+    Initial = Initialise_Initial_Condition(PhaseSpace);
+    Initial_PowerLaw!(Initial,PhaseSpace,"Ele",pmin=1e3,pmax=1e6,umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,index=2.0,num_Init=1e6);
 
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SyncAni_Test.jld2";
+    fileName = "SyncIso_Test.jld2";
     fileLocation = pwd()*"\\examples\\Synchrotron\\Data";
 
     sol_Iso = Solve(Initial,scheme;save_steps=5,progress=true,fileName=fileName,fileLocation=fileLocation);
@@ -130,7 +129,8 @@ using Diplodocus
     (PhaseSpace, sol_Ani) = SolutionFileLoad(fileLocation,fileName);
 
     CodeToSIUnitsTime(sol_Ani.t[52])
-    ObserverFluxPlot(PhaseSpace,sol_Ani,52,[0.1,0.2,0.3,0.4,0.5],1.0,TimeUnits=CodeToSIUnitsTime,plot_limits=(-6.5,3.5,-0.5,5.5))
+    ObserverFluxPlot(PhaseSpace,sol_Ani,52,[0.1,0.2,0.3,0.4,0.5],1.0,TimeUnits=CodeToSIUnitsTime,plot_limits=(-15.5,3.5,-0.5,10.5))
+    MomentumAndPolarAngleDistributionPlot(sol_Ani,"Ele",PhaseSpace,Static(),(1,42,72),order=1,TimeUnits=CodeToSIUnitsTime)
 
 # ==== Saving plots for tutorial /paper ==== #
 
