@@ -3,7 +3,6 @@ module Diplodocus
     using DiplodocusCollisions
     using DiplodocusTransport
     using DiplodocusPlots
-    using RecursiveArrayTools
 
     # Collision Exports
     export UserBinaryParameters

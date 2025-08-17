@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.6"
+julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "411755a6737ff2d69b6487ae913ebc294f26e50d"
+project_hash = "ac2693973314b05f05de2cdc273c2eff761a679a"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -337,7 +337,7 @@ version = "0.0.1"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Makie", "Revise"]
-git-tree-sha1 = "7f26e2bb7afd367fbc61e470411dca6af66537c1"
+git-tree-sha1 = "fe9764f06fecb5bbf7abbc1f759b7772d9746ff6"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusPlots.jl"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
