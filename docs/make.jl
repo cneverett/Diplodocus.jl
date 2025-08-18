@@ -25,7 +25,7 @@ makedocs(;
         repo = "https://github.com/cneverett/Diplodocus.jl",
         devurl = "dev",
         devbranch = "main",
-        deploy_url = "https://cneverett.github.io/Diplodocus.jl/",
+        #deploy_url = "https://cneverett.github.io/Diplodocus.jl/",
         # for liveServer, COMMENT OUT BEFORE DEPLOYING
         #md_outpath = ".",
         #build_vitepress = false,
