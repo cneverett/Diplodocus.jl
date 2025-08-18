@@ -1,6 +1,7 @@
 <img align="left" width="64" height="64" src="./docs/src/assets/favicon.svg" alt="Diplodocus icon">
 
-# DIPLODOCUS: Distribution In Plateaux Methodology for the Computation of transport EquationS
+# DIPLODOCUS.jl
+**D**istribution **I**n **PL**ateaux meth**ODO**logy for the **C**omp**u**tation of transport equation**S**
 
 [![][docs-latest-img]][docs-latest-url]
 [![Build Status][gha-img]][gha-url]
