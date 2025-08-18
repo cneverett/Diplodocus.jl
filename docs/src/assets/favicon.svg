@@ -2,13 +2,13 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="2.5in"
-   height="2.5in"
-   viewBox="0 0 63.5 63.5"
+   width="64"
+   height="64"
+   viewBox="0 0 16.933333 16.933333"
    version="1.1"
    id="svg1"
    inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
-   sodipodi:docname="green_round_spines.svg"
+   sodipodi:docname="favicon.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -23,9 +23,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="1.4378367"
-     inkscape:cx="202.38737"
-     inkscape:cy="172.13359"
+     inkscape:zoom="8"
+     inkscape:cx="39.5"
+     inkscape:cy="30.3125"
      inkscape:window-width="1440"
      inkscape:window-height="890"
      inkscape:window-x="-6"
@@ -41,7 +41,7 @@
      id="layer1">
     <g
        id="g1541"
-       transform="translate(-22.835433,-18.692239)">
+       transform="matrix(0.30403509,0,0,0.30403509,-8.1292204,-6.8695441)">
       <path
          style="fill:#e7a27a;fill-opacity:1;stroke:#b57f5f;stroke-width:0.455999;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
          d="m 34.700305,56.260361 c 0,0 -0.90421,0.75718 -1.23612,1.23613 -0.29851,0.43075 -0.6506,1.43129 -0.6506,1.43129 0,0 0.98884,-0.27076 1.49636,-0.32529 0.38812,-0.0417 1.17107,0 1.17107,0 z"
