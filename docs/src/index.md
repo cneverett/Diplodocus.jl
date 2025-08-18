@@ -10,6 +10,8 @@ hero:
     image:
         src: /test1.gif
         alt: Diplodocus
+        width: 480
+        height: 480
     actions:
         -   theme: alt
             text: View on Github
