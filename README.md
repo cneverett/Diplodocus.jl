@@ -1,6 +1,6 @@
 <img align="left" width="64" height="64" src="./docs/src/assets/favicon.svg" alt="Diplodocus icon">
 
-# DIPLODOCUS.jl
+# Diplodocus.jl
 **D**istribution **I**n **PL**ateaux meth**ODO**logy for the **C**omp**u**tation of transport equation**S**
 
 [![][docs-latest-img]][docs-latest-url]
