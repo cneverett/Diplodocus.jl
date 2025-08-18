@@ -1,4 +1,4 @@
-<img align="left" width="100" height="100" src="./docs/src/assets/favicon.svg" alt="Diplodocus icon">
+<img align="left" width="64" height="64" src="./docs/src/assets/favicon.svg" alt="Diplodocus icon">
 
 # DIPLODOCUS: Distribution In Plateaux Methodology for the Computation of transport EquationS
 
