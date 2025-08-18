@@ -8,7 +8,7 @@ hero:
     text: "Particle transport for Astrophysics"
     tagline: A Julia framework for evaluating transport of particle distributions through phase space for mesoscopic modelling of astrophysical sources
     image:
-        src: ./public/test1.gif
+        src: /test1.gif
         alt: Diplodocus
     actions:
         -   theme: alt
