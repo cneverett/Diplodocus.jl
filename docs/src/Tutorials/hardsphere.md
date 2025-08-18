@@ -309,7 +309,7 @@ First we need to initialise the state vector `Initial` that will house the initi
 ```
 To fill this state vector there are several functions which can be used to generate different types of initial conditions e.g. `Inital_Constant!`, `Initial_PowerLaw!`, `Initial_MaxwellJuttner!`, etc. For this case we want to use `Initial_Constant!` to modify `Initial` with a distribution that matches our selected initial conditions of: ``p`` between ``10.0m_\text{Ele}c`` and ``13.3m_\text{Ele}c``, angles ``u`` between ``-0.25`` and ``0.25``, angles ``h`` between ``0`` and ``2\pi`` and a number density ``n=1 \mathrm{m}^{-3}``. This can be done as follows:
 ```julia
-    Initial_Constant!(Initial,PhaseSpace,"Sph",pmin=10.0,pmax=13.0,umin=-0.25,umax=0.24,hmin=0.0,hmax=2.0,num_Init=1f0);
+    Initial_Constant!(Initial,PhaseSpace,"Sph",pmin=10.0,pmax=13.0,umin=-0.25,umax=0.24,hmin=0.0,hmax=2.0,num_Init=1.0);
 ```
 
 ::: warning
