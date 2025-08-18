@@ -11,7 +11,7 @@ Diplodocus is a novel framework for evolving the a set of particle distribution 
 ## Transport Equations
 Transport equations refers to a set of equations that dictate the evolution of particles through phase space. In Diplodocus, that takes the form of an integrated Boltzmann equation: 
 ```math
-\int_{\partial T_m} f(\boldsymbol{x},\boldsymbol{p}) \boldsymbol{\omega}_m = \int_{T_m} \boldsymbol{C}_{m}(\boldsymbol{x},\boldsymbol{p}).
+\int_{\partial Q} f(\boldsymbol{x},\boldsymbol{p}) \boldsymbol{\omega} = \int_{Q} \boldsymbol{C}(\boldsymbol{x},\boldsymbol{p}).
 ```
 Terms on the left-hand-side dictate the continuous transport of particle through phase space including advection through space and forcing through momentum. The right-hand-side, described termination and beginning of particle worldlines in a volume of phase space due to discrete interaction between particles. 
 
