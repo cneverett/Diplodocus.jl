@@ -361,7 +361,9 @@ The particle spectrum can then be plotted as a function of momentum and polar an
 MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,Static(),(0.0,10.0,1000.0),order=1)
 ```
 where `(0.0,10.0,1000.0)` can either be the times in code units or the time steps, and `order` defines the exponent in the particle spectrum ``p^{order}\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}``, where `order=1` is default and corresponds to the number density of particles per bin as a function of momentum and polar angle. (`order=2` is the energy density per bin as a function of momentum and polar angle). The resulting plot is:
-![](./assets/HardSphere/HardSpherePandUDisPlotDark.svg)
+
+!!! Missing Plot, does not want to load
+
 This shows the "diffusion" of particles in both momentum and angle as a result of the binary interaction between spheres. Though it may be difficult to interpret the actual shape of the spectrum that is being formed from this 2D heatmap. To get an idea of this spectral shape, we can plot the angle-averaged distribution as a function of momentum:
 ```julia
 MomentumDistributionPlot(sol,"Sph",PhaseSpace,Static(),step=15,thermal=true,order=1)
