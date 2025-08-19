@@ -1,5 +1,11 @@
 # Tutorial 2: Cooling of Electrons via Radiation Reaction
 
+---
+
+```@raw html
+<video autoplay loop muted playsinline controls src="./assets/RadReact/RadReactMomentumComboAnimation.mp4" style="max-height: 60vh;"/>
+```
+
 In this tutorial we will consider a population of electrons which are homogenous in space. This population will undergo cooling due to a radiation reaction force induced by a uniform magnetic field (this force is described in [External Forces](@ref)). 
 
 ::: info
@@ -28,7 +34,7 @@ Let's first set up the time and space grids, in the same manor as [Tutorial 1: E
 
     t_up::Float64 = SyncToCodeUnitsTime(1.0,B=B) # seconds * (σT*c)
     t_low::Float64 = SyncToCodeUnitsTime(0.0,B=B) # seconds * (σT*c)
-    t_num::Int64 = 100
+    t_num::Int64 = 1000
     t_grid::String = "u"
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
@@ -96,8 +102,8 @@ We want the initial population of electrons to be a Maxwell-Juttner (thermal) di
         kb = 1.380649e-23
         return m*c^2*pth^2/kb
     end
-    Initial = Initialise_Initial_Condition(PhaseSpace)
-    Initial_MaxwellJuttner!(Initial,PhaseSpace,"Ele",T=pth_to_T(2.0),umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1e0);
+    Initial = Initialise_Initial_Condition(PhaseSpace);
+    Initial_MaxwellJuttner!(Initial,PhaseSpace,"Ele",T=pth_to_T(2.0),umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1.0);
 ```
 where we will also use a number density of ``n=1 \mathrm{m}^{-3}``, which won't affect the results as the force is independent of ``n``.
 
@@ -119,7 +125,7 @@ We can load the three simulations using
 
 We can examine whether this inverted population has appeared by plotting the component of the distribution function ``f(\boldsymbol{p})`` (which corresponds to an ``order`` of -2), parallel and perpendicular to the magnetic field using the `paraperp` option:
 ```julia 
-    MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=3,order=-2,paraperp=true,plot_limits=((-4.0,2.0),(-5.0,1.0)))
+    MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,order=-2,paraperp=true,plot_limits=((-4.0,2.0),(-5.0,1.0)))
 
 ```
 ![](./assets/RadReact/PDisPlotDark.svg)
@@ -127,28 +133,24 @@ from which we can clearly see the process of population inversion where ``\frac{
 
 We can also plot the angular dependence of the distribution:
 ```julia
-    MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,7,12),order=-2,TimeUnits=Diplodocus.DiplodocusPlots.CodeToSyncUnitsTime)
+    MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,52,102),order=-2,TimeUnits=Diplodocus.DiplodocusPlots.CodeToSyncUnitsTime)
 ```
 ![](./assets/RadReact/PAndUDisPlotDark.svg)
 where we can see the formation of a *ring* in momentum space as a result of this population pile-up.
 
 It is always good to also inspect the energy and number conservation. 
 ```julia
-    FracNumberDensityPlot(sol_low,PhaseSpace_low)
-    EnergyDensityPlot(sol_low,PhaseSpace_low)
+    FracNumberDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSyncUnitsTime)
+    EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSyncUnitsTime)
 ```
-![](./assets/RadReact/FracNumPlotLowDark.svg)![](./assets/RadReact/EngPlotLowDark.svg)
-```julia 
-    FracNumberDensityPlot(sol_med,PhaseSpace_med)
-    EnergyDensityPlot(sol_med,PhaseSpace_med)
-```
-![](./assets/RadReact/FracNumPlotMedDark.svg)![](./assets/RadReact/EngPlotLowDark.svg)
+![](./assets/RadReact/FracNumPlotDark.svg)![](./assets/RadReact/EngPlotDark.svg)
+The simulation shows good particle number conservation, but energy appears to be decreasing exponentially. However, this is to be expected! The radiation reaction force is non-conservative, continually decreasing the energy of the electron population!
+
+### Animated Plot
+We can then also generate the animated plot used at the top of this page using 
 ```julia
-    FracNumberDensityPlot(sol_high,PhaseSpace_high)
-    EnergyDensityPlot(sol_high,PhaseSpace_high)
+MomentumComboAnimation(sol_high,["Ele"],PhaseSpace_high;plot_limits_momentum=((-4.0,2.0),(-6.0,0.0)),order=-2,thermal=false,paraperp=true,initial=false,filename="RadReactMomentumComboAnimation.mp4",TimeUnits=CodeToSyncUnitsTime)
 ```
-![](./assets/RadReact/FracNumPlotHighDark.svg)![](./assets/RadReact/EngPlotHighDark.svg)
-All three simulations show good particle number conservation, but energy appears to be decreasing exponentially. But this is to be expected! The radiation reaction force is non-conservative, continually decreasing the energy of the electron population!
 
 ## Reference
 ```@bibliography

@@ -18,7 +18,7 @@ hero:
             link: https://github.com/cneverett/Diplodocus
 
 features:
-    -   title: Overview
+    -   title: Get Started
         details: Overview of the Diplodocus framework, installation guide and the codes conventions
         link: /Overview/overview
     -   title: Tutorials

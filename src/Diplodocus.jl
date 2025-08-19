@@ -32,7 +32,7 @@ module Diplodocus
     export FracEnergyDensityPlot, EnergyDensityPlot
     export IsThermalPlot, IsIsotropicPlot, IsThermalAndIsotropicPlot
     export InteractiveEmissionGainLossPlot
-    export CodeToCodeUnitsTime, CodeToSIUnitsTime, SIToCodeUnitsTime
+    export CodeToCodeUnitsTime, CodeToSIUnitsTime, SIToCodeUnitsTime, SyncToCodeUnitsTime, CodeToSyncUnitsTime
     export ObserverFluxPlot
 
     # RecursiveArrayTools

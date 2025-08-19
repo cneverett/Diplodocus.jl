@@ -1,5 +1,7 @@
 # Tutorial 3: Synchrotron Emissions
 
+---
+
 In this tutorial we will consider a population of electrons undergoing cooling due to a radiation reaction force induced by a magnetic field (just as in [Tutorial 2: Cooling of Electrons via Radiation Reaction](@ref)) but additionally included the emitted population of synchrotron photons. 
 
 ::: info

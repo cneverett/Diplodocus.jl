@@ -2,7 +2,7 @@ using Documenter
 using DocumenterVitepress
 using DocumenterCitations
 using Diplodocus
-#using DiplodocusCollisions
+using DiplodocusCollisions
 #using DiplodocusTransport
 #using DiplodocusPlots
 
@@ -16,7 +16,7 @@ bib = CitationBibliography(
 
 # build local docs but don't deploy
 makedocs(;
-    modules = [Diplodocus],
+    modules = [Diplodocus,DiplodocusCollisions],
     plugins = [bib],
     repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
     authors = "Christopher Everett",
@@ -34,10 +34,10 @@ makedocs(;
     source = "src",
     build = "build",
     pages=[
-        "Overview" => [
-            "Overview" => "Overview/overview.md"
-            "Installation" => "Overview/installation.md"
-            "Conventions" => "Overview/conventions.md"
+        "Get Started" => [
+            "Overview" => "Get Started/overview.md"
+            "Installation" => "Get Started/installation.md"
+            "Conventions" => "Get Started/conventions.md"
         ],
         "Tutorials" => [
                 "Hard Spheres" => "Tutorials/hardsphere.md"
@@ -46,7 +46,7 @@ makedocs(;
         ],
         "Collisions" => [
             "Overview" => "DiplodocusCollisions/overview.md",
-            "Cross Sections" => "DiplodocusCollisions/cross sections.md",
+            "Impelemented Collisions" => "DiplodocusCollisions/implemented collisions.md",
         ],
         "Transport" => [
             "Overview" => "DiplodocusTransport/overview.md",
