@@ -33,10 +33,10 @@ makedocs(;
     source = "src",
     build = "build",
     pages=[
-        "Overview" => [
-            "Overview" => "Overview/overview.md"
-            "Installation" => "Overview/installation.md"
-            "Conventions" => "Overview/conventions.md"
+        "Get Started" => [
+            "Overview" => "Get Started/overview.md"
+            "Installation" => "Get Started/installation.md"
+            "Conventions" => "Get Started/conventions.md"
         ],
         "Tutorials" => [
                 "Hard Spheres" => "Tutorials/hardsphere.md"

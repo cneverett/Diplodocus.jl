@@ -311,7 +311,7 @@ As many interactions and forces may be present in a system, rather than dealing 
 ### Initial Conditions
 First we need to initialise the state vector `Initial` that will house the initial conditions for all particles species at all positions in space (in this case there is only one particle species and one spatial position).
 ```julia
-    Initial = Initialise_Initial_Condition(PhaseSpace)
+    Initial = Initialise_Initial_Condition(PhaseSpace);
 ```
 To fill this state vector there are several functions which can be used to generate different types of initial conditions e.g. `Inital_Constant!`, `Initial_PowerLaw!`, `Initial_MaxwellJuttner!`, etc. For this case we want to use `Initial_Constant!` to modify `Initial` with a distribution that matches our selected initial conditions of: ``p`` between ``10.0m_\text{Ele}c`` and ``13.3m_\text{Ele}c``, angles ``u`` between ``-0.25`` and ``0.25``, angles ``h`` between ``0`` and ``2\pi`` and a number density ``n=1 \mathrm{m}^{-3}``. This can be done as follows:
 ```julia

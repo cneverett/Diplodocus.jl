@@ -1,3 +1,3 @@
 # DiplodocusPlots.jl
 
-... to be added
+This page is coming soon ...
