@@ -1,5 +1,7 @@
 # Tutorial 2: Cooling of Electrons via Radiation Reaction
 
+---
+
 In this tutorial we will consider a population of electrons which are homogenous in space. This population will undergo cooling due to a radiation reaction force induced by a uniform magnetic field (this force is described in [External Forces](@ref)). 
 
 ::: info
@@ -28,7 +30,7 @@ Let's first set up the time and space grids, in the same manor as [Tutorial 1: E
 
     t_up::Float64 = SyncToCodeUnitsTime(1.0,B=B) # seconds * (σT*c)
     t_low::Float64 = SyncToCodeUnitsTime(0.0,B=B) # seconds * (σT*c)
-    t_num::Int64 = 100
+    t_num::Int64 = 1000
     t_grid::String = "u"
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
@@ -97,7 +99,7 @@ We want the initial population of electrons to be a Maxwell-Juttner (thermal) di
         return m*c^2*pth^2/kb
     end
     Initial = Initialise_Initial_Condition(PhaseSpace)
-    Initial_MaxwellJuttner!(Initial,PhaseSpace,"Ele",T=pth_to_T(2.0),umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1e0);
+    Initial_MaxwellJuttner!(Initial,PhaseSpace,"Ele",T=pth_to_T(2.0),umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1.0);
 ```
 where we will also use a number density of ``n=1 \mathrm{m}^{-3}``, which won't affect the results as the force is independent of ``n``.
 

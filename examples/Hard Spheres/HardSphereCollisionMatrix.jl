@@ -20,9 +20,9 @@ using Diplodocus
     h_num_Sph = 1
 
     # number of points to sample
-    numLoss = p_num_Sph^2*u_num_Sph^2*h_num_Sph^2
-    numGain = p_num_Sph*u_num_Sph*h_num_Sph
-    numThreads = 2
+    numLoss = 4p_num_Sph^2*u_num_Sph^2*h_num_Sph^2
+    numGain = 8p_num_Sph*u_num_Sph*h_num_Sph
+    numThreads = 10
     # scale factor range
     scale = 0.0:0.1:0.0
 

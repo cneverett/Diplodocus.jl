@@ -1,6 +1,12 @@
 # Tutorial 1: Evolution of a Population of Hard Spheres
 
-In this tutorial we will consider a population of hard spheres which are homogenous in space. These spheres only interact via perfectly elastic collisions (a binary interaction), the cross section for which is given in [Binary Interaction Cross Sections](@ref). 
+---
+
+```@raw html
+<video autoplay loop muted playsinline controls src="./assets/HardSphere/HardSphereMomentumComboAnimation.mp4" style="max-height: 60vh;"/>
+```
+
+In this tutorial we will consider a population of hard spheres which are homogenous in space. These spheres only interact via perfectly elastic collisions (a binary interaction), the cross section for which is given in [Implemented Collisions](@ref). 
 
 ::: info
 
@@ -198,7 +204,7 @@ Now the conversion statistics for particle number are accurate to machine precis
 ## Evolving the Spheres Through Phase Space
 With a good set of interaction matrices, the evolution of a population of hard spheres can be evaluated using the functions contained within the `DiplodocusTransport` package. 
 
-For this tutorial we will consider the spheres to be initially distributed with momenta ``p`` between ``10^{3}m_\text{Ele}c`` and ``10^{3.1}m_\text{Ele}c``, angles ``u`` between ``-0.25`` and ``0.25`` and angles ``h`` between ``0`` and ``2\pi``. Therefore initially non-thermal and anisotropic, but with zero bulk velocity. Additionally, this population with have a number density ``n=1 \mathrm{m}^{-3}`` and the geometry of the system will be a cylinder with unit length and radius. With this number density one unit of time in code corresponds to the characteristic mean-free timescale of collisions, so we shall run the simulation for 5000 of these characteristic timescales, with a time step of 0.1. 
+For this tutorial we will consider the spheres to be initially distributed with momenta ``p`` between ``10^{3}m_\text{Ele}c`` and ``10^{3.1}m_\text{Ele}c``, angles ``u`` between ``-0.25`` and ``0.25`` and angles ``h`` between ``0`` and ``2\pi``. Therefore initially non-thermal and anisotropic, but with zero bulk velocity. Additionally, this population with have a number density ``n=1 \mathrm{m}^{-3}`` and the geometry of the system will be a cylinder with unit length and radius. With this number density one unit of time in code corresponds to the characteristic mean-free timescale of collisions, so we shall run the simulation for 1000 of these characteristic timescales, with a 15000 logarithmic time steps. 
 
 ### Phase Space Setup
 
@@ -208,10 +214,10 @@ Let's now see how to set this up. First we need to set up the domains of space a
 
     using Diplodocus
 
-    t_up::Float64 = 5e3 # seconds * (σT*c)
+    t_up::Float64 = 3.0 # seconds * (σT*c)
     t_low::Float64 = 0.0 # seconds * (σT*c)
-    t_num::Int64 = 50000
-    t_grid::String = "u"
+    t_num::Int64 = 15000
+    t_grid::String = "l"
 
     time = DT.TimeStruct(t_up,t_low,t_num,t_grid)
 
@@ -352,13 +358,13 @@ First step is to load in the solution file
 ```
 The particle spectrum can then be plotted as a function of momentum and polar angle at three different times using:
 ```julia
-MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,(10,1000,10000),order=1)
+MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,Static(),(0.0,10.0,1000.0),order=1)
 ```
-where `(10,1000,10000)` can either be the times in code units or the time steps, and `order` defines the exponent in the particle spectrum ``p^{order}\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}``, where `order=1` is default and corresponds to the number density of particles per bin as a function of momentum and polar angle. (`order=2` is the energy density per bin as a function of momentum and polar angle). The resulting plot is:
+where `(0.0,10.0,1000.0)` can either be the times in code units or the time steps, and `order` defines the exponent in the particle spectrum ``p^{order}\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}``, where `order=1` is default and corresponds to the number density of particles per bin as a function of momentum and polar angle. (`order=2` is the energy density per bin as a function of momentum and polar angle). The resulting plot is:
 ![](./assets/HardSphere/HardSpherePandUDisPlotDark.svg)
 This shows the "diffusion" of particles in both momentum and angle as a result of the binary interaction between spheres. Though it may be difficult to interpret the actual shape of the spectrum that is being formed from this 2D heatmap. To get an idea of this spectral shape, we can plot the angle-averaged distribution as a function of momentum:
 ```julia
-MomentumDistributionPlot(sol,"Sph",PhaseSpace,step=1,thermal=true,order=1)
+MomentumDistributionPlot(sol,"Sph",PhaseSpace,Static(),step=15,thermal=true,order=1)
 ```
 ![](./assets/HardSphere/HardSpherePDisPlotDark.svg)
 With the flag `thermal=true` the expected shape of a perfect Mawell-Juttner distribution is over-plotted for comparison. We can see that as time evolves the spheres approach the thermal distribution, but "over-shoot" at momenta away from the peak, this is linked to numerical diffusion due to the finite bin sizes. 
@@ -371,3 +377,10 @@ FracEnergyDensityPlot(sol,PhaseSpace)
 ``` 
 ![](./assets/HardSphere/HardSphereIsTAndIPlotDark.svg)![](./assets/HardSphere/HardSphereFracNumDenPlotDark.svg)![](./assets/HardSphere/HardSphereFracEngDenPlotDark.svg)
 Here we can see the distribution exponentially approaching thermalisation and isotropisation, as expected. Further particle number density is conserved between time steps to numerical precisions, while energy density is constantly increasing but at a slow rate due to it not directly being conserved.
+
+### Animated Plotting
+You may have noticed that the the momentum plots take `Static()` as an argument, this tells `DiplodocusPlots.jl` that you would like a generate a publication ready static vector plot. But there is an alternative, if instead you were to replace `Static()` with `Animated()`, rather than a static plot you would get a rendered `.mp4` file of the time evolution. This can be done for both `MomentumAndPolarAngleDistributionPlot` and `MomentumDistributionPlot` individually or you can use the function `MomentumComboAnimation` to plot both at the same time.
+```juila 
+    MomentumComboAnimation(sol,["Sph"],PhaseSpace;plot_limits_momentum=(-0.2,1.9,-2.1,0.8),filename="HardSphereMomentumComboAnimation.mp4",thermal=true)
+```
+The resulting animation can be seen at the top of this tutorial.
