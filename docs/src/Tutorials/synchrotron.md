@@ -104,7 +104,7 @@ We will consider a homogenous cylindrical geometry and evolve the system using a
 ```julia
     t_up::Float64 = log10(SIToCodeUnitsTime(1e8)) # seconds * (σT*c)
     t_low::Float64 = log10(SIToCodeUnitsTime(1e0)) # seconds * (σT*c)
-    t_num::Int64 = 8000
+    t_num::Int64 = 400
     t_grid::String = "l"
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
@@ -174,19 +174,17 @@ and build the interaction and flux matrices used internally by the solver
 ### Initial Conditions
 For this tutorial we will initially give the electron population a relativistic power-law distribution with an index of ``2``, spanning from a ``p`` of ``10^{3}m_\text{Ele}c`` to ``10^{6}m_\text{Ele}c``. The initial number density of this population will be taken to be ``10^6[\text{m}^{-3}]`` which can be generated using the function `Initial_PowerLaw`:
 ```julia
-    Initial_Ele = Initial_PowerLaw(PhaseSpace,"Ele",1e3,1e6,-1.0,1.0,0.0,2.0,2.0,1e6);
+    Initial = Initialise_Initial_Condition(PhaseSpace);
+    Initial_PowerLaw!(Initial,PhaseSpace,"Ele",pmin=1e3,pmax=1e6,umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,index=2.0,num_Init=1e6);
 ```
-For the photons, initialy there shouldn't be any, so we can use `Initial_Constant` with a initial number density of ``0.0``:
-```julia
-    Initial_Pho = Initial_Constant(PhaseSpace,"Pho",1,80,1,15,1,1,0.0)
-```
+For the photons, initialy there shouldn't be any, so we don't need to set any initial condition as `Initialise_Initial_Condition` sets all populations to zero when initialising the state vector.
 
 ### Running the Solver
 Let's quickly setup the `scheme`, `fileName` and `fileLocation` just the same as the previous tutorials
 ```julia 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SyncTest.jld2";
-    fileLocation = pwd()*"\\examples\\Synchrotron\\Data";
+    fileName = "SyncIso.jld2";
+    fileLocation = pwd()*"\\Data";
 ```
 Then run the solver (in this case it will save every 10 time steps):
 ```julia
@@ -200,7 +198,7 @@ We can load the results using
 ```
 and then plot how the momentum distribution evolves over time using `MomentumDistributionPlot`:
 ```julia
-    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=70,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
+    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,step=10,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
 ```
 ![](./assets/Synchrotron/SyncPDisPlotDark.svg)
 In the above, there are a few options of note, first is that by inputting a vector of strings for the particle species we can plot multiple species on a single plot, seconds is the option `wide=true` which defaults the figure size to a full page width figure for publication in an A4 document. Last is the option for `TimeUnits`, this is a function that tells the plotting function what units to put for time, in this case `CodeToSIUnitsTime` converts all code units to the SI unit of seconds.
@@ -220,8 +218,8 @@ To do this we will use the same initial conditions as before, i.e. starting with
 
 Therefore the only changes we need to make is to rebuild the parts that are dependent on the emission and force terms and run another simulation: 
 ```julia 
-    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[1e-4],Ani())];
-    Forces::Vector{ForceType} = [SyncRadReact(Ani(),1e-4),];
+    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[B],Ani())];
+    Forces::Vector{ForceType} = [SyncRadReact(Ani(),B),];
 
     PhaseSpace = PhaseSpaceStruct(name_list,time,space,momentum,Binary_list,Emi_list,Forces);  
 
@@ -236,9 +234,9 @@ Therefore the only changes we need to make is to rebuild the parts that are depe
 We can now question what flux of photons would an observer see at some distance `ObserverDistance` and at some set of angles `ObserverAngles` to the cylindrical ``z``-axis.
 ```julia
     (PhaseSpace, sol_Ani) = SolutionFileLoad(fileLocation,fileName);
-    ObserverFluxPlot(PhaseSpace,sol_Ani,502,[0.1,0.2,0.3,0.4,0.5],1.0,title="hello",TimeUnits=CodeToSIUnitsTime,plot_limits=(-9.5,-1.5,-3,2))
+    ObserverFluxPlot(PhaseSpace,sol_Ani,52,,[0.01,0.1,0.25,0.5],1.0,title="hello",TimeUnits=CodeToSIUnitsTime,plot_limits=(-15.5,0.5,-0.5,9.5))
 ```
-The angles are in units of ``\pi`` and here taken to be ``0.1\pi,0.2\pi,0.3\pi,0.4\pi,`` and ``0.5\pi``, the observing distance taken to be ``1.0`` and the time of observation is given as the time index of the solution output, here ``502`` corresponds to ``t=10^5 [\text{s}]``:
+The angles are in units of ``\pi`` and here taken to be ``0.01\pi,0.1\pi,0.25\pi,`` and ``0.5\pi``, the observing distance taken to be ``1.0`` and the time of observation is given as the time index of the solution output, here ``52`` corresponds to ``t=10^5 [\text{s}]``:
 ![](./assets/Synchrotron/ObsPlotDark.svg)
 We can see that emissions are most dominant at and observing angle of ``0.5\pi``, this is perpendicular to the direction of the magnetic field and as we started with an isotropic population of electrons and synchrotron emission is dominant for a pitch angle of ``\pi/2`` it is as expected.
 
