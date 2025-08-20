@@ -1,11 +1,5 @@
 # Installation
 
-::: warning
-
-*Diplodocus.jl* is still under development and not yet available via the Julia package manager
-
-:::
-
 To use *Diplodocus* you will first need to install *Julia* on your machine (see guide for installing Julia [here](https://julialang.org/install/))
 
 Then inside a Julia REPL you can install *Diplodocus.jl* using the julia package manager 
