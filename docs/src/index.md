@@ -20,7 +20,7 @@ hero:
 features:
     -   title: Get Started
         details: Overview of the Diplodocus framework, installation guide and the codes conventions
-        link: /Overview/overview
+        link: /Get Started/overview
     -   title: Tutorials
         details: Worked examples of how to use Diplodocus
         link: /Tutorials/tutorials
