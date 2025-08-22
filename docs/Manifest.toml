@@ -2,7 +2,7 @@
 
 julia_version = "1.11.6"
 manifest_format = "2.0"
-project_hash = "0d596f8791ce74d401d7f9a1f7532f6d72771e83"
+project_hash = "f3a39925febd736d79a273de0893d536091d1f18"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -323,17 +323,13 @@ version = "0.1.0"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Makie", "Revise"]
-git-tree-sha1 = "b5daea95883d384df542b6c3186b7492af19e3ed"
-repo-rev = "dev"
-repo-url = "https://github.com/cneverett/DiplodocusPlots.jl"
+git-tree-sha1 = "c7342f87fcedf986c106fc8259ab39efad7d80aa"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
 version = "0.1.0"
 
 [[deps.DiplodocusTransport]]
 deps = ["Bessels", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "ProgressMeter", "Revise", "Statistics"]
-git-tree-sha1 = "06cd7f365a597d2beecfc33d698ed771f9bd20c1"
-repo-rev = "dev"
-repo-url = "https://github.com/cneverett/DiplodocusTransport.jl"
+git-tree-sha1 = "6c9e8306ca2d93e8d28d5f2a5c97ee68695f50bd"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 version = "0.1.0"
 
