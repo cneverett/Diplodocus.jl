@@ -5,3 +5,4 @@ Several tutorials have been designed to familiarise users with how to set up and
 - [Tutorial 1: Evolution of a Population of Hard Spheres](@ref)
 - [Tutorial 2: Cooling of Electrons via Radiation Reaction](@ref)
 - [Tutorial 3: Synchrotron Emissions](@ref)
+- [Tutorial 4: Synchrotron Self Compton with Pair Production](@ref)
