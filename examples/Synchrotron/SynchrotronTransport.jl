@@ -124,6 +124,7 @@ using Diplodocus
     MomentumAndPolarAngleDistributionPlot(sol_Ani,"Pho",PhaseSpace,Static(),(1,42,82),order=1,TimeUnits=CodeToSIUnitsTime)
 
     MomentumDistributionPlot(sol_Ani,["Pho","Ele"],PhaseSpace,Static(),step=10,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
+    Diplodocus.DiplodocusPlots.AngleDistributionPlot(sol_Ani,["Pho","Ele"],PhaseSpace,Static(),82,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
 
     CodeToSIUnitsTime(sol_Ani.t[52])
     ObserverFluxPlot(PhaseSpace,sol_Ani,52,[0.01,0.1,0.25,0.5],1.0,TimeUnits=CodeToSIUnitsTime,plot_limits=(-15.5,0.5,-0.5,9.5))
