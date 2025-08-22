@@ -264,19 +264,19 @@ version = "1.6.4"
 
 [[deps.DiplodocusCollisions]]
 deps = ["BenchmarkTools", "Bessels", "JLD2", "ProgressMeter"]
-git-tree-sha1 = "a1017b3849fd0286ea615abb3672e477935efbe2"
+git-tree-sha1 = "950fca042a4b2c998d4e6651963589640ea9a9cd"
 uuid = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
 version = "0.1.0"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Makie", "Revise"]
-git-tree-sha1 = "0042869c6255be396771b48d22ddcc45a0697e73"
+git-tree-sha1 = "c7342f87fcedf986c106fc8259ab39efad7d80aa"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
 version = "0.1.0"
 
 [[deps.DiplodocusTransport]]
-deps = ["BenchmarkTools", "Bessels", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "ProgressMeter", "RecursiveArrayTools", "Revise", "Statistics"]
-git-tree-sha1 = "2aa5d6b9b35edef07daf7f0d98ab4b1c8aa50e35"
+deps = ["Bessels", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "ProgressMeter", "Revise", "Statistics"]
+git-tree-sha1 = "6c9e8306ca2d93e8d28d5f2a5c97ee68695f50bd"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 version = "0.1.0"
 
