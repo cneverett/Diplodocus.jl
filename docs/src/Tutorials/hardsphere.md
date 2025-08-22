@@ -364,6 +364,8 @@ where `(0.0,10.0,1000.0)` can either be the times in code units or the time step
 
 !!! Missing Plot, does not want to load
 
+![HSPandU](./assets/HardSphere/HardSpherePAndUDisPlotDark.svg)
+
 This shows the "diffusion" of particles in both momentum and angle as a result of the binary interaction between spheres. Though it may be difficult to interpret the actual shape of the spectrum that is being formed from this 2D heatmap. To get an idea of this spectral shape, we can plot the angle-averaged distribution as a function of momentum:
 ```julia
 MomentumDistributionPlot(sol,"Sph",PhaseSpace,Static(),step=15,thermal=true,order=1)
