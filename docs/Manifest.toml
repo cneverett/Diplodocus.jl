@@ -2,7 +2,7 @@
 
 julia_version = "1.11.6"
 manifest_format = "2.0"
-project_hash = "f3a39925febd736d79a273de0893d536091d1f18"
+project_hash = "0d596f8791ce74d401d7f9a1f7532f6d72771e83"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -317,9 +317,7 @@ version = "0.1.0"
 
 [[deps.DiplodocusCollisions]]
 deps = ["BenchmarkTools", "Bessels", "JLD2", "ProgressMeter"]
-git-tree-sha1 = "7dce0a99e9cd4979fc24bbf675ed2f62afc87fd8"
-repo-rev = "dev"
-repo-url = "https://github.com/cneverett/DiplodocusCollisions.jl"
+git-tree-sha1 = "950fca042a4b2c998d4e6651963589640ea9a9cd"
 uuid = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
 version = "0.1.0"
 
