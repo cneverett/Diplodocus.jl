@@ -18,9 +18,9 @@ Terms on the left-hand-side dictate the continuous transport of particle through
 ## Distribution-In-Plateaux
 To solve the evolution described by the transport equations computationally, a method called "Distribution-In-Plateaux" is used to discretise particle distribution functions. In brief, a continuous distribution over a surface in phase space is divided into a number of plateaux over sub-areas of the surface. The "height" of this plateaux is then taken to be the average value of the continuous distribution over that sub-area. 
 
-*INSERT IMAGE OF CONTINIOUS SURFACE TO GRID*
+![DIP](./../assets/DIP.svg)
 
-This discretisation allows the effects of discrete interactions, collisions, to be pre-computed while simultaniously providing a flexable and conservative numbical scheme for the transport of distribution function through phase space. 
+This discretisation allows the effects of discrete interactions, collisions, to be pre-computed while simultaneously providing a flexible and conservative numerical scheme for the transport of distribution function through phase space. 
 
 Pre-computation of collision terms is implemented in the `DiplodocusCollisions.jl` package. 
 
