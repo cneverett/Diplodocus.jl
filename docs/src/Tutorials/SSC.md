@@ -1,4 +1,4 @@
-# Tutorial 2: Synchrotron Self Compton with Pair Production
+# Tutorial 4: Synchrotron Self Compton with Pair Production
 
 ::: info
 
