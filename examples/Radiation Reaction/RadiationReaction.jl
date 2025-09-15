@@ -7,7 +7,7 @@ using Diplodocus
     B = 1e-4; # Magnetic field strength in Tesla
 
     t_up::Float64 = SyncToCodeUnitsTime(1.0,B=B) # seconds * (σT*c)
-    t_low::Float64 = SyncToCodeUnitsTime(0.0,B=B) # seconds * (σT*c)
+    t_low::Float64 = SyncToCodeUnitsTime(0.0,B=B)# seconds * (σT*c)
     t_num::Int64 = 1000
     t_grid::String = "u"
 
@@ -90,59 +90,36 @@ using Diplodocus
 
     (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
 
-    MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,order=-2,paraperp=true,plot_limits=((-4.0,2.0),(-6.0,0.0)),TimeUnits=CodeToSyncUnitsTime)
+    MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,order=-2,paraperp=true,plot_limits=((-3.4,1.9),(-5.9,-0.1)),TimeUnits=CodeToSyncUnitsTime)
 
     MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,52,102),order=-2,TimeUnits=CodeToSyncUnitsTime)
     
     FracNumberDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSyncUnitsTime)
     EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSyncUnitsTime)
 
-
-    MomentumComboAnimation(sol,["Ele"],PhaseSpace;plot_limits_momentum=((-4.0,2.0),(-6.0,0.0)),order=-2,thermal=false,paraperp=true,initial=false,filename="RadReactMomentumComboAnimation.mp4",TimeUnits=CodeToSyncUnitsTime)
+    MomentumComboAnimation(sol,["Ele"],PhaseSpace;plot_limits_momentum=((-3.4,1.9),(-5.9,-0.1)),order=-2,thermal=false,paraperp=true,initial=false,filename="RadReactMomentumComboAnimation.mp4",TimeUnits=CodeToSyncUnitsTime)
 
 # ====== Saving Plots for tutorial/paper ======= #
 
     #=
-
-    # Timescale plot
-
-    p_num = PhaseSpace.Momentum.px_num_list[1]
-
-    analytic= ones(length(inv_test))
-    @. analytic /= (1e-4)^2 / (4pi * 1e-7) * 2/3 / (9.11e-31 * 2.99792458e8^2) * PhaseSpace.Grids.dE_list[1] #* PhaseSpace_low.Grids.mpx_list[1] / PhaseSpace_low.Grids.dpx_list[1]
-
-    newT = FluxM.Ap_Flux \ (abs.(FluxM.I_Flux) * ones(Float64,p_num)) ./ PhaseSpace.Grids.mpx_list[1] .* PhaseSpace.Grids.dpx_list[1]
-
-    fig = Diplodocus.DiplodocusPlots.Figure();
-    ax = Diplodocus.DiplodocusPlots.Axis(fig[1,1], xlabel="p", ylabel="(4pi)^2 times Sync timescale log10(s)", title="Sync timescale as a function of p")
-    Diplodocus.DiplodocusPlots.scatter!(ax, log10.(PhaseSpace.Grids.mpx_list[1]), log10.(PhaseSpace.Grids.dt[1] ./ newT))
-    Diplodocus.DiplodocusPlots.scatter!(ax, log10.(PhaseSpace.Grids.mpx_list[1]), log10.(analytic))
-    ax.aspect=Diplodocus.DiplodocusPlots.DataAspect()
-    Diplodocus.DiplodocusPlots.hlines!(ax,log10.(tau_to_t / 24 * 3 * 4pi))
-    Diplodocus.DiplodocusPlots.hlines!(ax,log10.(tau_to_t / 24 * 2 * 4pi))
-    Diplodocus.DiplodocusPlots.hlines!(ax,log10.(tau_to_t / 24 * 1 * 4pi))
-    display(fig)
-
-    =#
-
-    #=
     
-    PDisPlotDark = MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,thermal=false,paraperp=true,order=-2,plot_limits=((-4.0,2.0),(-6.0,0.0)),theme=DiplodocusDark(),TimeUnits=CodeToSyncUnitsTime)
+    PDisPlotDark = MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,thermal=false,paraperp=true,order=-2,plot_limits=((-3.4,1.9),(-5.9,-0.1)),theme=DiplodocusDark(),TimeUnits=CodeToSyncUnitsTime)
+    PDisPlotLight = MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,thermal=false,paraperp=true,order=-2,plot_limits=((-3.4,1.9),(-5.9,-0.1)),theme=DiplodocusLight(),TimeUnits=CodeToSyncUnitsTime)
 
-    PDisPlotLight = MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,thermal=false,paraperp=true,order=-2,plot_limits=((-4.0,2.0),(-6.0,0.0)),theme=DiplodocusLight(),TimeUnits=CodeToSyncUnitsTime)
-
-    Diplodocus.DiplodocusPlots.save("PDisPlotDark.svg",PDisPlotDark)
-    Diplodocus.DiplodocusPlots.save("PDisPlotDark.pdf",PDisPlotDark)
-    Diplodocus.DiplodocusPlots.save("PDisPlotLight.svg",PDisPlotLight)
-    Diplodocus.DiplodocusPlots.save("PDisPlotLight.pdf",PDisPlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactPDisPlotDark.svg",PDisPlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactPDisPlotDark.pdf",PDisPlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactPDisPlotLight.svg",PDisPlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactPDisPlotLight.pdf",PDisPlotLight)
 
     PAndUDisPlotDark = MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,52,102),order=-2,TimeUnits=CodeToSyncUnitsTime,theme=DiplodocusDark())
     PAndUDisPlotLight = MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,52,102),order=-2,TimeUnits=CodeToSyncUnitsTime,theme=DiplodocusLight())
 
-    Diplodocus.DiplodocusPlots.save("PAndUDisPlotDark.svg",PAndUDisPlotDark)
-    Diplodocus.DiplodocusPlots.save("PAndUDisPlotDark.pdf",PAndUDisPlotDark)
-    Diplodocus.DiplodocusPlots.save("PAndUDisPlotLight.svg",PAndUDisPlotLight)
-    Diplodocus.DiplodocusPlots.save("PAndUDisPlotLight.pdf",PAndUDisPlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactPAndUDisPlotDark.svg",PAndUDisPlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactPAndUDisPlotDark.pdf",PAndUDisPlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactPAndUDisPlotLight.svg",PAndUDisPlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactPAndUDisPlotLight.pdf",PAndUDisPlotLight)
+
+    MomentumComboAnimation(sol,["Ele"],PhaseSpace;plot_limits_momentum=((-3.4,1.9),(-5.9,-0.1)),order=-2,thermal=false,paraperp=true,initial=false,filename="RadReactMomentumComboAnimation.mp4",TimeUnits=CodeToSyncUnitsTime)
 
     FracNumPlotDark = FracNumberDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),TimeUnits=CodeToSyncUnitsTime)
     EngPlotDark = EnergyDensityPlot(sol,species="Ele",PhaseSpace,theme=DiplodocusDark(),TimeUnits=CodeToSyncUnitsTime)
@@ -150,14 +127,22 @@ using Diplodocus
     FracNumPlotLight = FracNumberDensityPlot(sol,species="Ele",PhaseSpace,theme=DiplodocusLight(),TimeUnits=CodeToSyncUnitsTime)
     EngPlotLight = EnergyDensityPlot(sol,species="Ele",PhaseSpace,theme=DiplodocusLight(),TimeUnits=CodeToSyncUnitsTime)
 
-    Diplodocus.DiplodocusPlots.save("FracNumPlotDark.svg",FracNumPlotDark)
-    Diplodocus.DiplodocusPlots.save("FracNumPlotDark.pdf",FracNumPlotDark)
-    Diplodocus.DiplodocusPlots.save("EngPlotDark.svg",EngPlotDark)
-    Diplodocus.DiplodocusPlots.save("EngPlotDark.pdf",EngPlotDark)
-    Diplodocus.DiplodocusPlots.save("FracNumPlotLight.svg",FracNumPlotLight)
-    Diplodocus.DiplodocusPlots.save("FracNumPlotLight.pdf",FracNumPlotLight)
-    Diplodocus.DiplodocusPlots.save("EngPlotLight.svg",EngPlotLight)
-    Diplodocus.DiplodocusPlots.save("EngPlotLight.pdf",EngPlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactFracNumPlotDark.svg",FracNumPlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactFracNumPlotDark.pdf",FracNumPlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactEngPlotDark.svg",EngPlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactEngPlotDark.pdf",EngPlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactFracNumPlotLight.svg",FracNumPlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactFracNumPlotLight.pdf",FracNumPlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactEngPlotLight.svg",EngPlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactEngPlotLight.pdf",EngPlotLight)
+
+    TimePlotLight = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol.f[1],1;paraperp=true,p_timescale=true,wide=false,legend=false,horz_lines=[1.0,0.667,0.33],plot_limits=((-4,2),(-2,2)),TimeUnits=CodeToSyncUnitsTime,theme=DiplodocusLight())
+    TimePlotDark = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol.f[1],1;paraperp=true,p_timescale=true,wide=false,legend=false,horz_lines=[1.0,0.667,0.33],plot_limits=((-4,2),(-2,2)),TimeUnits=CodeToSyncUnitsTime,theme=DiplodocusDark())
+
+    Diplodocus.DiplodocusPlots.save("RadReactTimePlotLight.svg",TimePlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactTimePlotLight.pdf",TimePlotLight)
+    Diplodocus.DiplodocusPlots.save("RadReactTimePlotDark.svg",TimePlotDark)
+    Diplodocus.DiplodocusPlots.save("RadReactTimePlotDark.pdf",TimePlotDark)
 
     =#
 
