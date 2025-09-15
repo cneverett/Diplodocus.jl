@@ -83,13 +83,13 @@ using Diplodocus
     
     MomentumAndPolarAngleDistributionPlot(sol,"Sph",PhaseSpace,Static(),(0.0,10.0,1000.0),order=1)
 
-    MomentumDistributionPlot(sol,["Sph"],PhaseSpace,Static(),step=15,thermal=true,order=1,plot_limits=(-0.2,1.9,-2.1,0.8))
+    MomentumDistributionPlot(sol,["Sph"],PhaseSpace,Static(),step=15,thermal=true,order=1,plot_limits=(-0.4,2.4,-2.4,0.9))
     
     IsThermalAndIsotropicPlot(sol,PhaseSpace)
     FracNumberDensityPlot(sol,PhaseSpace)
     FracEnergyDensityPlot(sol,PhaseSpace,species="Sph")
 
-    MomentumComboAnimation(sol,["Sph"],PhaseSpace;plot_limits_momentum=(-0.2,1.9,-2.1,0.8),filename="HardSphereMomentumComboAnimation.mp4",thermal=true)
+    MomentumComboAnimation(sol,["Sph"],PhaseSpace;plot_limits_momentum=(-0.4,2.4,-2.4,0.9),filename="HardSphereMomentumComboAnimation.mp4",thermal=true)
 
 # ==== Saving plots for tutorial /paper ==== #
 
