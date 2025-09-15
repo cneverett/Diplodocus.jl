@@ -9,20 +9,20 @@ using Diplodocus
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
 
-    space_coords = Cylindrical() # x = r, y = phi, z = z
+    space_coords = Cartesian() # x = x, y = y, z = z
 
-    x_up::Float64 = 1.0
-    x_low::Float64 = 0f0
+    x_up::Float64 = 0.5
+    x_low::Float64 = -0.5
     x_grid::String = "u"
     x_num::Int64 = 1
 
-    y_up::Float64 = 2.0*pi
-    y_low::Float64 = 0.0
+    y_up::Float64 = 0.5
+    y_low::Float64 = -0.5
     y_grid::String = "u"
     y_num::Int64 = 1
 
-    z_up::Float64 = 1.0
-    z_low::Float64 = 0.0
+    z_up::Float64 = 0.5
+    z_low::Float64 = -0.5
     z_grid::String = "u"
     z_num::Int64 = 1
 
@@ -127,13 +127,15 @@ using Diplodocus
     Diplodocus.DiplodocusPlots.save("HardSpherePAndUDisPlotLight.svg",HardSpherePAndUDisPlotLight)
     Diplodocus.DiplodocusPlots.save("HardSpherePAndUDisPlotLight.pdf",HardSpherePAndUDisPlotLight)
 
-    HardSpherePDisPlotDark = MomentumDistributionPlot(sol,["Sph"],PhaseSpace,Static(),step=15,thermal=true,legend=false,order=1,theme=DiplodocusDark(),plot_limits=(-0.2,1.9,-2.1,0.8))
+    HardSpherePDisPlotDark = MomentumDistributionPlot(sol,["Sph"],PhaseSpace,Static(),step=15,thermal=true,legend=false,order=1,theme=DiplodocusDark(),plot_limits=(-0.4,2.4,-2.4,0.9))
     Diplodocus.DiplodocusPlots.save("HardSpherePDisPlotDark.svg",HardSpherePDisPlotDark)
     Diplodocus.DiplodocusPlots.save("HardSpherePDisPlotDark.pdf",HardSpherePDisPlotDark)
 
-    HardSpherePDisPlotLight = MomentumDistributionPlot(sol,["Sph"],PhaseSpace,Static(),step=15,thermal=true,legend=false,order=1,theme=DiplodocusLight(),plot_limits=(-0.2,1.9,-2.1,0.8))
+    HardSpherePDisPlotLight = MomentumDistributionPlot(sol,["Sph"],PhaseSpace,Static(),step=15,thermal=true,legend=false,order=1,theme=DiplodocusLight(),plot_limits=(-0.4,2.4,-2.4,0.9))
     Diplodocus.DiplodocusPlots.save("HardSpherePDisPlotLight.svg",HardSpherePDisPlotLight)
     Diplodocus.DiplodocusPlots.save("HardSpherePDisPlotLight.pdf",HardSpherePDisPlotLight)
+    
+    MomentumComboAnimation(sol,["Sph"],PhaseSpace;plot_limits_momentum=(-0.4,2.4,-2.4,0.9),order=1,thermal=true,paraperp=false,legend=false,initial=true,filename="HardSphereMomentumComboAnimation.mp4")
 
     
     =#
