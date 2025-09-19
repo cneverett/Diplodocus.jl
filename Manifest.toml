@@ -272,7 +272,7 @@ version = "0.1.0"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Makie", "Revise"]
-git-tree-sha1 = "ef094303b54b8611ea95097e547c583872184508"
+git-tree-sha1 = "4ddfc3a6301d72fd2a2ecdb0a23ba394dfa47def"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusPlots.jl"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
@@ -280,7 +280,7 @@ version = "0.1.0"
 
 [[deps.DiplodocusTransport]]
 deps = ["Bessels", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "ProgressMeter", "Revise", "Statistics"]
-git-tree-sha1 = "d806e9e8a120f8fee2d69949673ebbae7e06f2da"
+git-tree-sha1 = "004bf5be78b7edd37044919a624abd10f095bf89"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusTransport.jl"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
