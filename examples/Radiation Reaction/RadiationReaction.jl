@@ -65,7 +65,7 @@ using Diplodocus
 
     DataDirectory = pwd() * "/examples/Data/"
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true);
-    FluxM = BuildFluxMatrices(PhaseSpace);
+    FluxM = BuildFluxMatrices(PhaseSpace,debug_mode=true);
 
 # ===== Set Initial Conditions ================== #
 
@@ -81,7 +81,7 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     fileLocation = pwd() * "/examples/Data/";
-    fileName = "RadReact.jld2"
+    fileName = "RadReact_new.jld2"
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
     sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
@@ -90,21 +90,21 @@ using Diplodocus
 
     (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
 
-    MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,order=-2,paraperp=true,plot_limits=((-3.4,1.9),(-5.9,-0.1)),TimeUnits=CodeToSyncUnitsTime)
+    MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,order=-2,paraperp=true,plot_limits=((-2.9,1.9),(-5.9,-0.6)),TimeUnits=CodeToSyncUnitsTime)
 
     MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,52,102),order=-2,TimeUnits=CodeToSyncUnitsTime)
     
     FracNumberDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSyncUnitsTime)
     EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSyncUnitsTime)
 
-    MomentumComboAnimation(sol,["Ele"],PhaseSpace;plot_limits_momentum=((-3.4,1.9),(-5.9,-0.1)),order=-2,thermal=false,paraperp=true,initial=false,filename="RadReactMomentumComboAnimation.mp4",TimeUnits=CodeToSyncUnitsTime)
+    MomentumComboAnimation(sol,["Ele"],PhaseSpace;plot_limits_momentum=((-2.9,1.9),(-5.9,-0.6)),order=-2,thermal=false,paraperp=true,initial=false,filename="RadReactMomentumComboAnimation.mp4",TimeUnits=CodeToSyncUnitsTime)
 
 # ====== Saving Plots for tutorial/paper ======= #
 
     #=
     
-    PDisPlotDark = MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,thermal=false,paraperp=true,order=-2,plot_limits=((-3.4,1.9),(-5.9,-0.1)),theme=DiplodocusDark(),TimeUnits=CodeToSyncUnitsTime)
-    PDisPlotLight = MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,thermal=false,paraperp=true,order=-2,plot_limits=((-3.4,1.9),(-5.9,-0.1)),theme=DiplodocusLight(),TimeUnits=CodeToSyncUnitsTime)
+    PDisPlotDark = MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,thermal=false,paraperp=true,order=-2,plot_limits=((-2.9,1.9),(-5.9,-0.6)),theme=DiplodocusDark(),TimeUnits=CodeToSyncUnitsTime)
+    PDisPlotLight = MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,thermal=false,paraperp=true,order=-2,plot_limits=((-2.9,1.9),(-5.9,-0.6)),theme=DiplodocusLight(),TimeUnits=CodeToSyncUnitsTime)
 
     Diplodocus.DiplodocusPlots.save("RadReactPDisPlotDark.svg",PDisPlotDark)
     Diplodocus.DiplodocusPlots.save("RadReactPDisPlotDark.pdf",PDisPlotDark)
@@ -119,7 +119,7 @@ using Diplodocus
     Diplodocus.DiplodocusPlots.save("RadReactPAndUDisPlotLight.svg",PAndUDisPlotLight)
     Diplodocus.DiplodocusPlots.save("RadReactPAndUDisPlotLight.pdf",PAndUDisPlotLight)
 
-    MomentumComboAnimation(sol,["Ele"],PhaseSpace;plot_limits_momentum=((-3.4,1.9),(-5.9,-0.1)),order=-2,thermal=false,paraperp=true,initial=false,filename="RadReactMomentumComboAnimation.mp4",TimeUnits=CodeToSyncUnitsTime)
+    MomentumComboAnimation(sol,["Ele"],PhaseSpace;plot_limits_momentum=((-2.9,1.9),(-5.9,-0.6)),order=-2,thermal=false,paraperp=true,initial=false,filename="RadReactMomentumComboAnimation.mp4",TimeUnits=CodeToSyncUnitsTime)
 
     FracNumPlotDark = FracNumberDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),TimeUnits=CodeToSyncUnitsTime)
     EngPlotDark = EnergyDensityPlot(sol,species="Ele",PhaseSpace,theme=DiplodocusDark(),TimeUnits=CodeToSyncUnitsTime)
@@ -136,8 +136,8 @@ using Diplodocus
     Diplodocus.DiplodocusPlots.save("RadReactEngPlotLight.svg",EngPlotLight)
     Diplodocus.DiplodocusPlots.save("RadReactEngPlotLight.pdf",EngPlotLight)
 
-    TimePlotLight = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol.f[1],1;paraperp=true,p_timescale=true,wide=false,legend=false,horz_lines=[1.0,0.667,0.33],plot_limits=((-4,2),(-2,2)),TimeUnits=CodeToSyncUnitsTime,theme=DiplodocusLight())
-    TimePlotDark = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol.f[1],1;paraperp=true,p_timescale=true,wide=false,legend=false,horz_lines=[1.0,0.667,0.33],plot_limits=((-4,2),(-2,2)),TimeUnits=CodeToSyncUnitsTime,theme=DiplodocusDark())
+    TimePlotLight = TimeScalePlot(scheme,Initial,1;paraperp=true,p_timescale=true,wide=false,legend=false,horz_lines=[1.0,0.667,0.33],plot_limits=((-3.4,1.9),(-1.9,1.9)),TimeUnits=CodeToSyncUnitsTime,theme=DiplodocusLight(),direction="I")
+    TimePlotDark = TimeScalePlot(scheme,Initial,1;paraperp=true,p_timescale=true,wide=false,legend=false,horz_lines=[1.0,0.667,0.33],plot_limits=((-3.4,1.9),(-1.9,1.9)),TimeUnits=CodeToSyncUnitsTime,theme=DiplodocusDark(),direction="I")
 
     Diplodocus.DiplodocusPlots.save("RadReactTimePlotLight.svg",TimePlotLight)
     Diplodocus.DiplodocusPlots.save("RadReactTimePlotLight.pdf",TimePlotLight)
