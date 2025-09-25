@@ -210,6 +210,7 @@ and further we can plot how energy changes between the electron and photon popul
     EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSIUnitsTime)
 ```
 ![](./assets/Synchrotron/SyncEngDenPlotDark.svg)
+As we can see, energy is not quite conserved. This is due to numerical diffusion of the electron population and the way the cooling of electrons and emission of photons are handled within *Diplodocus*. Electrons are cooled by a radiation reaction *force* which is implemented as an analytically integrated force flux, whereas photons are *emitted* via an emission matrix, the terms of which are integrated via a Monte-Carlo method. In the limit of infinite momentum grid resolutions, these two methods converge on perfect energy conservation but there is a difference for finite grids that scales inversely to grid resolution - a scaling factor to counter this effect is under development and will feature in a future version of *Diplodocus*.
 
 ## Comparison to AM3
 
