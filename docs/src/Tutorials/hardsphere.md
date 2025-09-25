@@ -54,18 +54,18 @@ For this tutorial we will select the momenta ``p`` ranges from ``10^{-5}m_\text{
 
 ```
 
-Now we need to define how many times these bins are sampled by the Monte-Carlo integration process. This is defined by three values: `numLoss` defines the number of incoming states (i.e. sets of ``(\vec{p}_1,\vec{p}_2)`` vectors) to sample per thread in a multi-threaded evaluation, `numGain` defines the number of outgoing states (i.e. ``\vec{p}_3`` and ``\vec{p}_4)``) to sample per initial state, and `numThreads` defines the number of threads to use (see [the documentation for multi-threading in Julia](https://docs.julialang.org/en/v1/manual/multi-threading/)).
+Now we need to define how many times these bins are sampled by the Monte-Carlo integration process. This is defined by three values: `numLoss` defines the number of incoming states (i.e. sets of ``(\vec{p}_1,\vec{p}_2)`` vectors) to sample per incoming state momentum bin, `numGain` defines the number of outgoing states (i.e. ``\vec{p}_3`` and ``\vec{p}_4)``) to sample for each outgoing state bin in momentum space, and `numThreads` defines the number of threads to use (see [the documentation for multi-threading in Julia](https://docs.julialang.org/en/v1/manual/multi-threading/)).
 
 ::: tip
 
-`numLoss` and `numGain` should be larger than the number of bins associated with the incoming and outgoing states for good Monte-Carlo sampling. 
+The larger `numLoss` and `numGain` are, the more accurate the integration will be, but this will take more time. 
 
 :::
 
 ```julia
 
-    numLoss = 16*p1_num*u1_num*h1_num*p2_num*u2_num*h2_num
-    numGain = 16*p3_num*u3_num*h3_num
+    numLoss = 16
+    numGain = 16
     numThreads = 10
 
 ```
@@ -74,7 +74,7 @@ Further, for potentially improved integration accuracy, the Monte-Carlo sampling
 
 ```julia
 
-    scale = 0.0:0.1:1.0
+    scale = 0.0:0.1:0.1
 
 ```
 
@@ -204,7 +204,7 @@ Now the conversion statistics for particle number are accurate to machine precis
 ## Evolving the Spheres Through Phase Space
 With a good set of interaction matrices, the evolution of a population of hard spheres can be evaluated using the functions contained within the `DiplodocusTransport` package. 
 
-For this tutorial we will consider the spheres to be initially distributed with momenta ``p`` between ``10^{3}m_\text{Ele}c`` and ``10^{3.1}m_\text{Ele}c``, angles ``u`` between ``-0.25`` and ``0.25`` and angles ``h`` between ``0`` and ``2\pi``. Therefore initially non-thermal and anisotropic, but with zero bulk velocity. Additionally, this population with have a number density ``n=1 \mathrm{m}^{-3}`` and the geometry of the system will be a cylinder with unit length and radius. With this number density one unit of time in code corresponds to the characteristic mean-free timescale of collisions, so we shall run the simulation for 1000 of these characteristic timescales, with a 15000 logarithmic time steps. 
+For this tutorial we will consider the spheres to be initially distributed with momenta ``p`` between ``10^{3}m_\text{Ele}c`` and ``10^{3.1}m_\text{Ele}c``, angles ``u`` between ``-0.25`` and ``0.25`` and angles ``h`` between ``0`` and ``2\pi``. Therefore initially non-thermal and anisotropic, but with zero bulk velocity. Additionally, this population with have a number density ``n=1 \mathrm{m}^{-3}`` and the geometry of the system will be a unit cube, with Cartesian coordinates. With this number density one unit of time in code corresponds to the characteristic mean-free timescale of collisions, so we shall run the simulation for 1000 of these characteristic timescales, with a 15000 logarithmic time steps. 
 
 ### Phase Space Setup
 
@@ -219,29 +219,29 @@ Let's now see how to set this up. First we need to set up the domains of space a
     t_num::Int64 = 15000
     t_grid::String = "l"
 
-    time = DT.TimeStruct(t_up,t_low,t_num,t_grid)
+    time = TimeStruct(t_up,t_low,t_num,t_grid)
 
-    space_coords = DT.Cylindrical() # x = r, y = phi, z = z
+    space_coords = Cartesian() # x = x, y = y, z = z
 
-    x_up::Float64 = 1.0
-    x_low::Float64 = 0f0
+    x_up::Float64 = 0.5
+    x_low::Float64 = -0.5
     x_grid::String = "u"
     x_num::Int64 = 1
-            
-    y_up::Float64 = 2.0*pi
-    y_low::Float64 = 0.0
+
+    y_up::Float64 = 0.5
+    y_low::Float64 = -0.5
     y_grid::String = "u"
     y_num::Int64 = 1
-            
-    z_up::Float64 = 1.0
-    z_low::Float64 = 0.0
+
+    z_up::Float64 = 0.5
+    z_low::Float64 = -0.5
     z_grid::String = "u"
     z_num::Int64 = 1
 
-    space = DT.SpaceStruct(space_coords,x_up,x_low,x_grid,x_num,y_up,y_low,y_grid,y_num,z_up,z_low,z_grid,z_num)
+    space = SpaceStruct(space_coords,x_up,x_low,x_grid,x_num,y_up,y_low,y_grid,y_num,z_up,z_low,z_grid,z_num)
 
 ```
-This generates the `Struct`s used internally to define the geometry of the system, note that as the system in this example is homogenous the number of spatial grid cells is set to `1` in each coordinate.
+This generates the `Struct`s used internally to define the geometry of the system, note that as the system in this example is homogenous in space the number of spatial grid cells is set to `1` in each coordinate and the struct `Cartesian()` for the `space_coords` will be default assume periodic boundary conditions.
 
 Next we need to define the particles in the system and their momentum-space grids 
 
@@ -255,7 +255,7 @@ Momentum-space grids must match those used in generating the collision matrices
 
     name_list::Vector{String} = ["Sph",];
 
-    momentum_coords = DT.Spherical() # px = p, py = u, pz = phi
+    momentum_coords = Spherical() # px = p, py = u, pz = phi
 
     px_up_list::Vector{Float64} = [4.0,];
     px_low_list::Vector{Float64} = [-5.0,];
@@ -272,7 +272,7 @@ Momentum-space grids must match those used in generating the collision matrices
     pz_grid_list::Vector{String} = ["u",];
     pz_num_list::Vector{Int64} = [1,];
 
-    momentum = DT.MomentumStruct(momentum_coords,px_up_list,px_low_list,px_grid_list,px_num_list,py_up_list,py_low_list,py_grid_list,py_num_list,pz_up_list,pz_low_list,pz_grid_list,pz_num_list,"upwind");
+    momentum = MomentumStruct(momentum_coords,px_up_list,px_low_list,px_grid_list,px_num_list,py_up_list,py_low_list,py_grid_list,py_num_list,pz_up_list,pz_low_list,pz_grid_list,pz_num_list,"upwind");
 
 ```
 
@@ -368,7 +368,7 @@ where `(0.0,10.0,1000.0)` can either be the times in code units or the time step
 
 This shows the "diffusion" of particles in both momentum and angle as a result of the binary interaction between spheres. Though it may be difficult to interpret the actual shape of the spectrum that is being formed from this 2D heatmap. To get an idea of this spectral shape, we can plot the angle-averaged distribution as a function of momentum:
 ```julia
-MomentumDistributionPlot(sol,"Sph",PhaseSpace,Static(),step=15,thermal=true,order=1)
+MomentumDistributionPlot(sol,"Sph",PhaseSpace,Static(),step=15,thermal=true,order=1,plot_limits=(-0.4,2.4,-2.4,0.9))
 ```
 ![HSP](./assets/HardSphere/HardSpherePDisPlotDark.svg)
 With the flag `thermal=true` the expected shape of a perfect Mawell-Juttner distribution is over-plotted for comparison. We can see that as time evolves the spheres approach the thermal distribution, but "over-shoot" at momenta away from the peak, this is linked to numerical diffusion due to the finite bin sizes. 

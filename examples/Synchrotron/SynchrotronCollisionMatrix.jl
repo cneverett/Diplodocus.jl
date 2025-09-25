@@ -14,16 +14,16 @@
     p_grid_Ele = "l"
     p_num_Ele = 80
     u_grid_Ele = "u"
-    u_num_Ele = 15
+    u_num_Ele = 9
     h_grid_Ele = "u"
     h_num_Ele = 1
 
-    p_low_Pho = -20e0
-    p_up_Pho = 0e0
+    p_low_Pho = -15e0
+    p_up_Pho = 7e0
     p_grid_Pho = "l"
-    p_num_Pho = 80
+    p_num_Pho = 88
     u_grid_Pho = "u"
-    u_num_Pho = 15
+    u_num_Pho = 9
     h_grid_Pho = "u"
     h_num_Pho = 1
 
@@ -31,23 +31,16 @@
     Ext::Vector{Float64} = [1e-4,];
 
     # number of points to sample
-    numLoss = 128*p_num_Pho*u_num_Pho*h_num_Pho
-    numGain = 1024*p_num_Pho*u_num_Pho*h_num_Pho
-    numThreads = 18
+    numLoss = 256
+    numGain = 256
+    numThreads = 10
+    
     # scale factor range
     scale = 0.0:0.1:0.0
 
     # file location and setup
-    fileLocation = pwd()*"\\examples\\Synchrotron\\Data";
+    fileLocation = pwd()*"\\examples\\Data";
     (Setup,fileName) = UserEmissionParameters()
-
-    fileName = "SyncEleElePho#-3.0-7.0l80#u15#u1#-3.0-7.0l80#u15#u1#-20.0-0.0l80#u15#u1#0.0001 copy 3.jld2"
-
-    #(Parameters,scale, numLoss, numGain, numThreads, fileLocation, fileName) = Setup
-
-    #fileName = "weightedtest.jld2"
-
-    #Setup = (Parameters,scale, numLoss, numGain, numThreads, fileLocation, fileName)
 
     # run the integration
     EmissionInteractionIntegration(Setup)

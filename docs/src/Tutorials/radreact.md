@@ -22,7 +22,7 @@ juila> include("RadiationReaction.jl")
 ## Evolving the Electrons Through Phase Space
 As radiation reaction is an external force, no collision matrices need to be generated for this tutorial and we can go straight evolving the electron population with the functions contained within the `DiplodocusTransport` package.
 
-For this tutorial we will attempt to reproduce the feature of population inversion studied by [BilbaoSilva_2023,BilbaoEtAl_2024](@citet). The cooling of electrons due to a radiation reaction force is non-linear in their momenta and a function of their angle to the magnetic field direction. For an electron propagating perpendicularly to the magnetic field, the characteristic timescale over which it loses its perpendicular momentum is given by ``t_{\perp}=\frac{\mu_0m_ec}{B^2\sigma_T}\frac{1}{\sqrt{p^2+1}}``, where ``p`` is normalised by ``m_ec``, whereas an electron propagating parallel to the magnetic field looses no momentum. ``t_{\perp}`` implies that for relativistic electrons, ``t_{\perp}\propto frac{1}{p}`` while for sub-relativistic electrons ``t_{\perp}\approx {\mu_0m_ec}{B^2\sigma_T}``, independent of their momentum. Therefore if there is a distribution of electrons that's momentum ranges from sub-relativistic to relativistic, the relativistic electrons will cool faster and they will cause a *pile-up* or more technically *Landau population inversion* in the electron distribution defined by ``\frac{\partial f)}{\partial p}>0``. The characteristic time over which this should occur is then ``t={\mu_0m_ec}{B^2\sigma_T}=t_{\text{sync}}`` the characteristic synchrotron timescale.
+For this tutorial we will attempt to reproduce the feature of population inversion studied by [BilbaoSilva_2023,BilbaoEtAl_2024](@citet). The cooling of electrons due to a radiation reaction force is non-linear in their momenta and a function of their angle to the magnetic field direction. For an electron propagating perpendicularly to the magnetic field, the characteristic timescale over which it loses its perpendicular momentum is given by ``t_{\perp}=\frac{\mu_0m_ec}{B^2\sigma_T}\frac{1}{\sqrt{p^2+m_e^2c^2}}``, where ``p`` is normalised by ``m_ec``, whereas an electron propagating parallel to the magnetic field looses no momentum. ``t_{\perp}`` implies that for relativistic electrons, ``t_{\perp}\propto frac{1}{p}`` while for sub-relativistic electrons ``t_{\perp}\approx {\mu_0m_ec}{B^2\sigma_T}``, independent of their momentum. Therefore if there is a distribution of electrons that's momentum ranges from sub-relativistic to relativistic, the relativistic electrons will cool faster and they will cause a *pile-up* or more technically *Landau population inversion* in the electron distribution defined by ``\frac{\partial f)}{\partial p}>0``. The characteristic time over which this should occur is then ``t={\mu_0m_ec}{B^2\sigma_T}=t_{\text{sync}}`` the characteristic synchrotron timescale.
 
 To explore this we will set up an initial condition of a thermal electron population with its peak around ``p=1 [m_\text{Ele}c]`` such that it contains both sub-relativistic and relativistic populations. We will then evolve that system for one characteristic synchrotron timescale. 
 
@@ -72,7 +72,7 @@ Then for the momentum grids we expect the peak of the thermal distribution to be
     py_up_list::Vector{Float64} = [1.0,];
     py_low_list::Vector{Float64} = [-1.0,];
     py_grid_list::Vector{String} = ["u",];
-    py_num_list::Vector{Int64} = [33,];
+    py_num_list::Vector{Int64} = [65,];
 
     pz_up_list::Vector{Float64} = [2.0*pi,];
     pz_low_list::Vector{Float64} = [0.0,];
@@ -123,19 +123,19 @@ We can load the three simulations using
     (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
 ```
 
-We can examine whether this inverted population has appeared by plotting the component of the distribution function ``f(\boldsymbol{p})`` (which corresponds to an ``order`` of -2), parallel and perpendicular to the magnetic field using the `paraperp` option:
+We can examine whether this inverted population has appeared by plotting the component of the distribution function ``f(\boldsymbol{p})`` (which corresponds to an `order` of ``-2``), parallel and perpendicular to the magnetic field using the `paraperp` option:
 ```julia 
     MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=33,order=-2,paraperp=true,plot_limits=((-4.0,2.0),(-5.0,1.0)))
 
 ```
-![](./assets/RadReact/PDisPlotDark.svg)
+![](./assets/RadReact/RadReactPDisPlotDark.svg)
 from which we can clearly see the process of population inversion where ``\frac{\partial f(\boldsymbol{p})}{\partial p_\perp}>0``.
 
 We can also plot the angular dependence of the distribution:
 ```julia
     MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,52,102),order=-2,TimeUnits=Diplodocus.DiplodocusPlots.CodeToSyncUnitsTime)
 ```
-![](./assets/RadReact/PAndUDisPlotDark.svg)
+![](./assets/RadReact/RadReactPAndUDisPlotDark.svg)
 where we can see the formation of a *ring* in momentum space as a result of this population pile-up.
 
 It is always good to also inspect the energy and number conservation. 
@@ -143,7 +143,7 @@ It is always good to also inspect the energy and number conservation.
     FracNumberDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSyncUnitsTime)
     EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSyncUnitsTime)
 ```
-![](./assets/RadReact/FracNumPlotDark.svg)![](./assets/RadReact/EngPlotDark.svg)
+![](./assets/RadReact/RadReactFracNumPlotDark.svg)![](./assets/RadReact/RadReactEngPlotDark.svg)
 The simulation shows good particle number conservation, but energy appears to be decreasing exponentially. However, this is to be expected! The radiation reaction force is non-conservative, continually decreasing the energy of the electron population!
 
 ### Animated Plot
