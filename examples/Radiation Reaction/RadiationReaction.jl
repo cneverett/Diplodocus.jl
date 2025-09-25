@@ -81,7 +81,7 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     fileLocation = pwd() * "/examples/Data/";
-    fileName = "RadReact_new.jld2"
+    fileName = "RadReact.jld2"
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
     sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
