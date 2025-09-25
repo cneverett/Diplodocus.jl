@@ -32,19 +32,21 @@ This script is provided as an example of how to run the BinaryInteractionSpectra
     h_num_Pho = 1
     h_grid_Pho = "u"
 
-    numLoss = 20
-    numGain = 20
+    numLoss = 16
+    numGain = 16
     numThreads = 15
 
-    scale = 0.0:0.1:0.7
+    scale = 0.0:0.1:1.0
 
     fileLocation = pwd()*"\\examples\\Data"
     (Setup,fileName) = UserBinaryParameters()
 
     BinaryInteractionIntegration(Setup)
 
-    Output = BinaryFileLoad_Matrix(fileLocation,fileName,corrected=false); 
+    Output = BinaryFileLoad_Matrix(fileLocation,fileName,corrected=true); 
     InteractiveBinaryGainLossPlot(Output)
+
+    DoesConserve(Output,Tuple_Output=false)
 
     #=
 

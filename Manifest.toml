@@ -2,7 +2,7 @@
 
 julia_version = "1.11.6"
 manifest_format = "2.0"
-project_hash = "2a827dc17eb71dbc4b545a38e7b2cc7b564c267d"
+project_hash = "b4e8feea7cc84f2af7752f46e2779f5d57e745e7"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -149,6 +149,23 @@ weakdeps = ["SparseArrays"]
     [deps.ChainRulesCore.extensions]
     ChainRulesCoreSparseArraysExt = "SparseArrays"
 
+[[deps.ChunkCodecCore]]
+git-tree-sha1 = "51f4c10ee01bda57371e977931de39ee0f0cdb3e"
+uuid = "0b6fb165-00bc-4d37-ab8b-79f91016dbe1"
+version = "1.0.0"
+
+[[deps.ChunkCodecLibZlib]]
+deps = ["ChunkCodecCore", "Zlib_jll"]
+git-tree-sha1 = "cee8104904c53d39eb94fd06cbe60cb5acde7177"
+uuid = "4c0bbee4-addc-4d73-81a0-b6caacae83c8"
+version = "1.0.0"
+
+[[deps.ChunkCodecLibZstd]]
+deps = ["ChunkCodecCore", "Zstd_jll"]
+git-tree-sha1 = "34d9873079e4cb3d0c62926a225136824677073f"
+uuid = "55437552-ac27-4d47-9aa3-63184e8fd398"
+version = "1.0.0"
+
 [[deps.CodeTracking]]
 deps = ["InteractiveUtils", "UUIDs"]
 git-tree-sha1 = "980f01d6d3283b3dbdfd7ed89405f96b7256ad57"
@@ -263,28 +280,28 @@ uuid = "927a84f5-c5f4-47a5-9785-b46e178433df"
 version = "1.6.4"
 
 [[deps.DiplodocusCollisions]]
-deps = ["BenchmarkTools", "Bessels", "JLD2", "ProgressMeter"]
-git-tree-sha1 = "0c15d08651c8b9f5bd6b5ec7b1deb20e835c17be"
+deps = ["BenchmarkTools", "Bessels", "JLD2", "ProgressMeter", "Random"]
+git-tree-sha1 = "1f903f9d63566e480a9f433be282acccc5211c15"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusCollisions.jl"
 uuid = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
-version = "0.1.0"
+version = "0.1.1"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Makie", "Revise"]
-git-tree-sha1 = "d50754dc2454b64e5d8ae6fa77dc62b09cd8e2d5"
+git-tree-sha1 = "bc0ff40757ee8bcb3dd312e7afba2a540880422a"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusPlots.jl"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
-version = "0.1.0"
+version = "0.1.1"
 
 [[deps.DiplodocusTransport]]
 deps = ["Bessels", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "ProgressMeter", "Revise", "Statistics"]
-git-tree-sha1 = "c64ad13cc0225024013859dd16fa651c5b002308"
+git-tree-sha1 = "900a9c4d53affc1aa5525c44bea5e7e1991cb125"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusTransport.jl"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
-version = "0.1.0"
+version = "0.1.1"
 
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
@@ -681,10 +698,10 @@ uuid = "82899510-4779-5014-852e-03e436cf321d"
 version = "1.0.0"
 
 [[deps.JLD2]]
-deps = ["FileIO", "MacroTools", "Mmap", "OrderedCollections", "PrecompileTools", "ScopedValues", "TranscodingStreams"]
-git-tree-sha1 = "d97791feefda45729613fafeccc4fbef3f539151"
+deps = ["ChunkCodecLibZlib", "ChunkCodecLibZstd", "FileIO", "MacroTools", "Mmap", "OrderedCollections", "PrecompileTools", "ScopedValues"]
+git-tree-sha1 = "da2e9b4d1abbebdcca0aa68afa0aa272102baad7"
 uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-version = "0.5.15"
+version = "0.6.2"
 
     [deps.JLD2.extensions]
     UnPackExt = "UnPack"
@@ -816,21 +833,21 @@ version = "1.18.0+0"
 
 [[deps.Libmount_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "706dfd3c0dd56ca090e86884db6eda70fa7dd4af"
+git-tree-sha1 = "3acf07f130a76f87c041cfb2ff7d7284ca67b072"
 uuid = "4b2f31a3-9ecc-558c-b454-b3730dcb73e9"
-version = "2.41.1+0"
+version = "2.41.2+0"
 
 [[deps.Libtiff_jll]]
 deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "XZ_jll", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "4ab7581296671007fc33f07a721631b8855f4b1d"
+git-tree-sha1 = "f04133fe05eff1667d2054c53d59f9122383fe05"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.7.1+0"
+version = "4.7.2+0"
 
 [[deps.Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "d3c8af829abaeba27181db4acb485b18d15d89c6"
+git-tree-sha1 = "2a7a12fc0a4e7fb773450d17975322aa77142106"
 uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
-version = "2.41.1+0"
+version = "2.41.2+0"
 
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]

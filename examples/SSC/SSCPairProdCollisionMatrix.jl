@@ -41,11 +41,11 @@ This script is provided as an example of how to run the BinaryInteractionSpectra
     h_num_Pho = 1
     h_grid_Pho = "u"
 
-    numLoss = 16
-    numGain = 16
+    numLoss = 32
+    numGain = 32
     numThreads = 15
 
-    scale = 0.0:0.1:0.7
+    scale = 0.0:0.1:1.0
 
     fileLocation = pwd()*"\\examples\\Data";
 

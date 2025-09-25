@@ -6,7 +6,7 @@ using Diplodocus
 
     t_up::Float64 = log10(SIToCodeUnitsTime(1e6)) # -12e0 seconds * (σT*c)
     t_low::Float64 = log10(SIToCodeUnitsTime(1e0)) #-20e0 seconds * (σT*c)
-    t_num::Int64 = 12000
+    t_num::Int64 = 30000
     t_grid::String = "l"
 
     #t_up::Float64 = SIToCodeUnitsTime(1e2) # -12e0 seconds * (σT*c)
@@ -73,7 +73,7 @@ using Diplodocus
 
 # Load interaction matrices
 
-    BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true);
+    BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true,Bin_Mode=Iso(),corrected=true);
     FluxM = BuildFluxMatrices(PhaseSpace);
 
     GC.gc()
@@ -86,10 +86,10 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SSC.jld2";
+    fileName = "SSC_new_6.jld2";
     fileLocation = pwd()*"\\examples\\Data";
 
-    @time sol = Solve(Initial,scheme;save_steps=20,progress=true,fileName=fileName,fileLocation=fileLocation);
+    sol = Solve(Initial,scheme;save_steps=50,progress=true,fileName=fileName,fileLocation=fileLocation);
 
 # ===== Load and Plot Results ================== # 
 
@@ -99,9 +99,9 @@ using Diplodocus
     MomentumAndPolarAngleDistributionPlot(sol,"Pos",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
     MomentumAndPolarAngleDistributionPlot(sol,"Pho",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
 
-    MomentumDistributionPlot(sol,["Pho","Ele","Pos"],PhaseSpace,Static(),step=10,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
+    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,Static(),step=5,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-14,6),(4,18)))
     MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=10,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
-    MomentumDistributionPlot(sol,["Pos"],PhaseSpace,Static(),step=10,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
+    MomentumDistributionPlot(sol,["Pos"],PhaseSpace,Static(),step=1,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
     MomentumDistributionPlot(sol,["Pho"],PhaseSpace,Static(),step=10,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
 
     NumberDensityPlot(sol,PhaseSpace,species="Pho",theme=DiplodocusDark(),title=nothing)
@@ -116,7 +116,8 @@ using Diplodocus
 
     MomentumDistributionPlot(sol_Iso,["Ele","Pho"],PhaseSpace,Animated(),thermal=false,order=2,plot_limits=((-15,7),(2,10)),wide=true,TimeUnits=CodeToSIUnitsTime,filename="SyncElePhoAnimated.mp4")
 
-    Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol.f[52],52;wide=true,paraperp=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
+    Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol.f[50],50;wide=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
+     Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,Initial,1;wide=true,paraperp=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
     #Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,1e12 .* ones(Float64,size(sol.f[52])),52;wide=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
 
 # ====== Plot Observer angle dependence ======= #
