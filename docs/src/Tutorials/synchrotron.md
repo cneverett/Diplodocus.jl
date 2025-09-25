@@ -219,36 +219,6 @@ The single zone code *AM3* is quite capable of replicating an identical setup as
 
 Notice how the *Diplodocus* and *AM3* plots are almost identical (as is to be expected) but there are a few subtle differences. *Diplodocus* shows a steeper cut-off in emissions at low photon momentum. This is due to *Diplodocus* using an analytic expression for the synchrotron spectra that is valid at all electron momenta, whereas *AM3* uses an expression that is only true for relativistic electrons. Hence, as the electron cool to sub-relativistic (``p\approx 1 ``), the *Diplodocus* spectra are more accurate. The second thing to note is that the electron population in *Diplodocus* appears to cool faster than that of *AM3*, this is due to the momentum grid resolution in *Diplodocus* introducing more numerical diffusion than the finer grid that is used by *AM3*.
 
-## Angular Dependent Emissions
-
-Now that we have considered an isotropically averaged field and have shown that *Diplodocus* can well replicate an advanced isotropic single-zone code in that regard, let's consider a directed magnetic field which will induce anisotropic cooling of the electrons and emission of synchrotron photons. 
-
-To do this we will use the same initial conditions as before, i.e. starting with an isotropic population of electron, but this time the radiation reaction force and synchrotron emissions will be set to `Ani` rather than `Iso`. The three arguments set to zero in `space_coords = Cylindrical(0.0,0.0,0.0)` this corresponds to a magnetic field aligned with the ``z`` axis of our cylindrical coordinate system.
-
-Therefore the only changes we need to make is to rebuild the parts that are dependent on the emission and force terms and run another simulation: 
-```julia 
-    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[B],Ani())];
-    Forces::Vector{ForceType} = [SyncRadReact(Ani(),B),];
-
-    PhaseSpace = PhaseSpaceStruct(name_list,time,space,momentum,Binary_list,Emi_list,Forces);  
-
-    BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true);
-    FluxM = BuildFluxMatrices(PhaseSpace);
-
-    scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SyncAni.jld2";
-
-    sol_Ani = Solve(Initial_Ani,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
-```
-We can now question what flux of photons would an observer see at some distance `ObserverDistance` and at some set of angles `ObserverAngles` to the cylindrical ``z``-axis.
-```julia
-    (PhaseSpace, sol_Ani) = SolutionFileLoad(fileLocation,fileName);
-    ObserverFluxPlot(PhaseSpace,sol_Ani,52,,[0.01,0.1,0.25,0.5],1.0,title="hello",TimeUnits=CodeToSIUnitsTime,plot_limits=(-15.5,0.5,-0.5,9.5))
-```
-The angles are in units of ``\pi`` and here taken to be ``0.01\pi,0.1\pi,0.25\pi,`` and ``0.5\pi``, the observing distance taken to be ``1.0`` and the time of observation is given as the time index of the solution output, here ``52`` corresponds to ``t=10^5 [\text{s}]``:
-![](./assets/Synchrotron/ObsPlotDark.svg)
-We can see that emissions are most dominant at and observing angle of ``0.5\pi``, this is perpendicular to the direction of the magnetic field and as we started with an isotropic population of electrons and synchrotron emission is dominant for a pitch angle of ``\pi/2`` it is as expected.
-
 ## Reference
 ```@bibliography
 Pages = ["synchrotron.md"]
