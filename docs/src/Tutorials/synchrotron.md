@@ -3,7 +3,7 @@
 ---
 
 ```@raw html
-<video autoplay loop muted playsinline controls src="./assets/RadReact/SyncPDisAnimated.mp4" style="max-height: 60vh;"/>
+<video autoplay loop muted playsinline controls src="./assets/Synchrotron/SyncPDisAnimated.mp4" style="max-height: 60vh;"/>
 ```
 
 In this tutorial we will consider a population of electrons undergoing cooling due to a radiation reaction force induced by a magnetic field (just as in [Tutorial 2: Cooling of Electrons via Radiation Reaction](@ref)) but additionally included the emitted population of synchrotron photons. 
