@@ -297,7 +297,7 @@ version = "0.1.1"
 
 [[deps.DiplodocusTransport]]
 deps = ["Bessels", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "ProgressMeter", "Revise", "Statistics"]
-git-tree-sha1 = "900a9c4d53affc1aa5525c44bea5e7e1991cb125"
+git-tree-sha1 = "0c224d553b8bf8eb018cc0824c31bd39e1af54d2"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusTransport.jl"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
