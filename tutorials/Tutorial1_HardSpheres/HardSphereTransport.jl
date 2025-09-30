@@ -59,7 +59,7 @@ using Diplodocus
 
 # ==== Build Interaction and Flux Matrices ====== #
 
-    DataDirectory = pwd()*"\\examples\\Data"
+    DataDirectory = pwd()*"\\Data"
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=false);
     FluxM = BuildFluxMatrices(PhaseSpace);
 
@@ -73,7 +73,7 @@ using Diplodocus
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
 
     fileName = "HardSphere.jld2";
-    fileLocation = pwd()*"\\examples\\Data";
+    fileLocation = pwd()*"\\Data";
 
     sol = Solve(Initial,scheme;save_steps=100,progress=true,fileName=fileName,fileLocation=fileLocation);
 

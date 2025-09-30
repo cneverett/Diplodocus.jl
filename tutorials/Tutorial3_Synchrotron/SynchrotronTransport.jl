@@ -64,7 +64,7 @@ using Diplodocus
 
 # location of DataDirectory where Interaction Matrices are stored
 
-    DataDirectory = pwd()*"\\examples\\Data"
+    DataDirectory = pwd()*"\\Data"
 
 # Load interaction matrices
 
@@ -80,7 +80,7 @@ using Diplodocus
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
     fileName = "Sync.jld2";
-    fileLocation = pwd()*"\\examples\\Data";
+    fileLocation = pwd()*"\\Data";
 
     sol = Solve(Initial,scheme;save_steps=5,progress=true,fileName=fileName,fileLocation=fileLocation);
 
