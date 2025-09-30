@@ -2,15 +2,15 @@
 
 ---
 
+In this tutorial we will consider a population of electrons which are homogenous in space. This population will undergo cooling due to a radiation reaction force induced by a uniform magnetic field (this force is described in [External Forces](@ref)).  
+
 ```@raw html
 <video autoplay loop muted playsinline controls src="./assets/RadReact/RadReactMomentumComboAnimation.mp4" style="max-height: 60vh;"/>
 ```
 
-In this tutorial we will consider a population of electrons which are homogenous in space. This population will undergo cooling due to a radiation reaction force induced by a uniform magnetic field (this force is described in [External Forces](@ref)). 
-
 ::: info
 
-The full code for this tutorial can be found in `src/examples/Synchrotron/RadiationReaction.jl`. This can be run inside a Julia REPL using 
+The full code for this tutorial can be found in `src/tutorials/Tutorial2_RadiationReaction/RadiationReaction.jl`. This can be run inside a Julia REPL using 
 ```julia
 
 juila> include("RadiationReaction.jl")

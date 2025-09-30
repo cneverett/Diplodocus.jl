@@ -2,21 +2,29 @@
 
 ---
 
+In this tutorial we will consider a population of hard spheres which are homogenous in space. These spheres only interact via perfectly elastic collisions (a binary interaction), the cross section for which is given in [Implemented Collisions](@ref). As a result of which an initially non-thermal and anisotropic population is expected to tend towards thermal and isotropic over time, as can be seen in the animation below:
+
 ```@raw html
 <video autoplay loop muted playsinline controls src="./assets/HardSphere/HardSphereMomentumComboAnimation.mp4" style="max-height: 60vh;"/>
 ```
 
-In this tutorial we will consider a population of hard spheres which are homogenous in space. These spheres only interact via perfectly elastic collisions (a binary interaction), the cross section for which is given in [Implemented Collisions](@ref). 
-
 ::: info
 
-The full code for this tutorial is split into two files, which can be found in `src/examples/Hard Spheres/HardSphereCollisionMatrix.jl` and `src/examples/Hard Spheres/HardSphereTransport.jl`. They can be run inside a Julia REPL using 
+The full code for this tutorial is split into two files, which can be found in the Diplodocus.jl GitHub under the locations `src/tutorials/Tutorial1_HardSpheres/HardSphereCollisionMatrix.jl` and `src/tutorials/Tutorial1_HardSpheres/HardSphereTransport.jl`. They can be run inside a Julia REPL using 
 ```julia
 
 juila> include("HardSphereCollisionMatrix.jl")
 juila> include("HardSphereTransport.jl")
 
 ```
+
+::: warning
+
+    The generation of collision matrices using `HardSphereCollisionMatrix.jl` by default uses 10 threads, if you're system has fewer than this number of threads this number should be changed by modifying the variable `numThreads`. 
+
+    By default, collision matrices are set to be saved in a `fileLocation=pwd()*"\\Data"`, i.e. in a folder named `Data` located in the same directory from which the code is run. This folder is not created by default and must created by the user or the user may change the `fileLocation` to wherever they would prefer.
+
+:::
 
 :::
 
@@ -35,7 +43,7 @@ First thing is to select the names of the four particles involved in the binary 
     name4 = "Sph";
 ```
 
-Next is to define how momentum space is to be discretised for each of particle species. Given that spheres are the only species here, we only need to define the discretisation for them, this includes the upper and lower bounds of momentum magnitude ``p`` (upper and lower bounds for polar angle cosine ``u`` and azimuthal angle ``h`` are not requrired as they are assume to be bounded by ``[-1,1]`` and ``[0, 2\pi]``), grid types (see [Particles, Grids and Units](@ref)) and the number of grid bins. These must be of the format `p_low_name`, `p_low_name`, `p_grid_name`, `p_num_name`, `u_grid_name`, `u_num_name`, `h_grid_name` and  `h_num_name` where `name` is the abbreviated three letter name of the particle species.
+Next is to define how momentum space is to be discretised for each particle species. Given that spheres are the only species here, we only need to define the discretisation for them, this includes the upper and lower bounds of momentum magnitude ``p`` (upper and lower bounds for polar angle cosine ``u`` and azimuthal angle ``h`` are not requrired as they are assume to be bounded by ``[-1,1]`` and ``[0, 2\pi]``), grid types (see [Particles, Grids and Units](@ref)) and the number of grid bins. These must be of the format `p_low_name`, `p_low_name`, `p_grid_name`, `p_num_name`, `u_grid_name`, `u_num_name`, `h_grid_name` and  `h_num_name` where `name` is the abbreviated three letter name of the particle species.
 
 For this tutorial we will select the momenta ``p`` ranges from ``10^{-5}m_\text{Ele}c`` to ``10^{4}m_\text{Ele}c`` consisting of 72 bins, 8 uniformly sized bins in polar angle cosine and 1 uniformly sized bin in azimuthal angle (i.e. axisymmetric).
 
@@ -54,7 +62,7 @@ For this tutorial we will select the momenta ``p`` ranges from ``10^{-5}m_\text{
 
 ```
 
-Now we need to define how many times these bins are sampled by the Monte-Carlo integration process. This is defined by three values: `numLoss` defines the number of incoming states (i.e. sets of ``(\vec{p}_1,\vec{p}_2)`` vectors) to sample per incoming state momentum bin, `numGain` defines the number of outgoing states (i.e. ``\vec{p}_3`` and ``\vec{p}_4)``) to sample for each outgoing state bin in momentum space, and `numThreads` defines the number of threads to use (see [the documentation for multi-threading in Julia](https://docs.julialang.org/en/v1/manual/multi-threading/)).
+Now we need to define how many times these bins are sampled by the Monte-Carlo integration process. This is defined by three values: `numLoss` defines the number of incoming states (i.e. sets of ``(\vec{p}_1,\vec{p}_2)`` vectors, which in this case define the momentum vectors for the two incoming spheres about to collide) to sample per incoming state momentum bin, `numGain` defines the number of outgoing states (i.e. ``\vec{p}_3`` and ``\vec{p}_4)``, defining the momentum of the spheres after colliding) to sample for each outgoing state bin in momentum space, and `numThreads` defines the number of threads to use (see [the documentation for multi-threading in Julia](https://docs.julialang.org/en/v1/manual/multi-threading/)).
 
 ::: tip
 
@@ -91,6 +99,12 @@ Then we need to define the `fileLocation` where the collision matrices are going
     (Setup,fileName) = UserBinaryParameters()
 ```
 
+::: warning
+
+    The `fileName` generated by `UserBinaryParameters()` is used internally when running simulations to ensure the correct data is loaded, it is not recommended to changed the file name of any collision matrices generated.
+
+:::
+
 Finally, we can run the integration using the function `BinaryInteractionIntegration`. 
 
 ```julia
@@ -116,7 +130,7 @@ The most visual of these is the plotting function `InteractiveBinaryGainLossPlot
 
 ```
 
-This will display the plot in a separate window in which you can interact with it.
+This will display the plot in a separate window in which you can interact with it. There are sliders for the the discrete bins of the two incoming particles momentum `p1` and `p2`, and their propagation directions, in spherical polars `u` (``u=\cos\theta``) and `h` (``phi``). There are then also sliders for the outgoing particles directions with the range of outgoing momenta plotted.
 
 As an example of poor integration, the plots below show a noisy spectra most likely due to insufficient sampling of incoming and outgoing states:
 
@@ -126,7 +140,7 @@ This noise can be reduced by increasing the number of sampling points (i.e. runn
 
 ![good](./assets/HardSphere/GoodSphereSpectra.png)
 
-Generating good spectra involves a bit of trial and error. It is very easy to tell when a spectra is poor but it may take some practice to get used to how increasing the sampling and adjusting the `scale` effect the results.  
+Generating good spectra involves a bit of trial and error. It is very easy to tell when a spectra is poor but it may take some practice to get used to how increasing the sampling and adjusting the `scale` affect the results.  
 
 Another way to judge the accuracy of integration is through the `DoesConserve` function. This prints to the terminal a series of statistics about the integration. For the "good" integration this looks like:
 
