@@ -31,8 +31,8 @@
     Ext::Vector{Float64} = [1e-4,];
 
     # number of points to sample
-    numLoss = 256p_num_Pho*u_num_Pho*h_num_Pho
-    numGain = 512p_num_Pho*u_num_Pho*h_num_Pho
+    numLoss = 256
+    numGain = 512
     numThreads = 15
     # scale factor range
     scale = 0.0:0.1:0.0

@@ -20,7 +20,7 @@ To solve the evolution described by the transport equations computationally, a m
 
 *INSERT IMAGE OF CONTINIOUS SURFACE TO GRID*
 
-This discretisation allows the effects of discrete interactions, collisions, to be pre-computed while simultaniously providing a flexable and conservative numbical scheme for the transport of distribution function through phase space. 
+This discretisation allows the effects of discrete interactions, collisions, to be pre-computed while simultaneously providing a flexible and conservative numerical scheme for the transport of distribution function through phase space. 
 
 Pre-computation of collision terms is implemented in the `DiplodocusCollisions.jl` package. 
 
