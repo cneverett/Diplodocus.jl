@@ -63,7 +63,7 @@ using Diplodocus
 
 # ==== Build Interaction and Flux Matrices ====== #
 
-    DataDirectory = pwd() * "/examples/Data/"
+    DataDirectory = pwd() * "/Data/"
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true);
     FluxM = BuildFluxMatrices(PhaseSpace,debug_mode=true);
 
@@ -80,7 +80,7 @@ using Diplodocus
 
 # ===== Run the Solver ================== #
 
-    fileLocation = pwd() * "/examples/Data/";
+    fileLocation = pwd() * "/Data/";
     fileName = "RadReact.jld2"
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)

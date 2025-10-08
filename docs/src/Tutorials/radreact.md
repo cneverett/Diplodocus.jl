@@ -110,7 +110,7 @@ where we will also use a number density of ``n=1 \mathrm{m}^{-3}``, which won't 
 ### Running the Solver
 We can now run the solver for both sets of initial conditions:
 ```julia
-    fileLocation = pwd() * "/examples/Data/";
+    fileLocation = pwd() * "/Data/";
     fileName = "RadReact.jld2"
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)

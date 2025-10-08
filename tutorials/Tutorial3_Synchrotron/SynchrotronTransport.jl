@@ -64,7 +64,7 @@ using Diplodocus
 
 # location of DataDirectory where Interaction Matrices are stored
 
-    DataDirectory = pwd()*"\\examples\\Data"
+    DataDirectory = pwd()*"\\Data"
 
 # Load interaction matrices
 

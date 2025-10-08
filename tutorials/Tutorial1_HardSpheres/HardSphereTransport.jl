@@ -59,7 +59,7 @@ using Diplodocus
 
 # ==== Build Interaction and Flux Matrices ====== #
 
-    DataDirectory = pwd()*"\\examples\\Data"
+    DataDirectory = pwd()*"\\Data"
     BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=false);
     FluxM = BuildFluxMatrices(PhaseSpace);
 
