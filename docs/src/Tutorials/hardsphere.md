@@ -18,13 +18,13 @@ juila> include("HardSphereTransport.jl")
 
 ```
 
+:::
+
 ::: warning
 
-    The generation of collision matrices using `HardSphereCollisionMatrix.jl` by default uses 10 threads, if you're system has fewer than this number of threads this number should be changed by modifying the variable `numThreads`. 
+    The generation of collision matrices using `HardSphereCollisionMatrix.jl` by default uses the maximum number of available threads `Threads.nthreads()`, if you would prefer the scripts to run with fewer threads then modify the variable `numThreads` to the desired amount. 
 
     By default, collision matrices are set to be saved in a `fileLocation=pwd()*"\\Data"`, i.e. in a folder named `Data` located in the same directory from which the code is run. This folder is not created by default and must created by the user or the user may change the `fileLocation` to wherever they would prefer.
-
-:::
 
 :::
 
@@ -74,7 +74,7 @@ The larger `numLoss` and `numGain` are, the more accurate the integration will b
 
     numLoss = 16
     numGain = 16
-    numThreads = 10
+    numThreads = Threads.nthreads()
 
 ```
 
@@ -82,7 +82,7 @@ Further, for potentially improved integration accuracy, the Monte-Carlo sampling
 
 ```julia
 
-    scale = 0.0:0.1:0.1
+    scale = 0.0:0.1:0.0
 
 ```
 

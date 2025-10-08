@@ -65,7 +65,7 @@ Now we define how many points in momentum-space will be sampled per bin by the M
 ```julia 
     numLoss = 256
     numGain = 256
-    numThreads = 10
+    numThreads = Threads.nthreads()
 
     scale = 0.0:0.1:0.0
 ```
