@@ -28,13 +28,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup Julia
         uses: julia-actions/setup-julia@v2
-      - name: Pull Julia cache
-        uses: julia-actions/cache@v2
-      - name: Install dependencies
-        run: julia --project=docs -e 'using Pkg; pkg"dev ."; Pkg.instantiate(); Pkg.precompile(); Pkg.status()'
+        with:
+          version: '1'
+      - uses: julia-actions/julia-buildpkg@v1
+      #- name: Pull Julia cache
+      #  uses: julia-actions/cache@v2
+      #- name: Install dependencies
+      #  run: julia --project=docs -e 'using Pkg; pkg"dev ."; Pkg.instantiate(); Pkg.precompile(); Pkg.status()'
       - name: Build and deploy
         uses: julia-actions/julia-docdeploy@v1
         with:
