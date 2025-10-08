@@ -34,7 +34,7 @@ jobs:
       - name: Pull Julia cache
         uses: julia-actions/cache@v2
       - name: Install dependencies
-        run: julia --project=docs -e 'using Pkg; Pkg.instantiate()'
+        run: julia --project=docs -e 'using Pkg; pkg"dev ."; Pkg.instantiate(); Pkg.precompile(); Pkg.status()'
       - name: Build and deploy
         uses: julia-actions/julia-docdeploy@v1
         with:
