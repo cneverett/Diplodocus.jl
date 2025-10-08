@@ -33,13 +33,13 @@
     # number of points to sample
     numLoss = 256
     numGain = 256
-    numThreads = Threads.nthreads()
+    numThreads = 10
     
     # scale factor range
     scale = 0.0:0.1:0.0
 
     # file location and setup
-    fileLocation = pwd()*"\\examples\\Data";
+    fileLocation = pwd()*"\\Data";
     (Setup,fileName) = UserEmissionParameters()
 
     # run the integration
