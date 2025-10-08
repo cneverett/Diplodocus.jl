@@ -22,12 +22,12 @@ using Diplodocus
     # number of points to sample
     numLoss = 16
     numGain = 16
-    numThreads = 10
+    numThreads = Threads.nthreads()
     # scale factor range
     scale = 0.0:0.1:0.0
 
     # file location and setup
-    fileLocation = pwd()*"\\Data"
+    fileLocation = pwd()*"\\examples\\Data"
     (Setup,fileName) = UserBinaryParameters()
     
     # run the integration

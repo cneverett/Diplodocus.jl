@@ -6,10 +6,10 @@ This script is provided as an example of how to run the BinaryInteractionSpectra
 
 # First select the binary interaction (12->34) you want to evaluate the collision integral for by setting the names of particles 1 through 4. The pairs of names (12) and (34) should be in alphabetical order.
 
-    name1 = "Ele";
-    name2 = "Pho";
-    name3 = "Ele";
-    name4 = "Pho";
+    name1::String = "Ele";
+    name2::String = "Pho";
+    name3::String = "Ele";
+    name4::String = "Pho";
 
 # Define the Momentum space discretisation for each particle species named. This includes the upper and lower momentum bounds, grid type "l", "u", or "b", and the number of bins. Must be of the format `p_low_name`, p_low_name`, `p_grid_name`, `p_num_name`, `u_grid_name` and `u_num_name` where `name` is the abbreviated three letter name of the particle species. 
 
@@ -36,18 +36,15 @@ This script is provided as an example of how to run the BinaryInteractionSpectra
     numGain = 16
     numThreads = 15
 
-    scale = 0.0:0.05:1.5
+    scale = 0.0:0.1:1.0
 
-    fileLocation = pwd()*"\\Data"
+    fileLocation = pwd()*"\\examples\\Data"
     (Setup,fileName) = UserBinaryParameters()
 
     BinaryInteractionIntegration(Setup)
 
-    Output = BinaryFileLoad_Matrix(fileLocation,fileName,corrected=false); 
+    Output = BinaryFileLoad_Matrix(fileLocation,fileName,corrected=true); 
     InteractiveBinaryGainLossPlot(Output)
-
-    Output = 0.0
-    GC.gc()
 
     DoesConserve(Output,Tuple_Output=false)
 

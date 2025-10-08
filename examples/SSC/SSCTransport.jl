@@ -4,10 +4,10 @@ using Diplodocus
 
     B = 1e-4
 
-    t_up::Float64 = SIToCodeUnitsTime(1e6)#log10(SIToCodeUnitsTime(1e6)) # -12e0 seconds * (σT*c)
-    t_low::Float64 = SIToCodeUnitsTime(0e0) #log10(SIToCodeUnitsTime(1e0)) #-20e0 seconds * (σT*c)
-    t_num::Int64 = 10000#12000#30000
-    t_grid::String = "u"#"l"
+    t_up::Float64 = log10(SIToCodeUnitsTime(1e6)) # -12e0 seconds * (σT*c)
+    t_low::Float64 = log10(SIToCodeUnitsTime(1e0)) #-20e0 seconds * (σT*c)
+    t_num::Int64 = 30000
+    t_grid::String = "l"
 
     #t_up::Float64 = SIToCodeUnitsTime(1e2) # -12e0 seconds * (σT*c)
     #t_low::Float64 = SIToCodeUnitsTime(0e0) #-20e0 seconds * (σT*c)
@@ -60,7 +60,7 @@ using Diplodocus
 
 # ==== Define Interactions  ====== #
 
-    Binary_list::Vector{BinaryStruct} = [BinaryStruct("Ele","Pho","Ele","Pho"),BinaryStruct("Pos","Pho","Pos","Pho")#= ,BinaryStruct("Pho","Pho","Ele","Pos") =#];
+    Binary_list::Vector{BinaryStruct} = [BinaryStruct("Ele","Pho","Ele","Pho"),BinaryStruct("Pos","Pho","Pos","Pho"),BinaryStruct("Pho","Pho","Ele","Pos")];
     Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[B],Iso()),EmiStruct("Pos","Pos","Pho","Sync",[B],Iso())];
     Forces::Vector{ForceType} = [SyncRadReact(Iso(),B),];
 
@@ -69,11 +69,11 @@ using Diplodocus
 
 # location of DataDirectory where Interaction Matrices are stored
 
-    DataDirectory = pwd()*"\\Data"
+    DataDirectory = pwd()*"\\examples\\Data"
 
 # Load interaction matrices
 
-    BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true,Bin_corrected=true);
+    BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true,Bin_Mode=Iso(),corrected=true);
     FluxM = BuildFluxMatrices(PhaseSpace);
 
     GC.gc()
@@ -86,66 +86,39 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SSC_new_6_UniformT_no_pair_prod.jld2";
-    fileLocation = pwd()*"\\Data";
+    fileName = "SSC_new_6.jld2";
+    fileLocation = pwd()*"\\examples\\Data";
 
-    sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
+    sol = Solve(Initial,scheme;save_steps=50,progress=true,fileName=fileName,fileLocation=fileLocation);
 
 # ===== Load and Plot Results ================== # 
 
     (PhaseSpace, sol) = SolutionFileLoad(fileLocation,fileName);
 
-    MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,32,10000),order=1,TimeUnits=CodeToSIUnitsTime)
+    MomentumAndPolarAngleDistributionPlot(sol,"Ele",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
     MomentumAndPolarAngleDistributionPlot(sol,"Pos",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
     MomentumAndPolarAngleDistributionPlot(sol,"Pho",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
 
-    MomentumDistributionPlot(sol,["Pho","Ele","Pos"],PhaseSpace,Static(),step=2,order=1,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-14,7),(3.5,10.5)))
+    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,Static(),step=5,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-14,6),(4,18)))
     MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=10,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
     MomentumDistributionPlot(sol,["Pos"],PhaseSpace,Static(),step=1,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
     MomentumDistributionPlot(sol,["Pho"],PhaseSpace,Static(),step=10,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
 
-    NumberDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing)
     NumberDensityPlot(sol,PhaseSpace,species="Pho",theme=DiplodocusDark(),title=nothing)
     NumberDensityPlot(sol,PhaseSpace,species="Ele",theme=DiplodocusDark(),title=nothing)
     FracNumberDensityPlot(sol,PhaseSpace,species="Ele",theme=DiplodocusDark(),title=nothing)
     FracNumberDensityPlot(sol,PhaseSpace,species="Pho",theme=DiplodocusDark(),title=nothing)
     FracNumberDensityPlot(sol,PhaseSpace,species="All",theme=DiplodocusDark(),title=nothing)
 
-    EnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing,logt=true,TimeUnits=CodeToSIUnitsTime)
+    EnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing)
     FracEnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing)
     FracEnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing,only_all=true)
 
     MomentumDistributionPlot(sol_Iso,["Ele","Pho"],PhaseSpace,Animated(),thermal=false,order=2,plot_limits=((-15,7),(2,10)),wide=true,TimeUnits=CodeToSIUnitsTime,filename="SyncElePhoAnimated.mp4")
 
-    DataDirectory = pwd()*"\\examples\\Data"
-    BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true,Bin_corrected=true);
-    FluxM = BuildFluxMatrices(PhaseSpace);
-    scheme = EulerStruct(sol.f[1],PhaseSpace,BigM,FluxM,false)
-
-    CodeToSIUnitsTime.([PhaseSpace.Grids.dt[t*save_steps-2]])
-    t = 10000
-    save_steps = 10
-    sol.t[t]
-    PhaseSpace.Grids.tr[(t-2)*save_steps]
-    Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol,[1,2,3,12,85,1002,10002],["Pho","Ele","Pos"];wide=true,plot_limits=((-15,8),(0.0,18.0)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark(),u_avg=true,p_timescale=true,plot_dt=true,logt=true)
-
-    Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,Initial,1;wide=true,paraperp=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
+    Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol.f[50],50;wide=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
+     Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,Initial,1;wide=true,paraperp=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
     #Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,1e12 .* ones(Float64,size(sol.f[52])),52;wide=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
-
-    dstate = zeros(eltype(Initial),size(Initial))
-    timescale = zeros(eltype(Initial),size(Initial))
-
-    t_idx = 450
-    dt0 = PhaseSpace.Grids.tr[2] - PhaseSpace.Grids.tr[1]
-    dt = PhaseSpace.Grids.tr[t_idx+1] - PhaseSpace.Grids.tr[t_idx]
-    t = PhaseSpace.Grids.tr[t_idx]
-
-    scheme(dstate,sol.f[Int(t_idx/10)],dt0,dt,t)
-
-    test = scheme.df ./ sol.f[Int(t_idx/10)]
-    
-    replace!(test,Inf32=>0.0,-Inf32=>0.0,NaN=>0.0)
-    maximum(abs.(test))
 
 # ====== Plot Observer angle dependence ======= #
 
@@ -169,8 +142,8 @@ using Diplodocus
     Diplodocus.DiplodocusPlots.save("SSCPDisPlotLight.pdf",SSCPDisPlotLight)
     Diplodocus.DiplodocusPlots.save("SSCPDisPlotLight.svg",SSCPDisPlotLight)
 
-    SSCEngDenPlotDark = EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark(),logt=true)
-    SSCEngDenPlotLight = EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight(),logt=true)
+    SSCEngDenPlotDark = EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark())
+    SSCEngDenPlotLight = EnergyDensityPlot(sol,PhaseSpace,TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight())
     Diplodocus.DiplodocusPlots.save("SSCEngDenPlotDark.pdf",SSCEngDenPlotDark)
     Diplodocus.DiplodocusPlots.save("SSCEngDenPlotDark.svg",SSCEngDenPlotDark)
     Diplodocus.DiplodocusPlots.save("SSCEngDenPlotLight.pdf",SSCEngDenPlotLight)
@@ -185,26 +158,12 @@ using Diplodocus
     Diplodocus.DiplodocusPlots.save("AM3SSCPDisPlotLight.pdf",AM3SSCPDisPlotLight)
     Diplodocus.DiplodocusPlots.save("AM3SSCPDisPlotLight.svg",AM3SSCPDisPlotLight)
 
-    AM3DIPSSCPDisPlotDark = Diplodocus.DiplodocusPlots.AM3_DIP_Combo_MomentumDistributionPlot("./AM3/ssc_test.jld2",sol,PhaseSpace,1e7,1e1,"l",plot_limits=((-15.0,7.0),(3.5,10.5)),theme=DiplodocusDark(),ele_err=false,pos_err=false,yticks=1:2:11)
-    AM3DIPSSCPDisPlotLight = Diplodocus.DiplodocusPlots.AM3_DIP_Combo_MomentumDistributionPlot("./AM3/ssc_test.jld2",sol,PhaseSpace,1e7,1e1,"l",plot_limits=((-15.0,7.0),(3.5,10.5)),theme=DiplodocusLight(),ele_err=false,pos_err=false)
+    AM3DIPSSCPDisPlotDark = Diplodocus.DiplodocusPlots.AM3_DIP_Combo_MomentumDistributionPlot("./AM3/ssc_test.jld2",sol,PhaseSpace,1e6,1e0,"l",plot_limits=((-15.0,7.0),(3.5,10.5)),theme=DiplodocusDark(),ele_err=false,pos_err=false)
+    AM3DIPSSCPDisPlotLight = Diplodocus.DiplodocusPlots.AM3_DIP_Combo_MomentumDistributionPlot("./AM3/ssc_test.jld2",sol,PhaseSpace,1e6,1e0,"l",plot_limits=((-15.0,7.0),(3.5,10.5)),theme=DiplodocusLight(),ele_err=false,pos_err=false)
     Diplodocus.DiplodocusPlots.save("AM3DIPSSCPDisPlotDark.pdf",AM3DIPSSCPDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3DIPSSCPDisPlotDark.svg",AM3DIPSSCPDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3DIPSSCPDisPlotLight.pdf",AM3DIPSSCPDisPlotLight)
     Diplodocus.DiplodocusPlots.save("AM3DIPSSCPDisPlotLight.svg",AM3DIPSSCPDisPlotLight)
-
-
-    DataDirectory = pwd()*"\\examples\\Data"
-    BigM = BuildBigMatrices(PhaseSpace,DataDirectory;loading_check=true,Bin_corrected=true);
-    FluxM = BuildFluxMatrices(PhaseSpace);
-    scheme = EulerStruct(sol.f[1],PhaseSpace,BigM,FluxM,false)
-
-    SSCTimeScalePlotDark = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol,[1,2,3,12,85,1002,10002],["Pho","Ele"];wide=false,plot_limits=((-14,8),(0.0,18.0)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark(),u_avg=true,p_timescale=true,plot_dt=true,logt=true,legend=true)
-    SSCTimeScalePlotLight = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol,[1,2,3,12,85,1002,10002],["Pho","Ele"];wide=false,plot_limits=((-14,8),(0.0,18.0)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight(),u_avg=true,p_timescale=true,plot_dt=true,logt=true,legend=true)
-
-    Diplodocus.DiplodocusPlots.save("SSCTimeScalePlotDark.pdf",SSCTimeScalePlotDark)
-    Diplodocus.DiplodocusPlots.save("SSCTimeScalePlotDark.svg",SSCTimeScalePlotDark)
-    Diplodocus.DiplodocusPlots.save("SSCTimeScalePlotLight.pdf",SSCTimeScalePlotLight)
-    Diplodocus.DiplodocusPlots.save("SSCTimeScalePlotLight.svg",SSCTimeScalePlotLight)
 
     
     

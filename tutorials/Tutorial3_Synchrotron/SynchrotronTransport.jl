@@ -64,7 +64,7 @@ using Diplodocus
 
 # location of DataDirectory where Interaction Matrices are stored
 
-    DataDirectory = pwd()*"\\Data"
+    DataDirectory = pwd()*"\\examples\\Data"
 
 # Load interaction matrices
 
@@ -80,7 +80,7 @@ using Diplodocus
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
     fileName = "Sync.jld2";
-    fileLocation = pwd()*"\\Data";
+    fileLocation = pwd()*"\\examples\\Data";
 
     sol = Solve(Initial,scheme;save_steps=5,progress=true,fileName=fileName,fileLocation=fileLocation);
 
@@ -121,8 +121,8 @@ using Diplodocus
     Diplodocus.DiplodocusPlots.save("AM3SyncPDisPlotLight.pdf",AM3SyncPDisPlotLight)
     Diplodocus.DiplodocusPlots.save("AM3SyncPDisPlotLight.svg",AM3SyncPDisPlotLight)
 
-    AM3DIPSyncPDisPlotDark = Diplodocus.DiplodocusPlots.AM3_DIP_Combo_MomentumDistributionPlot("./AM3/syn_test_0-8.jld2",sol,PhaseSpace,1e8,1e0,"l",plot_limits=((-15.0,7.0),(2.5,9.5)),theme=DiplodocusDark(),yticks=2:2:16)
-    AM3DIPSyncPDisPlotLight = Diplodocus.DiplodocusPlots.AM3_DIP_Combo_MomentumDistributionPlot("./AM3/syn_test_0-8.jld2",sol,PhaseSpace,1e8,1e0,"l",plot_limits=((-15.0,7.0),(2.5,9.5)),theme=DiplodocusLight(),yticks=2:2:16)
+    AM3DIPSyncPDisPlotDark = Diplodocus.DiplodocusPlots.AM3_DIP_Combo_MomentumDistributionPlot("./AM3/syn_test_0-8.jld2",sol,PhaseSpace,1e8,1e0,"l",plot_limits=((-15.0,7.0),(2.5,9.5)),theme=DiplodocusDark())
+    AM3DIPSyncPDisPlotLight = Diplodocus.DiplodocusPlots.AM3_DIP_Combo_MomentumDistributionPlot("./AM3/syn_test_0-8.jld2",sol,PhaseSpace,1e8,1e0,"l",plot_limits=((-15.0,7.0),(2.5,9.5)),theme=DiplodocusLight())
     Diplodocus.DiplodocusPlots.save("AM3DIPSyncPDisPlotDark.pdf",AM3DIPSyncPDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3DIPSyncPDisPlotDark.svg",AM3DIPSyncPDisPlotDark)
     Diplodocus.DiplodocusPlots.save("AM3DIPSyncPDisPlotLight.pdf",AM3DIPSyncPDisPlotLight)

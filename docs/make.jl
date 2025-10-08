@@ -7,6 +7,7 @@ using DiplodocusCollisions
 #using DiplodocusPlots
 
 push!(LOAD_PATH,"../src/")
+push!(LOAD_PATH,"/docs/")
 
 bib = CitationBibliography(
     joinpath(@__DIR__,"src","refs.bib");
@@ -39,10 +40,10 @@ makedocs(;
             "Conventions" => "Get Started/conventions.md"
         ],
         "Tutorials" => [
-                "Hard Spheres" => "Tutorials/hardsphere.md"
-                "Radiation Reaction" => "Tutorials/radreact.md"
-                "Synchrotron" => "Tutorials/synchrotron.md"
-                "Synchrotron Self Compton" => "Tutorials/SSC.md"
+                "1. Hard Spheres" => "Tutorials/hardsphere.md"
+                "2. Radiation Reaction" => "Tutorials/radreact.md"
+                "3. Synchrotron" => "Tutorials/synchrotron.md"
+                "4. Synchrotron Self-Compton" => "Tutorials/SSC.md"
         ],
         "Collisions" => [
             "Overview" => "DiplodocusCollisions/overview.md",
@@ -65,9 +66,9 @@ makedocs(;
     #clean = false,
 )
 
-deploydocs(;
+DocumenterVitepress.deploydocs(;
     repo= "github.com/cneverett/Diplodocus.jl",    
-    target = "build",
+    target = joinpath(@__DIR__, "build"),
     devbranch = "main",
     branch = "gh-pages",
     push_preview = true,

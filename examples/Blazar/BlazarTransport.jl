@@ -6,7 +6,7 @@ using Diplodocus
 
     t_up::Float64 = log10(SIToCodeUnitsTime(1e6))
     t_low::Float64 = log10(SIToCodeUnitsTime(1e0))
-    t_num::Int64 = 1200
+    t_num::Int64 = 600
     t_grid::String = "l"
 
     #t_up::Float64 = SIToCodeUnitsTime(1e2) # -12e0 seconds * (σT*c)
@@ -16,7 +16,7 @@ using Diplodocus
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
 
-    space_coords = Cylindrical(0.0,0.5*2/3,0.0)# x = r, y = phi, z = z
+    space_coords = Cylindrical(0.0,0.0,0.0)# x = r, y = phi, z = z
 
     x_up::Float64 = 1.0
     x_low::Float64 = 0f0
@@ -60,8 +60,8 @@ using Diplodocus
 # ==== Define Interactions  ====== #
 
     Binary_list::Vector{BinaryStruct} = [BinaryStruct("Ele","Pho","Ele","Pho"),];
-    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[B],Ani()),];
-    Forces::Vector{ForceType} = [CoordinateForce(),SyncRadReact(Ani(),B),];
+    Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[B],Iso()),];
+    Forces::Vector{ForceType} = [CoordinateForce(),SyncRadReact(Iso(),B),];
 
     # build phase space
     PhaseSpace = PhaseSpaceStruct(name_list,time,space,momentum,Binary_list,Emi_list,Forces);
@@ -80,7 +80,7 @@ using Diplodocus
 # Set initial conditions
 
     Initial = Initialise_Initial_Condition(PhaseSpace);
-    Initial_UnBoostedPowerLaw!(Initial,PhaseSpace,"Ele",pmin=1e3,pmax=1e6,Gamma=2.0,index=2.0,num_Init=1e6);
+    Initial_UnBoostedPowerLaw!(Initial,PhaseSpace,"Ele",pmin=1e3,pmax=1e5,Gamma=2.0,index=2.0,num_Init=1e6);
     #Initial_PowerLaw!(Initial,PhaseSpace,"Ele",pmin=1e3,pmax=1e6,umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,index=2.0,num_Init=1e6);
     #Initial_BlackBody!(Initial,PhaseSpace,"Pho",T=3.0,umin=-1.0,umax=1.0,hmin=0.0,hmax=2.0,num_Init=1e15);
 
@@ -90,31 +90,29 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "Blazar_new_Ani_10div3.jld2";
+    fileName = "Blazar_new_Iso.jld2";
     fileLocation = pwd()*"\\examples\\Data";
 
     #VSCodeServer.Profile.clear()
     #@profview sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
-    sol = Solve(Initial,scheme;save_steps=20,progress=true,fileName=fileName,fileLocation=fileLocation);
-
-    (PhaseSpace,sol) = SolutionFileLoad(fileLocation,fileName);
+    sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
 
     Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol.f[62],62;wide=true,plot_limits=((-15,8),(0,20)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark(),p_timescale=false)
 
-    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,Static(),step=5,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-15,7),(-10,11)))
+    MomentumDistributionPlot(sol,["Pho","Ele"],PhaseSpace,Static(),step=5,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-15,7),(0,11)))
 
 # ===== Load and Plot Results ================== # 
 
     fileLocation = pwd()*"\\examples\\Data";
-    fileName = "Blazar_new_Iso.jld2";
+    fileName = "Blazar_Iso.jld2";
     (PS_Iso, sol_Iso) = SolutionFileLoad(fileLocation,fileName);
-    fileName = "Blazar_new_Ani_0.jld2";
+    fileName = "Blazar_Ani_0.jld2";
     (PS_Ani0, sol_Ani0) = SolutionFileLoad(fileLocation,fileName);
-    fileName = "Blazar_new_Ani_5.jld2";
+    fileName = "Blazar_Ani_5.jld2";
     (PS_Ani5, sol_Ani5) = SolutionFileLoad(fileLocation,fileName);
-    fileName = "Blazar_new_Ani_5div3.jld2";
+    fileName = "Blazar_Ani_5div3.jld2";
     (PS_Ani5div3, sol_Ani5div3) = SolutionFileLoad(fileLocation,fileName);
-    fileName = "Blazar_new_Ani_10div3.jld2";
+    fileName = "Blazar_Ani_10div3.jld2";
     (PS_Ani10div3, sol_Ani10div3) = SolutionFileLoad(fileLocation,fileName);
 
     SSCBFieldDark = Diplodocus.DiplodocusPlots.BFieldObserverPlot([sol_Ani0,sol_Ani5div3,sol_Ani10div3,sol_Ani5,sol_Iso],[PS_Ani0,PS_Ani5div3,PS_Ani10div3,PS_Ani5,PS_Iso],52,0.1,plot_limits=((-16.0,7.0),(-21.5,-12.5)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark(),R=1e14,Z=1e21,ObserverDistance=1e26)
