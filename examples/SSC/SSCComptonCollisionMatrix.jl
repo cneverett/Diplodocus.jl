@@ -36,15 +36,18 @@ This script is provided as an example of how to run the BinaryInteractionSpectra
     numGain = 16
     numThreads = 15
 
-    scale = 0.0:0.05:0.25
+    scale = 0.0:0.05:1.5
 
-    fileLocation = pwd()*"\\examples\\Data"
+    fileLocation = pwd()*"\\Data"
     (Setup,fileName) = UserBinaryParameters()
 
     BinaryInteractionIntegration(Setup)
 
     Output = BinaryFileLoad_Matrix(fileLocation,fileName,corrected=false); 
     InteractiveBinaryGainLossPlot(Output)
+
+    Output = 0.0
+    GC.gc()
 
     DoesConserve(Output,Tuple_Output=false)
 

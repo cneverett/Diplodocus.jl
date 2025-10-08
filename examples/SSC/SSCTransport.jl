@@ -69,7 +69,7 @@ using Diplodocus
 
 # location of DataDirectory where Interaction Matrices are stored
 
-    DataDirectory = pwd()*"\\examples\\Data"
+    DataDirectory = pwd()*"\\Data"
 
 # Load interaction matrices
 
@@ -87,7 +87,7 @@ using Diplodocus
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
     fileName = "SSC_new_6_UniformT_no_pair_prod.jld2";
-    fileLocation = pwd()*"\\examples\\Data";
+    fileLocation = pwd()*"\\Data";
 
     sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
 
@@ -99,7 +99,7 @@ using Diplodocus
     MomentumAndPolarAngleDistributionPlot(sol,"Pos",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
     MomentumAndPolarAngleDistributionPlot(sol,"Pho",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
 
-    MomentumDistributionPlot(sol,["Pho","Ele","Pos"],PhaseSpace,Static(),step=1,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-14,7),(3.5,10.5)))
+    MomentumDistributionPlot(sol,["Pho","Ele","Pos"],PhaseSpace,Static(),step=2,order=1,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-14,7),(3.5,10.5)))
     MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=10,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
     MomentumDistributionPlot(sol,["Pos"],PhaseSpace,Static(),step=1,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
     MomentumDistributionPlot(sol,["Pho"],PhaseSpace,Static(),step=10,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
