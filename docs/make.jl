@@ -43,7 +43,7 @@ makedocs(;
                 "1. Hard Spheres" => "Tutorials/hardsphere.md"
                 "2. Radiation Reaction" => "Tutorials/radreact.md"
                 "3. Synchrotron" => "Tutorials/synchrotron.md"
-                "4. Synchrotron Self Compton" => "Tutorials/SSC.md"
+                "4. Synchrotron Self-Compton" => "Tutorials/SSC.md"
         ],
         "Collisions" => [
             "Overview" => "DiplodocusCollisions/overview.md",
