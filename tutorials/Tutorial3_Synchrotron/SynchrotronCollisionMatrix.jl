@@ -33,7 +33,7 @@
     # number of points to sample
     numLoss = 256
     numGain = 256
-    numThreads = 10
+    numThreads = Threads.nthreads()
     
     # scale factor range
     scale = 0.0:0.1:0.0
