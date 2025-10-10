@@ -118,7 +118,7 @@ using Diplodocus
     (PS_Ani10div3, sol_Ani10div3) = SolutionFileLoad(fileLocation,fileName);
 
     SSCBFieldDark = Diplodocus.DiplodocusPlots.BFieldObserverPlot([sol_Ani0,sol_Ani5div3,sol_Ani10div3,sol_Ani5,sol_Iso],[PS_Ani0,PS_Ani5div3,PS_Ani10div3,PS_Ani5,PS_Iso],52,0.1,plot_limits=((-16.0,7.0),(-21.5,-12.5)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark(),R=1e14,Z=1e21,ObserverDistance=1e26)
-    SSCBFieldLight = Diplodocus.DiplodocusPlots.BFieldObserverPlot([sol_Ani0,sol_Ani5div3,sol_Ani10div3,sol_Ani5,sol_Iso],[PS_Ani0,PS_Ani5div3,PS_Ani10div3,PS_Ani5,PS_Iso],52,0.1,plot_limits=((-16.0,6.0),(-21.5,-12.5)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight(),R=1e14,Z=1e21,ObserverDistance=1e26)
+    SSCBFieldLight = Diplodocus.DiplodocusPlots.BFieldObserverPlot([sol_Ani0,sol_Ani5div3,sol_Ani10div3,sol_Ani5,sol_Iso],[PS_Ani0,PS_Ani5div3,PS_Ani10div3,PS_Ani5,PS_Iso],52,0.1,plot_limits=((-16.0,7.0),(-21.5,-12.5)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight(),R=1e14,Z=1e21,ObserverDistance=1e26)
 
     Diplodocus.DiplodocusPlots.save("SSCBFieldDark.svg",SSCBFieldDark)
     Diplodocus.DiplodocusPlots.save("SSCBFieldDark.pdf",SSCBFieldDark)
