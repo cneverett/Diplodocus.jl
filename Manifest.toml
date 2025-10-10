@@ -289,7 +289,7 @@ version = "0.1.1"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Makie", "Revise"]
-git-tree-sha1 = "b9462949fba849194147d0c0ae652cdf5ea09c1c"
+git-tree-sha1 = "04d00a51e1e9e419394a783883b86e452691b3d9"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusPlots.jl"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
@@ -629,9 +629,9 @@ weakdeps = ["Unitful"]
 
 [[deps.IntervalArithmetic]]
 deps = ["CRlibm", "MacroTools", "OpenBLASConsistentFPCSR_jll", "Printf", "Random", "RoundingEmulator"]
-git-tree-sha1 = "815e74f416953c348c9da1d1bc977bbc97c84e18"
+git-tree-sha1 = "bf0210c01fb7d67c31fed97d7c1d1716b98ea689"
 uuid = "d1acc4aa-44c8-5952-acd4-ba5d80a2a253"
-version = "1.0.0"
+version = "1.0.1"
 
     [deps.IntervalArithmetic.extensions]
     IntervalArithmeticArblibExt = "Arblib"
@@ -1210,9 +1210,9 @@ version = "1.3.1"
 
 [[deps.Revise]]
 deps = ["CodeTracking", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "REPL", "Requires", "UUIDs", "Unicode"]
-git-tree-sha1 = "d852eba0cc08181083a58d5eb9dccaec3129cb03"
+git-tree-sha1 = "2d155af8d27cc03e39771aac4468695bcedb6ca7"
 uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
-version = "3.9.0"
+version = "3.10.0"
 weakdeps = ["Distributed"]
 
     [deps.Revise.extensions]

@@ -4,10 +4,10 @@ using Diplodocus
 
     B = 1e-4
 
-    t_up::Float64 = log10(SIToCodeUnitsTime(1e6))
-    t_low::Float64 = log10(SIToCodeUnitsTime(1e0))
-    t_num::Int64 = 1200
-    t_grid::String = "l"
+    t_up::Float64 = SIToCodeUnitsTime(1e5) #log10(SIToCodeUnitsTime(1e6))
+    t_low::Float64 = SIToCodeUnitsTime(0e0) # log10(SIToCodeUnitsTime(1e0))
+    t_num::Int64 = 1000
+    t_grid::String = "u"
 
     #t_up::Float64 = SIToCodeUnitsTime(1e2) # -12e0 seconds * (σT*c)
     #t_low::Float64 = SIToCodeUnitsTime(0e0) #-20e0 seconds * (σT*c)
@@ -16,7 +16,7 @@ using Diplodocus
 
     time = TimeStruct(t_up,t_low,t_num,t_grid)
 
-    space_coords = Cylindrical(0.0,0.5*2/3,0.0)# x = r, y = phi, z = z
+    space_coords = Cylindrical(0.0,0.5*1/3,0.0)# x = r, y = phi, z = z
 
     x_up::Float64 = 1.0
     x_low::Float64 = 0f0
@@ -68,7 +68,7 @@ using Diplodocus
 
 # location of DataDirectory where Interaction Matrices are stored
 
-    DataDirectory = pwd()*"\\examples\\Data"
+    DataDirectory = pwd()*"\\Data"
 
 # Load interaction matrices
 
@@ -90,7 +90,7 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "Blazar_new_Ani_10div3.jld2";
+    fileName = "Blazar_new_Ani_5div3.jld2";
     fileLocation = pwd()*"\\examples\\Data";
 
     #VSCodeServer.Profile.clear()

@@ -6,7 +6,7 @@ using Diplodocus
 
     t_up::Float64 = SIToCodeUnitsTime(1e6)#log10(SIToCodeUnitsTime(1e6)) # -12e0 seconds * (σT*c)
     t_low::Float64 = SIToCodeUnitsTime(0e0) #log10(SIToCodeUnitsTime(1e0)) #-20e0 seconds * (σT*c)
-    t_num::Int64 = 10000#12000#30000
+    t_num::Int64 = 20000#12000#30000
     t_grid::String = "u"#"l"
 
     #t_up::Float64 = SIToCodeUnitsTime(1e2) # -12e0 seconds * (σT*c)
@@ -99,7 +99,7 @@ using Diplodocus
     MomentumAndPolarAngleDistributionPlot(sol,"Pos",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
     MomentumAndPolarAngleDistributionPlot(sol,"Pho",PhaseSpace,Static(),(1,32,52),order=1,TimeUnits=CodeToSIUnitsTime)
 
-    MomentumDistributionPlot(sol,["Pho","Ele","Pos"],PhaseSpace,Static(),step=2,order=1,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-14,7),(3.5,10.5)))
+    MomentumDistributionPlot(sol,["Pho","Ele","Pos"],PhaseSpace,Static(),step=20,order=2,wide=true,TimeUnits=CodeToSIUnitsTime,plot_limits=((-14,7),(3.5,10.5)))
     MomentumDistributionPlot(sol,["Ele"],PhaseSpace,Static(),step=10,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
     MomentumDistributionPlot(sol,["Pos"],PhaseSpace,Static(),step=1,order=2,wide=false,TimeUnits=CodeToSIUnitsTime)
     MomentumDistributionPlot(sol,["Pho"],PhaseSpace,Static(),step=10,order=2,wide=true,TimeUnits=CodeToSIUnitsTime)
@@ -113,7 +113,7 @@ using Diplodocus
 
     EnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing,logt=true,TimeUnits=CodeToSIUnitsTime)
     FracEnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing)
-    FracEnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing,only_all=true)
+    FracEnergyDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing,only_all=true,logt=true)
 
     MomentumDistributionPlot(sol_Iso,["Ele","Pho"],PhaseSpace,Animated(),thermal=false,order=2,plot_limits=((-15,7),(2,10)),wide=true,TimeUnits=CodeToSIUnitsTime,filename="SyncElePhoAnimated.mp4")
 
