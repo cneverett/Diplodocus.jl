@@ -52,7 +52,7 @@ makedocs(;
         ],
         "Transport" => [
             "Overview" => "DiplodocusTransport/overview.md",
-            "Implemented Coordinates and Forces" => "DiplodocusTransport/implemented forces.md",
+            "Implemented Coordinates and Forces" => "DiplodocusTransport/implemented terms.md",
         ],
         "Plots" => [
             "Overview" => "DiplodocusPlots/overview.md"
