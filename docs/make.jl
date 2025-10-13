@@ -3,7 +3,7 @@ using DocumenterVitepress
 using DocumenterCitations
 using Diplodocus
 using DiplodocusCollisions
-#using DiplodocusTransport
+using DiplodocusTransport
 #using DiplodocusPlots
 
 push!(LOAD_PATH,"../src/")
@@ -47,11 +47,12 @@ makedocs(;
         ],
         "Collisions" => [
             "Overview" => "DiplodocusCollisions/overview.md",
-            "Impelemented Collisions" => "DiplodocusCollisions/implemented collisions.md",
+            "Implemented Collisions" => "DiplodocusCollisions/implemented collisions.md",
+            "Adding New Collisions" => "DiplodocusCollisions/adding new collisions.md",
         ],
         "Transport" => [
             "Overview" => "DiplodocusTransport/overview.md",
-            "External Forces" => "DiplodocusTransport/external forces.md",
+            "Implemented Coordinates and Forces" => "DiplodocusTransport/implemented forces.md",
         ],
         "Plots" => [
             "Overview" => "DiplodocusPlots/overview.md"

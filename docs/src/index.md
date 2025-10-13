@@ -37,7 +37,7 @@ If you use Diplodocus.jl, any of its components or are just feeling kind, please
 
 (Paper II and III coming soon)
 
-::: BibTeX
+::: details Show BibTeX
 
 ```
 @online{EverettCotter_2025,

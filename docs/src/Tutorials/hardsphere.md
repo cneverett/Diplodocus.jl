@@ -22,9 +22,9 @@ juila> include("HardSphereTransport.jl")
 
 ::: warning
 
-    The generation of collision matrices using `HardSphereCollisionMatrix.jl` by default uses the maximum number of available threads `Threads.nthreads()`, if you would prefer the scripts to run with fewer threads then modify the variable `numThreads` to the desired amount. 
+The generation of collision matrices using `HardSphereCollisionMatrix.jl` by default uses the maximum number of available threads `Threads.nthreads()`, if you would prefer the scripts to run with fewer threads then modify the variable `numThreads` to the desired amount. 
 
-    By default, collision matrices are set to be saved in a `fileLocation=pwd()*"\\Data"`, i.e. in a folder named `Data` located in the same directory from which the code is run. This folder is not created by default and must created by the user or the user may change the `fileLocation` to wherever they would prefer.
+By default, collision matrices are set to be saved in a `fileLocation=pwd()*"\\Data"`, i.e. in a folder named `Data` located in the same directory from which the code is run. This folder is not created by default and must created by the user or the user may change the `fileLocation` to wherever they would prefer.
 
 :::
 
