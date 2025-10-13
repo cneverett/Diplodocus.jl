@@ -4,9 +4,9 @@ using Diplodocus
 
     B = 1e-4
 
-    t_up::Float64 = SIToCodeUnitsTime(1e6)#log10(SIToCodeUnitsTime(1e6)) # -12e0 seconds * (σT*c)
+    t_up::Float64 = SIToCodeUnitsTime(1e7)#log10(SIToCodeUnitsTime(1e6)) # -12e0 seconds * (σT*c)
     t_low::Float64 = SIToCodeUnitsTime(0e0) #log10(SIToCodeUnitsTime(1e0)) #-20e0 seconds * (σT*c)
-    t_num::Int64 = 20000#12000#30000
+    t_num::Int64 = 100000#12000#30000
     t_grid::String = "u"#"l"
 
     #t_up::Float64 = SIToCodeUnitsTime(1e2) # -12e0 seconds * (σT*c)
@@ -60,7 +60,7 @@ using Diplodocus
 
 # ==== Define Interactions  ====== #
 
-    Binary_list::Vector{BinaryStruct} = [BinaryStruct("Ele","Pho","Ele","Pho"),BinaryStruct("Pos","Pho","Pos","Pho")#= ,BinaryStruct("Pho","Pho","Ele","Pos") =#];
+    Binary_list::Vector{BinaryStruct} = [BinaryStruct("Ele","Pho","Ele","Pho"),BinaryStruct("Pos","Pho","Pos","Pho"),BinaryStruct("Pho","Pho","Ele","Pos")];
     Emi_list::Vector{EmiStruct} = [EmiStruct("Ele","Ele","Pho","Sync",[B],Iso()),EmiStruct("Pos","Pos","Pho","Sync",[B],Iso())];
     Forces::Vector{ForceType} = [SyncRadReact(Iso(),B),];
 
@@ -86,8 +86,8 @@ using Diplodocus
 # ===== Run the Solver ================== #
 
     scheme = EulerStruct(Initial,PhaseSpace,BigM,FluxM,false)
-    fileName = "SSC_new_6_UniformT_no_pair_prod.jld2";
-    fileLocation = pwd()*"\\Data";
+    fileName = "SSC_new_7_UniformT.jld2";
+    fileLocation = pwd()*"\\examples\\Data";
 
     sol = Solve(Initial,scheme;save_steps=10,progress=true,fileName=fileName,fileLocation=fileLocation);
 
@@ -107,6 +107,7 @@ using Diplodocus
     NumberDensityPlot(sol,PhaseSpace,theme=DiplodocusDark(),title=nothing)
     NumberDensityPlot(sol,PhaseSpace,species="Pho",theme=DiplodocusDark(),title=nothing)
     NumberDensityPlot(sol,PhaseSpace,species="Ele",theme=DiplodocusDark(),title=nothing)
+    NumberDensityPlot(sol,PhaseSpace,species="Pos",theme=DiplodocusDark(),title=nothing)
     FracNumberDensityPlot(sol,PhaseSpace,species="Ele",theme=DiplodocusDark(),title=nothing)
     FracNumberDensityPlot(sol,PhaseSpace,species="Pho",theme=DiplodocusDark(),title=nothing)
     FracNumberDensityPlot(sol,PhaseSpace,species="All",theme=DiplodocusDark(),title=nothing)
@@ -198,8 +199,8 @@ using Diplodocus
     FluxM = BuildFluxMatrices(PhaseSpace);
     scheme = EulerStruct(sol.f[1],PhaseSpace,BigM,FluxM,false)
 
-    SSCTimeScalePlotDark = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol,[1,2,3,12,85,1002,10002],["Pho","Ele"];wide=false,plot_limits=((-14,8),(0.0,18.0)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark(),u_avg=true,p_timescale=true,plot_dt=true,logt=true,legend=true)
-    SSCTimeScalePlotLight = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol,[1,2,3,12,85,1002,10002],["Pho","Ele"];wide=false,plot_limits=((-14,8),(0.0,18.0)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight(),u_avg=true,p_timescale=true,plot_dt=true,logt=true,legend=true)
+    SSCTimeScalePlotDark = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol,[1,2,3,12,102,1002,10002],["Pho","Ele"];wide=false,plot_limits=((-14,8),(0.0,18.0)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusDark(),u_avg=true,p_timescale=true,plot_dt=true,logt=true,legend=true)
+    SSCTimeScalePlotLight = Diplodocus.DiplodocusPlots.TimeScalePlot(scheme,sol,[1,2,3,12,102,1002,10002],["Pho","Ele"];wide=false,plot_limits=((-14,8),(0.0,18.0)),TimeUnits=CodeToSIUnitsTime,theme=DiplodocusLight(),u_avg=true,p_timescale=true,plot_dt=true,logt=true,legend=true)
 
     Diplodocus.DiplodocusPlots.save("SSCTimeScalePlotDark.pdf",SSCTimeScalePlotDark)
     Diplodocus.DiplodocusPlots.save("SSCTimeScalePlotDark.svg",SSCTimeScalePlotDark)
