@@ -54,7 +54,6 @@ If you use Diplodocus.jl, any of its components or are just feeling kind, please
 
 @online{EverettEtAl_2025,
   title = {{{DIPLODOCUS II}}: {{Implementation}} of Transport Equations and Test Cases Relevant to Micro-Scale Physics of Jetted Astrophysical Sources},
-  shorttitle = {{{DIPLODOCUS II}}},
   author = {Everett, Christopher N. and Klinger-Plaisier, Marc and Cotter, Garret},
   date = {2025-10-14},
   eprint = {2510.12505},
