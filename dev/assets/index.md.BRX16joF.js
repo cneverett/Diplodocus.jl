@@ -11,7 +11,6 @@ import{_ as s,c as n,o as e,aA as t}from"./chunks/framework.CSuYNUj9.js";const h
 <span class="line"><span></span></span>
 <span class="line"><span>@online{EverettEtAl_2025,</span></span>
 <span class="line"><span>  title = {{{DIPLODOCUS II}}: {{Implementation}} of Transport Equations and Test Cases Relevant to Micro-Scale Physics of Jetted Astrophysical Sources},</span></span>
-<span class="line"><span>  shorttitle = {{{DIPLODOCUS II}}},</span></span>
 <span class="line"><span>  author = {Everett, Christopher N. and Klinger-Plaisier, Marc and Cotter, Garret},</span></span>
 <span class="line"><span>  date = {2025-10-14},</span></span>
 <span class="line"><span>  eprint = {2510.12505},</span></span>
