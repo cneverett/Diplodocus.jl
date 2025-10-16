@@ -34,10 +34,11 @@ features:
 If you use Diplodocus.jl, any of its components or are just feeling kind, please cite one or all of the main Diplodocus series papers:
 
 >  C. N. Everett and G. Cotter, DIPLODOCUS I: Framework for the evaluation of relativistic transport equations with continuous forcing and discrete particle interactions (2025), https://doi.org/10.48550/arXiv.2508.13296
+>  C. N. Everett, M. Klinger-Plaisier and G. Cotter, DIPLODOCUS II: Implementation of Transport Equations and Test Cases Relevant to Micro-Scale Physics of Jetted Astrophysical Sources (2025), https://doi.org/10.48550/arXiv.2510.12505
 
-(Paper II and III coming soon)
+(Paper III coming soon)
 
-::: details Show BibTeX
+::: details Show BibLaTeX
 
 ```
 @online{EverettCotter_2025,
@@ -50,6 +51,20 @@ If you use Diplodocus.jl, any of its components or are just feeling kind, please
   doi = {10.48550/arXiv.2508.13296},
   url = {http://arxiv.org/abs/2508.13296},
 }
+
+@online{EverettEtAl_2025,
+  title = {{{DIPLODOCUS II}}: {{Implementation}} of Transport Equations and Test Cases Relevant to Micro-Scale Physics of Jetted Astrophysical Sources},
+  shorttitle = {{{DIPLODOCUS II}}},
+  author = {Everett, Christopher N. and Klinger-Plaisier, Marc and Cotter, Garret},
+  date = {2025-10-14},
+  eprint = {2510.12505},
+  eprinttype = {arXiv},
+  eprintclass = {astro-ph},
+  doi = {10.48550/arXiv.2510.12505},
+  url = {http://arxiv.org/abs/2510.12505},
+}
+
+
 ```
 
 :::
