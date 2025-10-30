@@ -11,7 +11,7 @@ DiplodocusTransport = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 [compat]
 DiplodocusCollisions = "0.1.1"
 DiplodocusPlots = "0.1.1"
-DiplodocusTransport = "0.1.1"
+DiplodocusTransport = "0.1.2"
 julia = "1.11.6"
 
 [extras]
