@@ -2,7 +2,7 @@
 
 julia_version = "1.12.0"
 manifest_format = "2.0"
-project_hash = "5bb89a695f7a60e9b33b5c9d853d3f78be4e623a"
+project_hash = "62405c10325c94d61ac0f3effd7ff1f623393304"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -303,7 +303,7 @@ version = "0.1.1"
 
 [[deps.DiplodocusTransport]]
 deps = ["Bessels", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "ProgressMeter", "Revise", "Statistics"]
-git-tree-sha1 = "056496bc9987e52b77414bff9cc16bd0f8020132"
+git-tree-sha1 = "32e03c9e252c8bce951004c3451849f4ad67f12e"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusTransport.jl"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
