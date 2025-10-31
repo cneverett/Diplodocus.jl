@@ -1,7 +1,7 @@
 name = "Diplodocus"
 uuid = "792d114c-f8c3-4b81-9580-cc03468a5b58"
+version = "0.2.0"
 authors = ["Christopher Everett"]
-version = "0.1.1"
 
 [deps]
 DiplodocusCollisions = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
@@ -9,10 +9,8 @@ DiplodocusPlots = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
 DiplodocusTransport = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 
 [compat]
-DiplodocusCollisions = "0.1.1"
-DiplodocusPlots = "0.1.1"
-DiplodocusTransport = "0.1.1"
-julia = "1.11.6"
+DiplodocusTransport = "0.2.0"
+julia = "1.12"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

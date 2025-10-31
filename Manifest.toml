@@ -2,7 +2,7 @@
 
 julia_version = "1.12.0"
 manifest_format = "2.0"
-project_hash = "62405c10325c94d61ac0f3effd7ff1f623393304"
+project_hash = "70c959d58663a2488a0ae4e22219cdf81a5b7b07"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -280,10 +280,10 @@ uuid = "927a84f5-c5f4-47a5-9785-b46e178433df"
 version = "1.6.4"
 
 [[deps.Diplodocus]]
-deps = ["DiplodocusCollisions", "DiplodocusPlots", "DiplodocusTransport"]
+deps = ["DiplodocusCollisions", "DiplodocusPlots"]
 path = "."
 uuid = "792d114c-f8c3-4b81-9580-cc03468a5b58"
-version = "0.1.1"
+version = "0.2.0"
 
 [[deps.DiplodocusCollisions]]
 deps = ["BenchmarkTools", "Bessels", "JLD2", "ProgressMeter", "Random"]
@@ -295,19 +295,19 @@ version = "0.1.1"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Makie", "Revise"]
-git-tree-sha1 = "78ad4b54b87ec1f947a87591602b8dbe54861091"
+git-tree-sha1 = "2e87920f8862b1f1d56a5c9eedebb1dd129cd458"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusPlots.jl"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
-version = "0.1.1"
+version = "0.2.0"
 
 [[deps.DiplodocusTransport]]
 deps = ["Bessels", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "ProgressMeter", "Revise", "Statistics"]
-git-tree-sha1 = "32e03c9e252c8bce951004c3451849f4ad67f12e"
+git-tree-sha1 = "1988ba7b4916e7689c334086064d3dc50b606327"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusTransport.jl"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
-version = "0.1.2"
+version = "0.2.0"
 
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
@@ -1226,9 +1226,9 @@ version = "1.3.1"
 
 [[deps.Revise]]
 deps = ["CodeTracking", "FileWatching", "JuliaInterpreter", "LibGit2", "LoweredCodeUtils", "OrderedCollections", "REPL", "Requires", "UUIDs", "Unicode"]
-git-tree-sha1 = "276237d98b5bfc2541d92e952bfa99d362011ac7"
+git-tree-sha1 = "b7e5b731326a99431517b0b4c1f3902e842103a2"
 uuid = "295af30f-e4ad-537b-8983-00126c2a3abe"
-version = "3.11.0"
+version = "3.12.0"
 weakdeps = ["Distributed"]
 
     [deps.Revise.extensions]
