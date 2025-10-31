@@ -9,5 +9,7 @@
 
 *.jld2
 
+examples/
+
 /AM3/
 /logo animation/
