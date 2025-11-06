@@ -7,9 +7,9 @@ Several tutorials have been designed to familiarise users with how to set up and
 - [Tutorial 3: Synchrotron Emissions](@ref)
 - [Tutorial 4: Synchrotron Self Compton with Pair Production](@ref)
 
-::: warning
+::: info
 
-    These tutorials only cover systems which are homogenous in space. Tutorials covering spatial variation are in development
+These tutorials only cover systems which are homogenous in space. Tutorials covering spatial variation are in development
 
 :::
 
