@@ -9,6 +9,7 @@ Below is a table of the currently implemented particles (i.e. their particle pro
 | Electron | `"Ele"`     |                    1.0          | -1.0 |
 | Positron | `"Pos"`     |                    1.0          | 1.0  |
 | Proton   | `"Pro"`     |                    1836.1528    | 1.0  |
+| Photon   | `"Pho"`     |                    0.0          | 0.0  |
 
 ## Grids
 Three types of grids for coordinates in phase space have been implemented

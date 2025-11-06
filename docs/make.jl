@@ -35,15 +35,16 @@ makedocs(;
     build = "build",
     pages=[
         "Get Started" => [
-            "Overview" => "Get Started/overview.md"
-            "Installation" => "Get Started/installation.md"
-            "Conventions" => "Get Started/conventions.md"
+            "Overview" => "Get Started/overview.md",
+            "Installation" => "Get Started/installation.md",
+            "Conventions" => "Get Started/conventions.md",
         ],
         "Tutorials" => [
-                "1. Hard Spheres" => "Tutorials/hardsphere.md"
-                "2. Radiation Reaction" => "Tutorials/radreact.md"
-                "3. Synchrotron" => "Tutorials/synchrotron.md"
-                "4. Synchrotron Self-Compton" => "Tutorials/SSC.md"
+            "Overview" => "Tutorials/overview.md",
+            "1. Hard Spheres" => "Tutorials/hardsphere.md",
+            "2. Radiation Reaction" => "Tutorials/radreact.md",
+            "3. Synchrotron" => "Tutorials/synchrotron.md",
+            "4. Synchrotron Self-Compton" => "Tutorials/SSC.md",
         ],
         "Collisions" => [
             "Overview" => "DiplodocusCollisions/overview.md",

@@ -8,7 +8,7 @@ The currently implemented spatial coordinates include:
 | Coordinates    | Coordinate Struct | Comment |
 | ----------------- | ------------ | ------------------------------- |
 | Cartesian Minkowski   | `Cartesian()`     |  Standard ``x,y,z`` flat Minkowski spacetime | 
-| Cylindrical Minkowski      | `Cylindrical()`     |     Standard ``\rho,\vartheta,z`` flat Minkowski spacetime. Allows three arguments ``Cylindrical(a,b,c)`` for local "z-x-z" rotation of the momentum-space ``z`` axis from the spatial cylindrical ``z`` axis  |
+| Cylindrical Minkowski      | `Cylindrical()`     |     Standard ``\rho,\vartheta,z`` flat Minkowski spacetime. Allows three arguments `Cylindrical(a,b,c)` for local "z-x-z" rotation of the momentum-space ``z`` axis from the spatial cylindrical ``z`` axis  |
 | Spherical Minkowski | `Spherical()`   | Standard ``r,\theta,\psi`` flat Minkowski spacetime   | 
 
 
