@@ -8,7 +8,7 @@
 
 Diplodocus is a novel framework for evolving the a set of particle distribution functions through the seven dimensions of phase space: one time, three space and three momentum. Evolution includes advection of particles, continuous forcing and discrete interactions (collisions) between particles.
 
-More details of the framework and its numerical implementation can be found in the DIPLODOCUS series of papers, the first two are currently available [EverettCotter_2025](@citet) and [EverettEtAl2025](@citet)
+More details of the framework and its numerical implementation can be found in the DIPLODOCUS series of papers, the first two are currently available [EverettCotter_2025](@citet) and [EverettEtAl_2025](@citet)
 
 ## Transport Equations for Particles
 Transport equations refers to a set of equations that dictate the evolution of particles through phase space. In Diplodocus, that takes the form of an integrated Boltzmann equation: 
