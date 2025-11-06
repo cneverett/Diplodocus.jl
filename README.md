@@ -1,7 +1,7 @@
 <img align="left" width="64" height="64" src="./docs/src/assets/favicon.svg" alt="Diplodocus icon">
 
 # Diplodocus.jl
-**D**istribution **I**n **PL**ateaux meth**ODO**logy for the **C**omp**u**tation of transport equation**S**
+**D**istribution **I**n **PL**ateaux meth**ODO**logy for the **C**omp**U**tation of transport equation**S**
 
 [![][docs-latest-img]][docs-latest-url]
 [![Build Status][gha-img]][gha-url]
@@ -16,4 +16,4 @@
 
 Documentation, installation instructions and tutorials can be found [here](https://cneverett.github.io/Diplodocus.jl/). 
 
-This framework is being published as the DIPLODOCUS series of papers, the first two covering the theoretical background and numerical implementation can be found at [Paper I](https://doi.org/10.48550/arXiv.2508.13296) and [Paper II](https://doi.org/10.48550/arXiv.2510.12505)
+This framework is being published as the DIPLODOCUS series of papers, the first two covering the theoretical background and numerical implementation can be found at [Paper I](https://doi.org/10.48550/arXiv.2508.13296) and [Paper II](https://doi.org/10.48550/arXiv.2510.12505).

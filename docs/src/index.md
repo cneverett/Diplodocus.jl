@@ -34,6 +34,7 @@ features:
 If you use Diplodocus.jl, any of its components or are just feeling kind, please cite one or all of the main Diplodocus series papers:
 
 >  C. N. Everett and G. Cotter, DIPLODOCUS I: Framework for the evaluation of relativistic transport equations with continuous forcing and discrete particle interactions (2025), https://doi.org/10.48550/arXiv.2508.13296
+
 >  C. N. Everett, M. Klinger-Plaisier and G. Cotter, DIPLODOCUS II: Implementation of Transport Equations and Test Cases Relevant to Micro-Scale Physics of Jetted Astrophysical Sources (2025), https://doi.org/10.48550/arXiv.2510.12505
 
 (Paper III coming soon)
