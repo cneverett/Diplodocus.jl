@@ -76,5 +76,5 @@ DocumenterVitepress.deploydocs(;
     push_preview = true,
 
     #devurl = "dev",
-    versions = ["stable" => "v^", "v#.#","dev"=>"dev"]
+    #versions = ["stable" => "v^", "v#.#","dev"=>"dev"]
 )
