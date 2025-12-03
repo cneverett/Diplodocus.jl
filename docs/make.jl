@@ -60,10 +60,10 @@ makedocs(;
         ],
     ],
     #linkcheck = true,
-    #doctest = false,
-    #warnonly = [:missing_docs],
+    doctest = false,
+    warnonly = [:missing_docs],
     #clean = true,
-    #checkdocs = :none
+    checkdocs = :none
     # for liveServer, COMMENT OUT BEFORE DEPLOYING
     #clean = false,
 )
