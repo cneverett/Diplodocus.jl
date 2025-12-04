@@ -62,7 +62,7 @@ makedocs(;
     #linkcheck = true,
     doctest = false,
     warnonly = [:missing_docs],
-    #clean = true,
+    clean = true,
     checkdocs = :none
     # for liveServer, COMMENT OUT BEFORE DEPLOYING
     #clean = false,
