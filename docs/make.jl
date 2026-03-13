@@ -18,13 +18,13 @@ bib = CitationBibliography(
 makedocs(;
     modules = [Diplodocus,DiplodocusCollisions],
     plugins = [bib],
-    repo = Remotes.GitHub("cneverett","Diplodocus.jl#dev"),
+    repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
     authors = "Christopher Everett",
     sitename = "Diplodocus.jl",
     format = DocumenterVitepress.MarkdownVitepress(
-        repo = "https://github.com/cneverett/Diplodocus.jl",
+        repo = "https://github.com/cneverett/Diplodocus.j",
         devurl = "dev",
-        devbranch = "main",
+        devbranch = "dev",
         #deploy_url = "https://cneverett.github.io/Diplodocus.jl/",
         # for liveServer, COMMENT OUT BEFORE DEPLOYING
         #md_outpath = ".",
