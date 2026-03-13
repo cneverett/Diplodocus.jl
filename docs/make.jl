@@ -41,10 +41,15 @@ makedocs(;
         ],
         "Tutorials" => [
             "Overview" => "Tutorials/overview.md",
-            "1. Hard Spheres" => "Tutorials/hardsphere.md",
-            "2. Radiation Reaction" => "Tutorials/radreact.md",
-            "3. Synchrotron" => "Tutorials/synchrotron.md",
-            "4. Synchrotron Self-Compton" => "Tutorials/SSC.md",
+            "Tutorial 1. Hard Spheres" => [
+                "1. Overview" => "Tutorials/Tutorial1/setup.md",
+                "1a. Generating the Collision Matrix" => "Tutorials/Tutorial1/tutorial1_collisions.md",
+                "1b. Running the Simulation" => "Tutorials/Tutorial1/tutorial1_transport.md",
+                "1c. Plotting the Results" => "Tutorials/Tutorial1/tutorial1_plots.md",
+            ],
+            "Tutorial 2. Radiation Reaction" => "Tutorials/radreact.md",
+            "Tutorial 3. Synchrotron" => "Tutorials/synchrotron.md",
+            "Tutorial 4. Synchrotron Self-Compton" => "Tutorials/SSC.md",
         ],
         "Collisions" => [
             "Overview" => "DiplodocusCollisions/overview.md",

@@ -61,4 +61,4 @@ Due to the generality of the DIPLODOCUS framework, this setup may require more s
 
 ## Plotting Results
 
-Once any collision matrices are generated and simulations are run, DiplodocusPlots.jl (loaded either as part of Diplodocus.jl or on its own) hosts a suite of plotting functions for analysing results. It is built upon the [Makie.jl](https://docs.makie.org/stable/) plotting ecosystem making it easy to edit plots for users to write their own plotting scripts.
+Once any collision matrices are generated and simulations are run, DiplodocusPlots.jl (loaded either as part of Diplodocus.jl or on its own) hosts a suite of plotting functions for analysing results. It is built upon the [Makie.jl](https://docs.makie.org/stable/) plotting ecosystem making it easy to edit plots and for users to write their own plotting scripts.

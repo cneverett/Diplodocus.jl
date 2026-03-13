@@ -1,4 +1,4 @@
-# Implemented Spatial Coordinates and Forces
+# Implemented Coordinates and Forces
 
 ## Implemented Spatial Coordinates
 These structs define what spatial coordinates are used when solving transport equations.
