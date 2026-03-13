@@ -10,7 +10,6 @@ Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
 
 [compat]
-Diplodocus = "0.2"
 DiplodocusCollisions = "0.2"
 DiplodocusPlots = "0.2"
 DiplodocusTransport = "0.2"

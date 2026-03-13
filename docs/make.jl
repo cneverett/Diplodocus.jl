@@ -18,7 +18,7 @@ bib = CitationBibliography(
 makedocs(;
     modules = [Diplodocus,DiplodocusCollisions],
     plugins = [bib],
-    repo = Remotes.GitHub("cneverett","Diplodocus.jl"),
+    repo = Remotes.GitHub("cneverett","Diplodocus.jl#dev"),
     authors = "Christopher Everett",
     sitename = "Diplodocus.jl",
     format = DocumenterVitepress.MarkdownVitepress(
