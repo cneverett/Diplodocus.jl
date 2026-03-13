@@ -4,6 +4,8 @@ EditURL = "../literate_scripts/Tutorial1/tutorial1_collisions.jl"
 
 # Tutorial 1a: Generating the Collision Matrices
 
+---
+
 Before any time evolution can be simulated, the effects of collisions between hard spheres must be pre-computed. This pre-computation is conducted by the functions contained within the `DiplodocusCollisions` sub-package of `Diplodocus`, which generate collision matrices that describe the rate at which some incoming state of spheres will be scattered into some outgoing state.
 
 This process is required whenever you want to include a *binary interaction* in your simulation, that is any interaction that involves two incoming particles and two outgoing particles, e.g. two incoming spheres that collide to create two outgoing spheres.

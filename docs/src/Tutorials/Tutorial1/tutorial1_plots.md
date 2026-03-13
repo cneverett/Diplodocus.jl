@@ -4,6 +4,8 @@ EditURL = "../literate_scripts/Tutorial1/tutorial1_plots.jl"
 
 # Tutorial 1c: Plotting Results
 
+---
+
 Now that we've run the simulation, we can use a variety of pre-built plotting functions from `DiplodocusPlots` to plot and analyse the results.
 
 ## Load the Simulation Output
@@ -73,4 +75,14 @@ EngPlot = EnergyDensityPlot0D(Static(),PhaseSpace,sol,species="Sph";frac=true,pe
 We can see that for our simulation, particle number and total energy are conserved to the numerical precision of the simulation!
 
 ## Animated Plotting
+
+You may have noticed that the the momentum plots take `Static()` as an argument, this tells `DiplodocusPlots.jl` that you would like a generate a publication ready static vector plot. But there is an alternative, if instead you were to replace `Static()` with `Animated()`, rather than a static plot you would get a rendered `.mp4` file of the time evolution. This can be done for both `MomentumAndPolarAngleDistributionPlot0D` and `MomentumDistributionPlot0D` individually or you can use the function `MomentumComboAnimation0D` to plot both at the same time!
+
+````julia
+AniPlot = MomentumComboAnimation0D(Animated(),PhaseSpace,sol,["Sph"];plot_limits_momentum=(-0.2,1.9,-2.1,0.8),filename="Tutorial1_Animation.mp4",thermal=true,framerate=24)
+````
+
+```@raw html
+<video autoplay loop muted playsinline controls src="./assets/Tutorial1_Animation.mp4" style="max-height: 60vh;"/>
+```
 
