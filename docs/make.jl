@@ -24,7 +24,7 @@ makedocs(;
     format = DocumenterVitepress.MarkdownVitepress(
         repo = "https://github.com/cneverett/Diplodocus.j",
         devurl = "dev",
-        devbranch = "dev",
+        devbranch = "main",
         #deploy_url = "https://cneverett.github.io/Diplodocus.jl/",
         # for liveServer, COMMENT OUT BEFORE DEPLOYING
         #md_outpath = ".",
