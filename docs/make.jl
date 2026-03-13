@@ -74,7 +74,7 @@ makedocs(;
 )
 
 DocumenterVitepress.deploydocs(;
-    repo= "github.com/cneverett/Diplodocus.jl/tree/dev",    
+    repo= "github.com/cneverett/Diplodocus.jl",    
     target = joinpath(@__DIR__, "build"),
     devbranch = "main",
     branch = "gh-pages",
