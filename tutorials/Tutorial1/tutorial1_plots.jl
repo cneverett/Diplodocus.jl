@@ -18,3 +18,5 @@ NumPlot = NumberDensityPlot0D(Static(),PhaseSpace,sol,species="Sph";frac=true)
 save("Tutorial1_NumPlot.svg",NumPlot)
 EngPlot = EnergyDensityPlot0D(Static(),PhaseSpace,sol,species="Sph";frac=true,perparticle=true)
 save("Tutorial1_EngPlot.svg",EngPlot)
+
+AniPlot = MomentumComboAnimation0D(Animated(),PhaseSpace,sol,["Sph"];plot_limits_momentum=(-0.2,1.9,-2.1,0.8),filename="Tutorial1_Animation.mp4",thermal=true,framerate=24)

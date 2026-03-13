@@ -4,6 +4,8 @@ EditURL = "../literate_scripts/Tutorial1/tutorial1_transport.jl"
 
 # Tutorial 1b: Running the Simulation
 
+---
+
 With the generation of a good set of collision matrices, we are now ready to run the simulation. This simulation will be run using the functions contained within the `DiplodocusTransport` sub-package.
 
 ## Backend Setup

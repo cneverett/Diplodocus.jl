@@ -397,15 +397,15 @@ version = "1.6.6"
 
 [[deps.Diplodocus]]
 deps = ["DiplodocusCollisions", "DiplodocusPlots", "DiplodocusTransport", "Revise"]
-git-tree-sha1 = "c2d837a6fea82d9ce020bae2031427ef063ea805"
+git-tree-sha1 = "8697636a9d6f47b87f71c27844c413adb8f9a03c"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/Diplodocus.jl.git"
 uuid = "792d114c-f8c3-4b81-9580-cc03468a5b58"
 version = "0.2.0"
 
 [[deps.DiplodocusCollisions]]
-deps = ["BenchmarkTools", "Bessels", "JLD2", "ProgressMeter", "Random", "Revise"]
-git-tree-sha1 = "2da58098594ef2aef12475540e9d4049e7512c7c"
+deps = ["BenchmarkTools", "Bessels", "JLD2", "MultiFloats", "ProgressMeter", "Random", "Revise"]
+git-tree-sha1 = "5bdff1505d19e303f6512cfc1ae05e07bf42608c"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusCollisions.jl.git"
 uuid = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
@@ -413,7 +413,7 @@ version = "0.2.0"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Revise"]
-git-tree-sha1 = "84ade62ef9b46f05093675911db9f64319a0ce6b"
+git-tree-sha1 = "f04eb877acd1dd84294827f2899dcad0f3d5f57a"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusPlots.jl.git"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
@@ -421,7 +421,7 @@ version = "0.2.0"
 
 [[deps.DiplodocusTransport]]
 deps = ["BenchmarkTools", "Bessels", "CUDA", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "MKL", "MKLSparse", "ProgressMeter", "Revise", "SparseArrays", "Statistics"]
-git-tree-sha1 = "fa6bf47d22ed25dfc5675706889bf224e1c68a3c"
+git-tree-sha1 = "4d0bbc4b7d1a1525bfe9e7263f842ac340724013"
 repo-rev = "dev"
 repo-url = "https://github.com/cneverett/DiplodocusTransport.jl.git"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
@@ -645,6 +645,11 @@ deps = ["ColorTypes", "Colors", "FileIO", "FixedPointNumbers", "FreeTypeAbstract
 git-tree-sha1 = "d16b3b912164f0fd90a393e8c3b6f5a4ec073fde"
 uuid = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 version = "0.11.11"
+
+[[deps.GMP_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "781609d7-10c4-51f6-84f2-b8444358ff6d"
+version = "6.3.0+2"
 
 [[deps.GPUArrays]]
 deps = ["Adapt", "GPUArraysCore", "KernelAbstractions", "LLVM", "LinearAlgebra", "Printf", "Random", "Reexport", "ScopedValues", "Serialization", "SparseArrays", "Statistics"]
@@ -1217,6 +1222,11 @@ git-tree-sha1 = "282cadc186e7b2ae0eeadbd7a4dffed4196ae2aa"
 uuid = "856f044c-d86e-5d09-b602-aeab76dc8ba7"
 version = "2025.2.0+0"
 
+[[deps.MPFR_jll]]
+deps = ["Artifacts", "GMP_jll", "Libdl"]
+uuid = "3a97d323-0669-5f0c-9066-3539efd106a3"
+version = "4.2.2+0"
+
 [[deps.MacroTools]]
 git-tree-sha1 = "1e0228a030642014fe5cfe68c2c0a818f9e3f522"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
@@ -1304,6 +1314,20 @@ version = "2025.5.20"
 git-tree-sha1 = "cac9cc5499c25554cba55cd3c30543cff5ca4fab"
 uuid = "46d2c3a1-f734-5fdb-9937-b9b9aeba4221"
 version = "0.2.4"
+
+[[deps.MultiFloats]]
+deps = ["LinearAlgebra", "MPFR_jll", "Printf", "Random", "SIMD"]
+git-tree-sha1 = "5f6a9a675aa04840091b21c8165f4b04883ee309"
+uuid = "bdf0d083-296b-4888-a5b6-7498122e68a5"
+version = "3.2.3"
+
+    [deps.MultiFloats.extensions]
+    MultiFloatsAMDGPUExt = "AMDGPU"
+    MultiFloatsCUDAExt = "CUDA"
+
+    [deps.MultiFloats.weakdeps]
+    AMDGPU = "21141c5a-9bdb-4563-92ae-f87d6854732e"
+    CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
 
 [[deps.NVTX]]
 deps = ["JuliaNVTXCallbacks_jll", "Libdl", "NVTX_jll"]

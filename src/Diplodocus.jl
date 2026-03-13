@@ -32,7 +32,7 @@ module Diplodocus
     export DiplodocusDark, DiplodocusLight
     export Static, Animated, Interactive
     export InteractiveBinaryGainLossPlot, InteractiveEmissionGainLossPlot
-    export MomentumDistributionPlot0D, MomentumAndPolarAngleDistributionPlot0D
+    export MomentumDistributionPlot0D, MomentumAndPolarAngleDistributionPlot0D, MomentumComboAnimation0D
     export NumberDensityPlot0D
     export EnergyDensityPlot0D
     export IsThermalAndIsotropicPlot0D
