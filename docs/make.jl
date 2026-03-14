@@ -22,7 +22,7 @@ makedocs(;
     authors = "Christopher Everett",
     sitename = "Diplodocus.jl",
     format = DocumenterVitepress.MarkdownVitepress(
-        repo = "https://github.com/cneverett/Diplodocus.j",
+        repo = "https://github.com/cneverett/Diplodocus.jl",
         devurl = "dev",
         devbranch = "main",
         #deploy_url = "https://cneverett.github.io/Diplodocus.jl/",
