@@ -354,7 +354,7 @@ uuid = "927a84f5-c5f4-47a5-9785-b46e178433df"
 version = "1.6.6"
 
 [[deps.Diplodocus]]
-deps = ["DiplodocusCollisions", "DiplodocusPlots", "DiplodocusTransport", "Revise"]
+deps = ["DiplodocusPlots", "DiplodocusTransport", "Revise"]
 path = "."
 uuid = "792d114c-f8c3-4b81-9580-cc03468a5b58"
 version = "0.2.0"
@@ -362,18 +362,24 @@ version = "0.2.0"
 [[deps.DiplodocusCollisions]]
 deps = ["BenchmarkTools", "Bessels", "JLD2", "MultiFloats", "ProgressMeter", "Random", "Revise"]
 git-tree-sha1 = "5bdff1505d19e303f6512cfc1ae05e07bf42608c"
+repo-rev = "dev"
+repo-url = "https://github.com/cneverett/DiplodocusCollisions.jl.git"
 uuid = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
 version = "0.2.0"
 
 [[deps.DiplodocusPlots]]
 deps = ["CairoMakie", "DiplodocusCollisions", "DiplodocusTransport", "GLMakie", "Revise"]
-git-tree-sha1 = "5a299b1ba1ea46e93e9c0ba12d86587790be4d45"
+git-tree-sha1 = "f04eb877acd1dd84294827f2899dcad0f3d5f57a"
+repo-rev = "dev"
+repo-url = "https://github.com/cneverett/DiplodocusPlots.jl.git"
 uuid = "e2feba3a-3769-4cd4-93ab-3db026c329dd"
 version = "0.2.0"
 
 [[deps.DiplodocusTransport]]
 deps = ["BenchmarkTools", "Bessels", "CUDA", "DiplodocusCollisions", "JLD2", "LinearAlgebra", "MKL", "MKLSparse", "ProgressMeter", "Revise", "SparseArrays", "Statistics"]
-git-tree-sha1 = "fcb1d8b20374ca2db2c78777150aa5be6a9a0f20"
+git-tree-sha1 = "4d0bbc4b7d1a1525bfe9e7263f842ac340724013"
+repo-rev = "dev"
+repo-url = "https://github.com/cneverett/DiplodocusTransport.jl.git"
 uuid = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 version = "0.2.0"
 
