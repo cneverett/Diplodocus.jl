@@ -42,7 +42,7 @@ makedocs(;
         "Tutorials" => [
             "Overview" => "Tutorials/overview.md",
             "Tutorial 1. Hard Spheres" => [
-                "1. Overview" => "Tutorials/Tutorial1/Tutorial1_overview.md",
+                "1. Overview" => "Tutorials/Tutorial1/tutorial1_overview.md",
                 "1a. Generating the Collision Matrix" => "Tutorials/Tutorial1/tutorial1_collisions.md",
                 "1b. Running the Simulation" => "Tutorials/Tutorial1/tutorial1_transport.md",
                 "1c. Plotting the Results" => "Tutorials/Tutorial1/tutorial1_plots.md",
