@@ -49,7 +49,7 @@ makedocs(;
             ],
             "Tutorial 2. Catastrophe" => [
                 "2. Overview" => "Tutorials/Tutorial2/tutorial2_overview.md",
-                "2a. Generating the Collision Matrix" => "Tutorials/Tutorial2/tutorial2_collisions.md",
+                "2a. Generating the Collision Matrix" => "Tutorials/Tutorial2/tutorial2_binary_collisions.md",
                 "2b. Generating Emission Matrix" => "Tutorials/Tutorial2/tutorial2_emission_collisions.md",
                 "2c. Running the Simulation" => "Tutorials/Tutorial2/tutorial2_transport.md",
                 "2d. Plotting the Results" => "Tutorials/Tutorial2/tutorial2_plots.md",
