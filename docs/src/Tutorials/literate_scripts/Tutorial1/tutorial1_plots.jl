@@ -34,7 +34,7 @@ save("Tutorial1_PAndUDisPlot.svg",PAndUDisPlot)
 # With the angular dependence, it is hard to interpret the shape of the distribution in momentum from this 2D heatmap. To visualise this spectral shape in momentum we can also plot the angle-averaged distribution using `MomentumDistributionPlot0D`:
 
 PDisPlot = MomentumDistributionPlot0D(Static(),PhaseSpace,sol,["Sph"];step=10,thermal=true,plot_limits=(-1.4,2.1,-3.4,0.9))
-save("Tutorial1_PDisPlot.svg",PDisPlot) #jl
+save("Tutorial1_PDisPlot.svg",PDisPlot) # jl
 
 # ![T1P](./assets/Tutorial1_PDisPlot.svg)
 #

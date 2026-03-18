@@ -52,11 +52,14 @@ Forces_list::Vector{ForceType} = []
 
 DataDirectory = joinpath(pwd(),"Data")
 
-BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false)
+BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false); # jl
+BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false) # md
 
-EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true)
+EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true); # jl
+EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true) # md
 
-FluxM = BuildFluxMatrices(PhaseSpace,Forces_list)
+FluxM = BuildFluxMatrices(PhaseSpace,Forces_list); # jl
+FluxM = BuildFluxMatrices(PhaseSpace,Forces_list) # md
 
 Initial = Initialise_Initial_Condition(PhaseSpace)
 Injection = Initialise_Injection_Condition(PhaseSpace)

@@ -9,7 +9,7 @@ PAndUDisPlot = MomentumAndPolarAngleDistributionPlot(Static(),PhaseSpace,sol,["S
 save("Tutorial1_PAndUDisPlot.svg",PAndUDisPlot)
 
 PDisPlot = MomentumDistributionPlot0D(Static(),PhaseSpace,sol,["Sph"];step=10,thermal=true,plot_limits=(-1.4,2.1,-3.4,0.9))
-save("Tutorial1_PDisPlot.svg",PDisPlot)
+save("Tutorial1_PDisPlot.svg",PDisPlot) # jl
 
 TandIPlot = IsThermalAndIsotropicPlot0D(Static(),PhaseSpace,sol,"Sph")
 save("Tutorial1_TAndIPlot.svg",TandIPlot)

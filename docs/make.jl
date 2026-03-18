@@ -47,9 +47,13 @@ makedocs(;
                 "1b. Running the Simulation" => "Tutorials/Tutorial1/tutorial1_transport.md",
                 "1c. Plotting the Results" => "Tutorials/Tutorial1/tutorial1_plots.md",
             ],
-            "Tutorial 2. Radiation Reaction" => "Tutorials/radreact.md",
-            "Tutorial 3. Synchrotron" => "Tutorials/synchrotron.md",
-            "Tutorial 4. Synchrotron Self-Compton" => "Tutorials/SSC.md",
+            "Tutorial 2. Catastrophe" => [
+                "2. Overview" => "Tutorials/Tutorial2/tutorial2_overview.md",
+                "2a. Generating the Collision Matrix" => "Tutorials/Tutorial2/tutorial2_collisions.md",
+                "2b. Generating Emission Matrix" => "Tutorials/Tutorial2/tutorial2_emission_collisions.md",
+                "2c. Running the Simulation" => "Tutorials/Tutorial2/tutorial2_transport.md",
+                "2d. Plotting the Results" => "Tutorials/Tutorial2/tutorial2_plots.md",
+            ],
         ],
         "Collisions" => [
             "Overview" => "DiplodocusCollisions/overview.md",

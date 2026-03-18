@@ -13,17 +13,16 @@ using Diplodocus
 Precision::DataType = Float32
 Backend::BackendType = CPUBackend() 
 
-# ## Characterisitic Scales
+# ## Characteristic Scales
 # 
-# Next we define any simulation specific scales in SI units. This will override the default scales, which are specificed in ... LINK TO SCALES ...
-
+# Next we define any simulation specific scales in SI units. This will override the default scales, which are specified in ... LINK TO SCALES ...
 
 CHAR_number_density::Float64 = 1.0 # m^-3
 CHAR_time = 1.0 / DiplodocusTransport.CONST_σT / DiplodocusTransport.CONST_c / CHAR_number_density # s
 
-# Here we have defined the characteristic number density to be to ``n=1 \mathrm{m}^{-3}``. We then set the characteristic time to be ``t=1/(n*σT*c)`` where ``σT`` is the Thompson scattering cross section (i.e. the cross section used for the elastic scattering of hard spheres), and ``c`` is the speed of light. As we are going to be examing the relativistic collisions of thes spheres, this time corresponds to the characteristic scattering time.
+# Here we have defined the characteristic number density to be to ``n=1 \mathrm{m}^{-3}``. We then set the characteristic time to be ``t=1/(n*σT*c)`` where ``σT`` is the Thompson scattering cross section (i.e. the cross section used for the elastic scattering of hard spheres), and ``c`` is the speed of light. As we are going to be examining the relativistic collisions of these spheres, this time corresponds to the characteristic scattering time.
 #
-# From here on out, all values are assumed to be in term of the charactersitic scales of the system.
+# From here on out, all values are assumed to be in term of the characteristic scales of the system.
 #
 # ## Phase-Space Setup
 #
@@ -119,11 +118,14 @@ DataDirectory = joinpath(pwd(),"Data")
 
 # Then we build three sets of matrices: `BinM` for the binary interactions, `EmiM` for the emissive interactions and `FluxM` for phase-space transport.
 
-BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false)
+BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false); # jl
+BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false) # md
 
-EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true)
+EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true); # jl 
+EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true) # md
 
-FluxM = BuildFluxMatrices(PhaseSpace,Forces_list)
+FluxM = BuildFluxMatrices(PhaseSpace,Forces_list); # jl
+FluxM = BuildFluxMatrices(PhaseSpace,Forces_list) # md
 
 # Here we have used the argument `Bin_corrected=true` to use the number and energy density correct binary collision matrices, and the argument `Bin_sparse=false` to define the binary collision matrix as a dense matrix.
 # The size of all these matrices is determined by the resolution of the phase-space grids and the sparsity of the interactions. The total size will be printed to the standard output once these matrices are built.
