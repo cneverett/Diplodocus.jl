@@ -14,10 +14,7 @@ That's it! For guides on setting up simulations see the [Tutorials](@ref).
 
 The main branch of Diplodocus.jl is currently locked to v0.1 while v0.2 is being tested. To use the dev branch with v0.2 features use instead:  
 
-    ```julia-repl
-    juila> ] # ']' should be pressed
-    pkg> add Diplodocus#dev
-    ```
+`add Diplodocus#dev`
 
 But this version is not guaranteed to be stable.
 
