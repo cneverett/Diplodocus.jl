@@ -7,7 +7,9 @@
 [![Build Status][gha-img]][gha-url]
 
 [docs-latest-img]: https://img.shields.io/badge/Docs-Stable-lightgrey.svg
-[docs-latest-url]: https://cneverett.github.io/Diplodocus.jl/dev/
+[docs-latest-url]: https://cneverett.github.io/Diplodocus.jl/stable/
+[docs-dev-img]: https://img.shields.io/badge/Docs-Dev-lightgrey.svg
+[docs-dev-url]: https://cneverett.github.io/Diplodocus.jl/dev/
 
 [gha-img]: https://github.com/cneverett/Diplodocus.jl/actions/workflows/CI.yml/badge.svg?branch=main
 [gha-url]: https://github.com/cneverett/Diplodocus.jl/actions/workflows/CI.yml?query=branch%3Amain
