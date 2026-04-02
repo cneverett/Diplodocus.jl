@@ -4,6 +4,7 @@
 **D**istribution **I**n **PL**ateaux meth**ODO**logy for the **C**omp**U**tation of transport equation**S**
 
 [![][docs-latest-img]][docs-latest-url]
+[![][docs-dev-img]][docs-dev-url]
 [![Build Status][gha-img]][gha-url]
 
 [docs-latest-img]: https://img.shields.io/badge/Docs-Stable-lightgrey.svg
