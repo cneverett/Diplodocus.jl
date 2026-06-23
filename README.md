@@ -6,6 +6,7 @@
 [![][docs-latest-img]][docs-latest-url]
 [![][docs-dev-img]][docs-dev-url]
 [![Build Status][gha-img]][gha-url]
+<a href="https://ascl.net/2605.023"><img src="https://img.shields.io/badge/ascl-2605.023-blue.svg?colorB=262255" alt="ascl:2605.023" /></a>
 
 [docs-latest-img]: https://img.shields.io/badge/Docs-Stable-lightgrey.svg
 [docs-latest-url]: https://cneverett.github.io/Diplodocus.jl/stable/
