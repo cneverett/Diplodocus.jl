@@ -58,7 +58,7 @@ function MomentumDistributionPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,so
     else
         ylab = L"$\log_{10}\left(p^{%$(order)}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)^{%$(order-1)}]\right)$"
     end
-    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,aspect=DataAspect())
+    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab#=,aspect=DataAspect()=#)
     ax.limits = plot_limits
 
     name_list = PhaseSpace.name_list
@@ -456,7 +456,7 @@ end
 """
     AngleDistributionPlot(sol,species::Vector{String},PhaseSpace::PhaseSpaceStruct,type::PlotType;angle_step=1,order=1,plot_limits=(nothing,nothing),theme=DiplodocusDark())
 
-Plots the angle averaged distribution function of of a given vector of particle `species` as a function of time given by the `sol` based on the conditions held in `PhaseSpace`. 
+Plots the momentum averaged distribution function of of a given vector of particle `species` as a function of time given by the `sol` based on the conditions held in `PhaseSpace`. 
     
 The plot can be either static, animated or interactive depending on the `type` argument. `Static` and `Animated` plots are generated using CairoMakie and are best for publications and presentations, while `Interactive` plots are generated using GLMakie and allow for user interaction with the plot.
 
@@ -721,7 +721,7 @@ end
 """
     AzimuthalAngleDistributionPlot(sol,species::Vector{String},PhaseSpace::PhaseSpaceStruct,type::PlotType;order=1,legend=true,wide=false,plot_limits=(nothing,nothing),TimeUnits=CodeToCodeUnitsTime,theme=DiplodocusDark())
 
-Plots the angle averaged distribution function of of a given vector of particle `species` as a function of time given by the `sol` based on the conditions held in `PhaseSpace`. 
+Plots the momentum and polar angle averaged distribution function of of a given vector of particle `species` as a function of time given by the `sol` based on the conditions held in `PhaseSpace`. 
     
 The plot can be either static, animated or interactive depending on the `type` argument. `Static` and `Animated` plots are generated using CairoMakie and are best for publications and presentations, while `Interactive` plots are generated using GLMakie and allow for user interaction with the plot.
 
@@ -1021,9 +1021,10 @@ Common arguments:
 - `x_idx::Int64=1`, the x index of the spatial grid cell that you want to plot the distribution for, default is 1.
 - `y_idx::Int64=1`, the y index of the spatial grid cell that you want to plot the distribution for, default is 1.
 - `z_idx::Int64=1`, the z index of the spatial grid cell that you want to plot the distribution for, default is 1.
+- `dis_range::Float64=10.0`, the dynamic range of the distribution to be plotted in log scale, default is 10.0, which means that the plot will show values within 10 orders of magnitude of the maximum value. 
 
 """
-function MomentumAndPolarAngleDistributionPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},timevalues::T;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Tuple{Float64,String}=(1.0,"\\text{Code Units}"),x_idx::Int64=1,y_idx::Int64=1,z_idx::Int64=1) where T <: Union{Tuple{Float64,Float64,Float64},Tuple{Int64,Int64,Int64}}
+function MomentumAndPolarAngleDistributionPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},timevalues::T;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Tuple{Float64,String}=(1.0,"\\text{Code Units}"),x_idx::Int64=1,y_idx::Int64=1,z_idx::Int64=1,dis_range::Float64=10.0) where T <: Union{Tuple{Float64,Float64,Float64},Tuple{Int64,Int64,Int64}}
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
@@ -1094,7 +1095,7 @@ function MomentumAndPolarAngleDistributionPlot0D(type::Static,PhaseSpace::PhaseS
 
     max_dis = maximum(x for x in [dis1; dis2; dis3] if !isnan(x))
     min_dis = minimum(x for x in [dis1; dis2; dis3] if !isnan(x))
-    col_range = (log10(max_dis)-11.75,log10(max_dis)+0.25)
+    col_range = (log10(max_dis)-dis_range+0.25,log10(max_dis)+0.25)
 
     ax1 = PolarAxis(fig[1,1+1],theta_0=-pi/2,direction=-1,width=176)
     ax1.radius_at_origin = log10(p_r[1])-1.0
@@ -1196,7 +1197,7 @@ function MomentumAndPolarAngleDistributionPlot0D(type::Animated,PhaseSpace::Phas
     name_list = PhaseSpace.name_list
     Momentum = PhaseSpace.Momentum
     Grids = PhaseSpace.Grids
-    Time = PhaseSpace.Time
+    Spacetime = PhaseSpace.Spacetime
 
     for (species_idx, species_name) in enumerate(species)
 
@@ -1223,12 +1224,13 @@ function MomentumAndPolarAngleDistributionPlot0D(type::Animated,PhaseSpace::Phas
             f2D[px,py] *= (meanp[px]^(order)) / dp[px] / du[py]
         end
         replace!(f2D,0.0 => NaN) # replace Inf with NaN for plotting
-        log10.(f2D)'
+        log10.(f2D)' # transpose to make p the vertical axis and u the horizontal axis for plotting
     end
 
-    max_dis = @lift(maximum(x for x in $dis if !isnan(x)))
+    max_dis = @lift(maximum(x for x in $dis if !isnan(x); init=0.0))
     #min_dis = @lift(minimum(x for x in [dis] if !isnan(x)))
     col_range = @lift(($max_dis-16.0,$max_dis))
+
 
     ax = PolarAxis(fig[1,1+species_idx],theta_0=-pi/2,direction=-1,width=Relative(1.2))
     ax.radius_at_origin = log10(p_r[1])-1.0

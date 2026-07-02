@@ -1,162 +1,256 @@
 """
-    NumberDensity2DPlot(type,sol,PhaseSpace,surface;species,time_idx;...)
+    NumberDensityPlot2D(type,PhaseSpace,sol,species,surface,time_idx;...)
 
 Returns a density plot of the number density of a `species` at a given `time_idx` on a specific spatial coordinate `surface`.
 """
-function NumberDensity2DPlot(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStruct,surface::String,species::String,time_idx::Int64;fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,wide=false,plot_limits=(nothing,nothing))
+function NumberDensityPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::String,coordinates::AbstractCoordinates,surface::Tuple{String,Int64};time_idx::Int64=1,fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,wide=false,plot_limits=(nothing,nothing),log_num_dens=false,figsize::Tuple{Int64,Int64}=(576,216))
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
     with_theme(theme) do
 
+    surface_string = surface[1]
+    surface_index = surface[2]
+
     name_list = PhaseSpace.name_list
     Momentum = PhaseSpace.Momentum
-    Space = PhaseSpace.Space
-    Time = PhaseSpace.Time
+    Spacetime = PhaseSpace.Spacetime
     Grids = PhaseSpace.Grids
-    x_num = Space.x_num
-    y_num = Space.y_num
-    z_num = Space.z_num
-    dx = Grids.dx
-    dy = Grids.dy
-    dz = Grids.dz
-    mx = Grids.mx
-    my = Grids.my
-    mz = Grids.mz
-    xr = Grids.xr
-    yr = Grids.yr
-    zr = Grids.zr
+    metric = Spacetime.metric
+    sim_coordinates = Spacetime.coordinates
+    tetrad = Spacetime.tetrad
+    mx_sim = Grids.mx
+    my_sim = Grids.my
+    mz_sim = Grids.mz
+    xr_sim = Grids.xr
+    yr_sim = Grids.yr
+    zr_sim = Grids.zr
 
     if wide
-        fig = Figure(size=(576,216)) # double column 8:3 aspect ratio
+        fig = Figure(size=figsize) # double column 8:3 aspect ratio
     else
         fig = Figure() # default single column 4:3 aspect ratio
     end
 
-    if surface == "xy"
-        xlab = L"$\left(x\,[\text{Code Units}]\right)$"
-        ylab = L"$\left(y\,[\text{Code Units}]\right)$"
-        nx_dir = x_num
-        ny_dir = y_num
-        xgrid_type = Space.x_grid  
-        ygrid_type = Space.y_grid
-        if xgrid_type == "u"
-            mxdir_plot = mx
-            xr_dir = xr
-            xlab = L"$\left(x\,[\text{Code Units}]\right)$"
-        elseif xgrid_type == "l"
-            mxdir_plot = log10.(mx)
-            xr_dir = log10.(xr)
-            xlab = L"$\log_{10}\left(x\,[\text{Code Units}]\right)$"
-        end
-        if ygrid_type == "u"
-            mydir_plot = my
-            yr_dir = yr
-            ylab = L"$\left(y\,[\text{Code Units}]\right)$"
-        elseif ygrid_type == "l"
-            mydir_plot = log10.(my)
-            yr_dir = log10.(yr)
-            ylab = L"$\log_{10}\left(y\,[\text{Code Units}]\right)$"
-        end
-    elseif surface == "yz"
-        xlab = L"$\left(y\,[\text{Code Units}]\right)$"
-        nx_dir = y_num
-        ny_dir = z_num
-        xgrid_type = Space.y_grid
-        ygrid_type = Space.z_grid
-        if xgrid_type == "u"
-            mxdir_plot = my
-            xr_dir = yr
-            xlab = L"$\left(y\,[\text{Code Units}]\right)$"
-        elseif xgrid_type == "l"
-            mxdir_plot = log10.(my)
-            xr_dir = log10.(yr)
-            xlab = L"$\log_{10}\left(y\,[\text{Code Units}]\right)$"
-        end
-        if ygrid_type == "u"
-            mydir_plot = mz
-            yr_dir = zr
-            ylab = L"$\left(z\,[\text{Code Units}]\right)$"
-        elseif ygrid_type == "l"
-            mydir_plot = log10.(mz)
-            yr_dir = log10.(zr)
-            ylab = L"$\log_{10}\left(z\,[\text{Code Units}]\right)$"
-        end
-    elseif surface == "xz"
-        nx_dir = x_num
-        ny_dir = z_num
-        xgrid_type = Space.x_grid
-        ygrid_type = Space.z_grid
-        if xgrid_type == "u"
-            mxdir_plot = mx
-            xr_dir = xr
-            xlab = L"$\left(x\,[\text{Code Units}]\right)$"
-        elseif xgrid_type == "l"
-            mxdir_plot = log10.(mx)
-            xr_dir = log10.(xr)
-            xlab = L"$\log_{10}\left(x\,[\text{Code Units}]\right)$"
-        end
-        if ygrid_type == "u"
-            mydir_plot = mz
-            yr_dir = zr
-            ylab = L"$\left(z\,[\text{Code Units}]\right)$"
-        elseif ygrid_type == "l"
-            mydir_plot = log10.(mz)
-            yr_dir = log10.(zr)
-            ylab = L"$\log_{10}\left(z\,[\text{Code Units}]\right)$"
-        end
-    else
-        error("Invalid surface specified. Must be one of 'xy', 'yz', or 'xz'.")
-    end
+    xlab, ylab, nx_dir, ny_dir = SimToPlotGrid(PhaseSpace,surface,coordinates,sim_coordinates) 
 
-    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab)
+    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,aspect=DataAspect())
     ax.limits = plot_limits
 
     num = zeros(Float64,nx_dir,ny_dir)
+    x_points = zeros(Float64,nx_dir,ny_dir)
+    y_points = zeros(Float64,nx_dir,ny_dir)
 
     species_index = findfirst(x->x==species,name_list)
 
-    p_num = Momentum.px_num_list[species_index]  
-    u_num = Momentum.py_num_list[species_index]
-    h_num = Momentum.pz_num_list[species_index]
-    pr = Grids.pxr_list[species_index]
-    ur = Grids.pyr_list[species_index]
-    hr = Grids.pzr_list[species_index]
-    mass = Grids.mass_list[species_index]
+    e_plot::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
+    inve_sim::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
+    pos_sim::MVector{4,Float64} = zeros(Float64,4)
+    pos_plot::MVector{4,Float64} = zeros(Float64,4)
 
-    f1D = zeros(Float32,p_num*u_num*h_num)
+    Uₐ::Vector{Float64} = [-1.0,0.0,0.0,0.0] # static observer
 
     t = sol.t[time_idx]
 
-    for x in 1:x_num, y in 1:y_num, z in 1:z_num
+    pos_sim[1] = t
 
-        Nᵃ = DiplodocusTransport.FourFlow(sol.f[time_idx],PhaseSpace,species_index;x_idx=x,y_idx=y,z_idx=z)
-        #Ua = HydroFourVelocity(Na)
-        Uₐ = [-1.0,0.0,0.0,0.0] # static observer
-        n = DiplodocusTransport.ScalarNumberDensity(Nᵃ,Uₐ)
+    for x_plot_idx in 1:nx_dir, y_plot_idx in 1:ny_dir
 
-        #println("n = $n at (x,y,z) = ($x,$y,$z)")
+        (x,y,z) = PlotIndexTransform2D!(x_plot_idx,y_plot_idx,surface,sim_coordinates,coordinates)
 
-        if surface == "xy"
-            num[x,y] += n * dz[z] / (sum(dz))
-        elseif surface == "yz"
-            num[y,z] += n * dx[x] / (sum(dx))
-        elseif surface == "xz"
-            num[x,z] += n * dy[y] / (sum(dy))
+        # TODO: add sub sampling of plot points
+        pos_sim[2] = mx_sim[x]
+        pos_sim[3] = my_sim[y]
+        pos_sim[4] = mz_sim[z]
+
+        CoordinateTransform!(pos_sim,pos_plot,sim_coordinates,coordinates)
+
+        InverseTetradComponents!(pos_sim,inve_sim,metric,sim_coordinates,tetrad)
+        TetradComponents!(pos_plot,e_plot,metric,coordinates,StationaryObserverTetrad())
+
+        Nᵇ = Float64.(FourFlow(sol.f[time_idx],PhaseSpace,species_index;x_idx=x,y_idx=y,z_idx=z))
+        CoordinateTransform!(inve_sim * Nᵇ,Nᵇ,sim_coordinates,coordinates) # transform vector from one coordinate basis to another 
+        Nᵃ = e_plot * Nᵇ # transform to stationary tetrad frame
+        num_den = ScalarNumberDensity(Nᵃ,Uₐ)
+
+        if (y==1 && z==3) || (y==3 && z==1)
+        println("n = $num_den at (x,y,z) = ($x,$y,$z),")
+        end
+
+        num[x_plot_idx,y_plot_idx] += num_den
+        if surface_string == "xy"
+            x_points[x_plot_idx,y_plot_idx] = pos_plot[2]
+            y_points[x_plot_idx,y_plot_idx] = pos_plot[3]
+        elseif surface_string == "yz"
+            x_points[x_plot_idx,y_plot_idx] = pos_plot[3]
+            y_points[x_plot_idx,y_plot_idx] = pos_plot[4]
+        elseif surface_string == "xz"
+            x_points[x_plot_idx,y_plot_idx] = pos_plot[2]
+            y_points[x_plot_idx,y_plot_idx] = pos_plot[4]
         end
 
     end
 
     replace!(num,0.0=>NaN)
 
-    hm = heatmap!(ax,xr_dir,yr_dir,num,colormap=theme.colormap_var)       
+    if log_num_dens
+        num = log10.(num)
+        replace!(num, -Inf => NaN)
+    end
+
+    println("num = $(num)")
+
+    #hm = heatmap!(ax,xr_dir,yr_dir,num,colormap=theme.colormap_var) 
+    hm = voronoiplot!(ax,x_points,y_points,num,colormap=theme.colormap_var,show_generators=false,strokewidth=0.1)       
 
     t_unit_string = TimeUnits()
 
-    Colorbar(fig[1,2],hm,label=L"$n\,$ $\text{code units}$")
+    z_lab = log_num_dens ? L"\log_{10}(n)\, \text{code units}" : L"n\, \text{code units}"
+
+    Colorbar(fig[1,2],hm,label=z_lab)
+
+    return fig
 
     end # with_theme
 
-    return fig
+end
+
+function NumberDensityPlot2D(type::Animated,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::String,coordinates::AbstractCoordinates,surface::Tuple{String,Int64};theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,wide=false,plot_limits=(nothing,nothing),framerate::Int64=12,filename="NumberDensity2D.mp4",figure=nothing,log_num_dens=false,figsize::Tuple{Int64,Int64}=(576,216))
+
+    CairoMakie.activate!(inline=true) # plot in vs code window
+
+    with_theme(theme) do
+
+    surface_string = surface[1]
+    surface_index = surface[2]
+
+    name_list = PhaseSpace.name_list
+    Momentum = PhaseSpace.Momentum
+    Spacetime = PhaseSpace.Spacetime
+    Grids = PhaseSpace.Grids
+    metric = Spacetime.metric
+    sim_coordinates = Spacetime.coordinates
+    tetrad = Spacetime.tetrad
+    mx_sim = Grids.mx
+    my_sim = Grids.my
+    mz_sim = Grids.mz
+    xr_sim = Grids.xr
+    yr_sim = Grids.yr
+    zr_sim = Grids.zr
+
+    xlab, ylab, nx_dir, ny_dir = SimToPlotGrid(PhaseSpace,surface,coordinates,sim_coordinates) 
+
+    if isnothing(figure)
+        time_idx = Observable(1) # index of the current time step
+        t = @lift(sol.t[$time_idx])
+        if wide
+            fig = Figure(size=figsize)
+        else
+            fig = Figure()
+        end
+        #fig = Figure(size =(3.25inch,3.25inch)) # 1:1 aspect ratio
+        ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,aspect=DataAspect())
+    else
+        fig, time_idx = figure # use the provided figure and time index
+        ax = Axis(fig,xlabel=xlab,ylabel=ylab,aspect=DataAspect())
+    end
+
+    ax.limits = plot_limits
+
+    num = zeros(Float64,nx_dir,ny_dir)
+    x_points = zeros(Float64,nx_dir,ny_dir)
+    y_points = zeros(Float64,nx_dir,ny_dir)
+
+    species_index = findfirst(x->x==species,name_list)
+
+    e_plot::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
+    inve_sim::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
+    pos_sim::MVector{4,Float64} = zeros(Float64,4)
+    pos_plot::MVector{4,Float64} = zeros(Float64,4)
+
+    Uₐ::Vector{Float64} = [-1.0,0.0,0.0,0.0] # static observer
+
+    t = sol.t[1]
+    pos_sim[1] = t
+
+    # setup grid of x, y points (only once since the grid is static)
+    for x_plot_idx in 1:nx_dir, y_plot_idx in 1:ny_dir
+
+        (x,y,z) = PlotIndexTransform2D!(x_plot_idx,y_plot_idx,surface,sim_coordinates,coordinates)
+
+        # TODO: add sub sampling of plot points
+        pos_sim[2] = mx_sim[x]
+        pos_sim[3] = my_sim[y]
+        pos_sim[4] = mz_sim[z]
+
+        CoordinateTransform!(pos_sim,pos_plot,sim_coordinates,coordinates)
+
+        if surface_string == "xy"
+            x_points[x_plot_idx,y_plot_idx] = pos_plot[2]
+            y_points[x_plot_idx,y_plot_idx] = pos_plot[3]
+        elseif surface_string == "yz"
+            x_points[x_plot_idx,y_plot_idx] = pos_plot[3]
+            y_points[x_plot_idx,y_plot_idx] = pos_plot[4]
+        elseif surface_string == "xz"
+            x_points[x_plot_idx,y_plot_idx] = pos_plot[2]
+            y_points[x_plot_idx,y_plot_idx] = pos_plot[4]
+        end
+
+    end
+
+   # compute number density at each point
+    num = @lift begin
+        num = zeros(Float64,nx_dir,ny_dir)
+        for x_plot_idx in 1:nx_dir, y_plot_idx in 1:ny_dir
+
+            (x,y,z) = PlotIndexTransform2D!(x_plot_idx,y_plot_idx,surface,sim_coordinates,coordinates)
+
+            # TODO: add sub sampling of plot points
+            pos_sim[2] = mx_sim[x]
+            pos_sim[3] = my_sim[y]
+            pos_sim[4] = mz_sim[z]
+
+            CoordinateTransform!(pos_sim,pos_plot,sim_coordinates,coordinates)
+
+            InverseTetradComponents!(pos_sim,inve_sim,metric,sim_coordinates,tetrad)
+            TetradComponents!(pos_plot,e_plot,metric,coordinates,StationaryObserverTetrad())
+
+            Nᵇ = Float64.(FourFlow(sol.f[$time_idx],PhaseSpace,species_index;x_idx=x,y_idx=y,z_idx=z))
+            CoordinateTransform!(inve_sim * Nᵇ,Nᵇ,sim_coordinates,coordinates) # transform vector from one coordinate basis to another 
+            Nᵃ = e_plot * Nᵇ # transform to stationary tetrad frame
+            num_den = ScalarNumberDensity(Nᵃ,Uₐ)
+
+            num[x_plot_idx,y_plot_idx] += num_den
+
+        end
+
+        if log_num_dens
+            num = log10.(num)
+            replace!(num, -Inf => NaN)
+        end 
+        #replace!(num,0.0=>NaN)
+
+        num
+    end
+
+
+    #hm = heatmap!(ax,xr_dir,yr_dir,num,colormap=theme.colormap_var)   
+    hm = voronoiplot!(ax,x_points,y_points,num,colormap=theme.colormap_var,show_generators=false,strokewidth=0.1,nan_color=:transparent)      
+
+    t_unit_string = TimeUnits()
+
+    z_lab = log_num_dens ? L"\log_{10}(n)\,\, \text{code units}" : L"n\,\, \text{code units}"
+    Colorbar(fig[1,2],hm,label=z_lab)
+
+    if !isnothing(filename)
+        # recording the animation
+        time_idxs = 1:length(sol.t)
+        record(fig,filename,time_idxs,framerate=framerate,backend=CairoMakie) do frame
+            print("generating frame: $frame \r")
+            time_idx[] = frame
+        end
+    end
+
+    end # with_theme
 
 end

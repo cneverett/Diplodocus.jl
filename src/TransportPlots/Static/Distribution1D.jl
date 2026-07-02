@@ -30,8 +30,7 @@ function MomentumDistribution1DPlot(type::Static,sol,species::Vector{String},Pha
 
     name_list = PhaseSpace.name_list
     Momentum = PhaseSpace.Momentum
-    Space = PhaseSpace.Space
-    Time = PhaseSpace.Time
+    Space = PhaseSpace.Spacetime
     Grids = PhaseSpace.Grids
     x_num = Space.x_num
     y_num = Space.y_num
@@ -80,7 +79,7 @@ function MomentumDistribution1DPlot(type::Static,sol,species::Vector{String},Pha
     elseif direction == "y"
         n_dir = y_num
         grid_type = Space.y_grid
-        if grid_type == "u"
+        if grid_type isa StretchGrid
             mdir_plot = my
             min_dir = yr[1]
             max_dir = yr[end]
@@ -94,7 +93,7 @@ function MomentumDistribution1DPlot(type::Static,sol,species::Vector{String},Pha
     elseif direction == "z"
         n_dir = z_num
         grid_type = Space.z_grid
-        if grid_type == "u"
+        if grid_type isa StretchGrid
             mdir_plot = mz
             min_dir = zr[1]
             max_dir = zr[end]

@@ -1,22 +1,20 @@
 """
-    NumberDensity1DPlot(type,sol,PhaseSpace,direction,species;...)
+    NumberDensityPlot1D(type,PhaseSpace,sol,species,direction;...)
 
 Returns a plot of the number density of all species as a function of time along a specific spatial coordinate `direction`.
 """
-function NumberDensity1DPlot(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStruct,direction::String,species::Vector{String};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
-
+function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},direction::String;fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
     CairoMakie.activate!(inline=true) # plot in vs code window
 
     with_theme(theme) do
 
     name_list = PhaseSpace.name_list
     Momentum = PhaseSpace.Momentum
-    Space = PhaseSpace.Space
-    Time = PhaseSpace.Time
+    Spacetime = PhaseSpace.Spacetime
     Grids = PhaseSpace.Grids
-    x_num = Space.x_num
-    y_num = Space.y_num
-    z_num = Space.z_num
+    x_num = Spacetime.x_num
+    y_num = Spacetime.y_num
+    z_num = Spacetime.z_num
     dx = Grids.dx
     dy = Grids.dy
     dz = Grids.dz
@@ -34,27 +32,27 @@ function NumberDensity1DPlot(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpa
     ylab = L"$n\, [\text{Code Units}]$"
 
     if direction == "x"
-        xlab = L"$\left(x\,[\text{Code Units}]\right)$"
+        xlab = L"$x\, [\text{Code Units}]$"
         n_dir = x_num
-        grid_type = Space.x_grid
+        grid_type = Spacetime.x_grid
         if grid_type == "u"
             mdir_plot = mx
         elseif grid_type == "l"
             mdir_plot = log10.(mx)
         end
     elseif direction == "y"
-        xlab = L"$\left(y\,[\text{Code Units}]\right)$"
+        xlab = L"$y\, [\text{Code Units}]$"
         n_dir = y_num
-        grid_type = Space.y_grid
+        grid_type = Spacetime.y_grid
         if grid_type == "u"
             mdir_plot = my
         elseif grid_type == "l"
             mdir_plot = log10.(my)
         end
     elseif direction == "z"
-        xlab = L"$\left(z\,[\text{Code Units}]\right)$"
+        xlab = L"$z\, [\text{Code Units}]$"
         n_dir = z_num
-        grid_type = Space.z_grid
+        grid_type = Spacetime.z_grid
         if grid_type == "u"
             mdir_plot = mz
         elseif grid_type == "l"

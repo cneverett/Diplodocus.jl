@@ -81,6 +81,13 @@ function TimeScalePlot(method::AbstractSteppingMethod,sol::OutputStruct,t_idxs::
 
         method(df,f,dt0,dt,t)
 
+        #= DIAG needs to be fixed as off diagonal terms can contribute to losses e.g. for compton scattering there could be a loss of electrons from photons. For a better estimate we should split method.temp into two parts: a positive part giving the rate of gain and a negative part giving the rate of loss.
+
+        Could also split df into forces, emissive and absorption parts.
+        =#
+
+        println("Diag should be fixed!!!!!")
+
         if direction == "all"
             df .= DiplodocusTransport.diag(method.temp) .* f
             #df .= method.temp * f

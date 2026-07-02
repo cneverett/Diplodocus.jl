@@ -245,6 +245,9 @@ function InteractiveEmissionGainLossPlot(Output::Tuple)
     u1_val = @lift(u1_m[$u1_idx])
     h1_val = @lift(h1_m[$h1_idx])
 
+    u3_val = @lift(u3_m[$u3_idx])
+    h3_val = @lift(h3_m[$h3_idx])
+
     label = @lift("p1: [$(round(p1_r[$p1_idx], sigdigits=3)),$(round(p1_r[$p1_idx+1], sigdigits=3))], u1: [$(round(u1_r[$u1_idx],sigdigits=2)),$(round(u1_r[$u1_idx+1],sigdigits=2))], h1: [$(round(h1_r[$h1_idx],sigdigits=2)),$(round(h1_r[$h1_idx+1],sigdigits=2))] 
     \n 
     p2: [u2: [$(round(u2_r[$u2_idx],sigdigits=2)),$(round(u2_r[$u2_idx+1],sigdigits=2))], h2: [$(round(h2_r[$h2_idx],sigdigits=2)),$(round(h2_r[$h2_idx+1],sigdigits=2))]
@@ -289,6 +292,10 @@ function InteractiveEmissionGainLossPlot(Output::Tuple)
         ω0 = @lift(abs((z1*1.6e-19*Ext[$Ext_idx]))/(10^$p1_val*9.11e-31))
         pc = @lift(log10(1.054e-34*$ω0/(9.11e-31*3e8^2)*(10^$p1_val)^3))
         vlines!(ax1,pc,color=:black,linestyle=(:dot,:dense))
+
+        pstar = @lift(log10(1.054e-34*abs(z1)*1.6e-19*Ext[$Ext_idx]/((9.11e-31*3e8)^2*(sqrt((10^$p1_val)^2+m1^2)-10^$p1_val*$u1_val*$u3_val)))) 
+        vlines!(ax1,pstar,color=:black,linestyle=(:dashdot,:dense))
+        
     end
 
     return fig

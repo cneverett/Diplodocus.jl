@@ -8,17 +8,22 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DiplodocusCollisions = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
 DiplodocusTransport = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 CairoMakie = "0.13.7"
 DiplodocusCollisions = "0.2.2"
 DiplodocusTransport = "1.0.0"
 GLMakie = "0.11.8"
+LinearAlgebra = "1.12.0"
 Revise = "3.8.0"
+StaticArrays = "1.9.18"
 julia = "1.12.0"
 
 [extras]
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]

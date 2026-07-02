@@ -23,7 +23,7 @@ Common keyword arguments:
 - `z_idx::Int64=1`, the z index of the spatial grid cell that you want to plot the distribution for, default is 1.
 
 """
-function NumberDensityPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::String;fig=nothing,theme=DiplodocusDark(),title=nothing,legend=false,legend_pos::Symbol=:rb,frac::Bool=false,logt::Bool=false,TimeUnits::Tuple{Float64,String}=(1.0,"\\text{Code Units}"),x_idx=1,y_idx=1,z_idx=1)
+function NumberDensityPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::String;fig=nothing,theme=DiplodocusDark(),title=nothing,legend=false,legend_pos::Symbol=:rb,frac::Bool=false,only_all::Bool=false,logt::Bool=false,TimeUnits::Tuple{Float64,String}=(1.0,"\\text{Code Units}"),x_idx=1,y_idx=1,z_idx=1)
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
@@ -89,13 +89,14 @@ function NumberDensityPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
         ax.title = title
     end
 
+    Uₐ::Vector{eltype(sol.t[1])} = [-1.0,0.0,0.0,0.0] # static observer
+
     for j in (species != "All" ? findfirst(x->x==species,name_list) : eachindex(name_list))
 
         for i in eachindex(sol.t)
 
             Nᵃ = FourFlow(sol.f[i],PhaseSpace,j;x_idx=x_idx,y_idx=y_idx,z_idx=z_idx)
             #Ua = HydroFourVelocity(Na)
-            Uₐ = [-1.0,0.0,0.0,0.0] # static observer
 
             val_prev = val
             val = ScalarNumberDensity(Nᵃ,Uₐ) * CHAR_number_density
@@ -116,6 +117,7 @@ function NumberDensityPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
         
         end
 
+        if !only_all
         if logt
             scatterlines!(ax,log10.(sol.t .* t_unit_scale),num,marker = :circle,color=theme.palette.color[][mod(2*j-1,7)+1],markersize=0.0,label=name_list_plot[j])
             xlims!(ax,log10(t_unit_scale*sol.t[1]),log10(t_unit_scale*sol.t[end]))
@@ -123,7 +125,7 @@ function NumberDensityPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
             scatterlines!(ax,sol.t .* t_unit_scale,num,marker = :circle,color=theme.palette.color[][mod(2*j-1,7)+1],markersize=0.0,label=name_list_plot[j])
             xlims!(ax,t_unit_scale*sol.t[1],t_unit_scale*sol.t[end])
         end
-
+        end
     end
 
     if species == "All"
