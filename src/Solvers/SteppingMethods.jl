@@ -1675,7 +1675,7 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
             #end
             t = 0.0
 
-            dt_local = dt #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
+            dt_local = dt / 16 #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
 
             kE = 1.0
             kϕ = 1.0
@@ -1723,10 +1723,17 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
                     J .*= Dinv # left mul
                     F .*= Dinv # left mul
 
+                    #println("sum(F): $(sum(F)), max(F): $(maximum(F)), min(F): $(minimum(F))")
+                    #println("sum(J): $(sum(J)), max(J): $(maximum(J)), min(J): $(minimum(J))")
+
                     arnoldi!(Ks, J, F;m=m,reorthogonalize=true,remove_drift=false,tol=1e-12)
 
                     V = ExponentialUtilities.getV(Ks)[:,1:end-1]
-                    #H = ExponentialUtilities.getH(Ks)[1:end-1,1:end]
+                    H = ExponentialUtilities.getH(Ks)[1:end-1,1:end]
+
+                    #display(ExponentialUtilities.getH(Ks))
+                    #show(IOContext(stdout, :compact=>false), "text/plain", H[1:4,1:4])
+                    #error("Stopping for debugging old, dtscale = $dtscale")
 
                     if #=cond((I - dt_local*H)) > 1f3 ||=#  norm(V' * V - I) > 1f-5 
                         dt_local *= 0.5
@@ -1738,6 +1745,8 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
                     _, errest = phiv!(ϕ,k,Ks,1;cache=ϕcache,correct=true,errest=true) # TODO: This allocates                  
                     @. δ = D * @view(ϕ[:,2]) * k
                     @. fout = fold + δ
+
+
                     
                         @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
 
@@ -1746,6 +1755,12 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
                         Eold = dot(E, fold .+ df_Inj * k * dtscale)
                         ηE = abs(dot(E, fout) / Eold - one(Precision))
                         #println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout), " inj E: ", dot(E, df_Inj * k * dtscale))
+
+                        #println("max delta: $(maximum(δ)), min delta: $(minimum(δ)), sum delta: $(sum(δ))")
+                        #println("max fold: $(maximum(fold)), min fold: $(minimum(fold)), sum fold: $(sum(fold))")
+                        #println("max fout: $(maximum(fout)), min fout: $(minimum(fout)), sum fout: $(sum(fout))")
+
+                        #error("end for debugging, dtscale = $dtscale, errest = $errest, eng err: $ηE")
 
                         if isnan(ηE) || ηE > 1e-2
 
@@ -1759,8 +1774,9 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
                         order = 1.0 # energy error is order 1
 
                         ηtarget = 1e-16
+                        ηEtarget = Precision == Float32 ? 1e-4 : 1e-6
 
-                        kE = (1e-5/(ηE+eps(1e-5)))^(1.0/(order+1)) # k from energy error estimate 
+                        kE = (ηEtarget/(ηE+eps(ηEtarget)))^(1.0/(order+1)) # k from energy error estimate 
                         kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
                         kϕ = min(kE,kϕmax) # max k is 2.0
                         errest = Inf
@@ -3021,8 +3037,6 @@ function update_momentum!(method::ExponentialRosenbrockEulerLejaStruct,dt::T) wh
 end
 
 
-using LinearAlgebra
-
 # ----------------------------
 # Scalar phi_1(z) = (exp(z)-1)/z
 # ----------------------------
@@ -3186,6 +3200,22 @@ function arnoldi_step!(
     return β
 end
 
+"""
+    firststep!(Ks, V, H, b) -> nothing
+
+Compute the first step of Arnoldi or Lanczos iteration.
+"""
+function firststep!(Ks::KrylovSubspace, V, H, b)
+    return @inbounds begin
+        fill!(H, zero(eltype(H)))
+        Ks.beta = norm(b)
+        if !iszero(Ks.beta)
+            @. V[:, 1] = b / Ks.beta
+        end
+        #println("beta = $(Ks.beta), sum(b) = $(sum(b)), norm(b) = $(norm(b))")
+    end
+end
+
 function arnoldi!(
     Ks::KrylovSubspace{T1, U}, A::AT, b;
     tol::Real = 1.0e-7,
@@ -3212,8 +3242,7 @@ function arnoldi!(
     b′, b_aug, n, p = ExponentialUtilities.checkdims(A, b, V)
     if iszero(init)
         isaugmented = AT <: Tuple
-        isaugmented ? ExponentialUtilities.firststep!(Ks::KrylovSubspace, V, H, b′, b_aug, t, mu, l) :
-                      ExponentialUtilities.firststep!(Ks::KrylovSubspace, V, H, b)
+        isaugmented ? ExponentialUtilities.firststep!(Ks::KrylovSubspace, V, H, b′, b_aug, t, mu, l) : firststep!(Ks::KrylovSubspace, V, H, b)
         init = 1
     end
 
@@ -3230,6 +3259,89 @@ function arnoldi!(
     end
 
     return Ks
+end
+
+"""
+    phiv!(w,t,Ks,k[;cache,correct,errest]) -> w[,errest]
+
+Non-allocating version of 'phiv' that uses precomputed Krylov subspace `Ks`.
+"""
+function phiv!(
+        w::AbstractMatrix, t::Number, Ks::KrylovSubspace{T, U}, k::Integer;
+        cache = nothing, correct = false,
+        errest = false
+    ) where {T <: Number, U <: Number}
+    m, beta, V, H = Ks.m, Ks.beta, ExponentialUtilities.getV(Ks), ExponentialUtilities.getH(Ks)
+    @assert size(w, 1) == size(V, 1) "Dimension mismatch"
+    @assert size(w, 2) == k + 1 "Dimension mismatch"
+    if isnothing(cache)
+        cache = PhivCache(w, m, k)
+    elseif !isa(cache, PhivCache)
+        throw(ArgumentError("Cache must be a PhivCache"))
+    end
+    e, Hcopy, C1, C2 = ExponentialUtilities.get_caches(cache, m, k)
+    lmul!(t, copyto!(Hcopy, @view(H[1:m, :])))
+    fill!(e, zero(T))
+    ExponentialUtilities.allowed_setindex!(e, one(T), 1) # e is the [1,0,...,0] basis vector
+    phiv_dense!(C2, Hcopy, e, k; cache = C1) # C2 = [ϕ0(H)e ϕ1(H)e ... ϕk(H)e]
+    
+    aC2 = ExponentialUtilities.Adapt.adapt(ExponentialUtilities.parameterless_type(w), C2)
+    lmul!(beta, mul!(w, @view(V[:, 1:m]), aC2)) # f(A) ≈ norm(b) * V * f(H)e
+    if correct
+        # Use the last Arnoldi vector for correction with little additional cost
+        # correct_p = beta * h_{m+1,m} * (em^T phi_p+1(H) e1) * v_m+1
+        betah = beta * H[end, end] * t
+        vlast = @view(V[:, end])
+        @inbounds for i in 1:k
+            axpy!(betah * C2[end, i + 1], vlast, @view(w[:, i]))
+        end
+    end
+    if errest
+        err = abs(beta * H[end, end] * t * C2[end, end])
+        return w, err
+    else
+        return w
+    end
+end
+
+"""
+    phiv_dense!(w,A,v,k[;cache]) -> w
+
+Non-allocating version of `phiv_dense`.
+"""
+function phiv_dense!(
+        w::AbstractMatrix{T}, A::AbstractMatrix{T},
+        v::AbstractVector{T}, k::Integer;
+        cache = nothing,
+        expmethod = ExpMethodHigham2005Base()
+    ) where {T <: Number}
+    @assert size(w, 1) == size(A, 1) == size(A, 2) == length(v) "Dimension mismatch"
+    @assert size(w, 2) == k + 1 "Dimension mismatch"
+    m = length(v)
+    # Construct the extended matrix
+    if isnothing(cache)
+        cache = fill(zero(T), m + k, m + k)
+    else
+        @assert size(cache) == (m + k, m + k) "Dimension mismatch"
+        fill!(cache, zero(T))
+    end
+    cache[1:m, 1:m] = A
+    cache[1:m, m + 1] = v
+    for i in (m + 1):(m + k - 1)
+        cache[i, i + 1] = one(T)
+    end
+    P = exponential!(cache, expmethod)
+
+    #display(P)
+
+    # Extract results
+    @views mul!(w[:, 1], P[1:m, 1:m], v)
+    @inbounds for i in 1:k
+        @inbounds for j in 1:m
+            w[j, i + 1] = P[j, m + i]
+        end
+    end
+    return w
 end
 
 """

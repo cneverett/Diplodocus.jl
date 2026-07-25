@@ -1,8 +1,8 @@
 using LinearAlgebra
 
 
-# A is the augmented matrix A = [J u; 0 0] 
-function arnoldi_scalar!(A::MT1, u::VT1, V::MT2, H::MT2, w::VT2; reorth::Bool = true) where {T1,T2,MT1<:AbstractMatrix{T1},VT1<:AbstractVector{T1},MT2<:AbstractMatrix{T2},VT2<:AbstractVector{T2}}
+
+function arnoldi_scalar!(A::MT1, u::VT1, V::MT2, H::MT2, w::VT2; reorth::Bool = false) where {T1,T2,MT1<:AbstractMatrix{T1},VT1<:AbstractVector{T1},MT2<:AbstractMatrix{T2},VT2<:AbstractVector{T2}}
 
     n = length(u)
     m = size(H, 2) - 1
@@ -12,32 +12,37 @@ function arnoldi_scalar!(A::MT1, u::VT1, V::MT2, H::MT2, w::VT2; reorth::Bool = 
     @assert size(H, 1) >= m + 1
     @assert length(w) == n
 
-    fill!(H, zero(T2))
-    fill!(V, zero(T2))
+    fill!(H, zero(eltype(H)))
+    fill!(V, zero(eltype(V)))
 
     β0::T2 = norm(u)
     iszero(β0) && throw(ArgumentError("Initial vector u has zero norm"))
 
     copyto!(@view(V[:, 1]), u)
-    rmul!(@view(V[:, 1]), inv(β0)) # TODO: not needed if u is [0,0,0,0 ... 1]
+    rmul!(@view(V[:, 1]), inv(β0)) 
+
+    #println("β0: $β0, sum(u) = $(sum(u)), norm(u) = $(norm(u))")
 
     hkp1k = zero(T2)
 
     @inbounds for k in 1:m
+
         Vk  = @view V[:, 1:k]
         vk  = @view V[:, k]
         vkp = @view V[:, k+1]
         hk  = @view H[1:k, k]
 
+        Vkt = transpose(Vk)
+
         mul!(vkp, A, vk)
-        mul!(hk, adjoint(Vk), vkp)
+        mul!(hk, Vkt, vkp)
         mul!(vkp, Vk, hk, -one(T2), one(T2))
 
         #println("norm(w): ", norm(vkp))
         #println("hk: ", hk)
 
-        if reorth
-            mul!(hk, adjoint(Vk), vkp)
+        if reorth # TODO: This currently doesn't work!!!!
+            mul!(hk, Vkt, vkp)
             mul!(vkp, Vk, hk, -one(T2), one(T2))
         end
         
@@ -46,7 +51,7 @@ function arnoldi_scalar!(A::MT1, u::VT1, V::MT2, H::MT2, w::VT2; reorth::Bool = 
 
         hkp1k = norm(vkp)
 
-        if iszero(hkp1k)
+        if hkp1k < 1e2 * eps(T2) # if the next basis vector is too small, stop the iteration
             println("happy")
             fill!(vkp, zero(T2))
             break
@@ -66,7 +71,7 @@ function arnoldi_scalar!(A::MT1, u::VT1, V::MT2, H::MT2, w::VT2; reorth::Bool = 
     return m, hkp1k, β0
 end
 
-function arnoldi_block4!(A::MT1, v::VT1, V::MT2, H::MT2, W::MT2, R::MT2; reorth::Bool = true) where {T1,T2,MT1<:AbstractMatrix{T1},VT1<:AbstractVector{T1},MT2<:AbstractMatrix{T2}}
+function arnoldi_block4!(A::MT1, v::VT1, V::MT2, H::MT2, W::MT2, R::MT2; reorth::Bool = false) where {T1,T2,MT1<:AbstractMatrix{T1},VT1<:AbstractVector{T1},MT2<:AbstractMatrix{T2}}
 
     T = eltype(V)
     n = length(v)

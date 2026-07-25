@@ -432,7 +432,7 @@ function (method::ERBEKrylovStruct)(t_start,t_stop,dt,Verbose::Int64)
 
     # Half injection 
 
-        @. method.fstep += method.df_Inj * dt_scale / 2
+        #@. method.fstep += method.df_Inj * dt_scale / 2
 
     # half momentum update
 
@@ -460,7 +460,7 @@ function (method::ERBEKrylovStruct)(t_start,t_stop,dt,Verbose::Int64)
 
     # half injection 
 
-        @. method.fstep += method.df_Inj * dt_scale / 2
+        #@. method.fstep += method.df_Inj * dt_scale / 2
 
     # half space update
 
@@ -605,20 +605,20 @@ function update_momentum!(method::ERBEKrylovStruct,dt::T) where T
 
                     @. J *= dtscale * invA
 
-                    println("max M_Emi: ", maximum(M_Emi), " min M_Emi : ", minimum(M_Emi))
-                    println("max J: ", maximum(J), " min J : ", minimum(J))
-                    println("max fold: ", maximum(fold), " min fold : ", minimum(fold))
-                    println("max df_Inj: ", maximum(df_Inj), " min df_Inj : ", minimum(df_Inj))
+                    #println("max M_Emi: ", maximum(M_Emi), " min M_Emi : ", minimum(M_Emi))
+                    #println("max J: ", maximum(J), " min J : ", minimum(J))
+                    #println("max fold: ", maximum(fold), " min fold : ", minimum(fold))
+                    #println("max df_Inj: ", maximum(df_Inj), " min df_Inj : ", minimum(df_Inj))
 
                     # Form F
                     mul!(F,method.M_Bin_Mul_Step,fold)
                     @. F *= invA
 
                     # Energy error estimate using F 
-                    ηEest = abs(dot(E,F) * dtscale) / dot(E,fold)
-                    println("Energy error estimate: ", ηEest)
+                    #ηEest = abs(dot(E,F) * dtscale) / dot(E,fold)
+                    #println("Energy error estimate: ", ηEest)
 
-                    #@. F += #=A *=# df_Inj
+                    @. F += #=A *=# df_Inj
                     if norm(F) == zero(Precision) # no change in distribution
                         break
                     end
@@ -635,14 +635,21 @@ function update_momentum!(method::ERBEKrylovStruct,dt::T) where T
                     #@view(Aaug[1:n_momentum,1:n_momentum]) .= J
                     #@view(Aaug[1:n_momentum,n_momentum+1]) .= F
 
+                    #println("sum(F): $(sum(F)), max(F): $(maximum(F)), min(F): $(minimum(F))")
+                    #println("sum(J): $(sum(J)), max(J): $(maximum(J)), min(J): $(minimum(J))")
+
                     # scalar
-                        _, hmp1m, β = arnoldi_scalar!(J,F,method.V,method.Hs,method.w;reorth=false)
+                        _, hmp1m, β = arnoldi_scalar!(J,F,method.V,method.Hs,method.w;reorth=false) # TODO: reoth doesn't work
                     # block
                         #Rlast = arnoldi_block4!(J,F,method.V,method.Hb,method.W,method.R0;reorth=false)
 
+                        #display(method.Hb)
+                        #display(method.V)
+                        #error("Stopping for debugging new, dtscale = $dtscale, $hmp1m")
+
                     order = 1.0 # energy error is order 1
-                    ηHtarget = 1e-5
-                    ηEtarget = 1e-5
+                    ηHtarget = 1e-16
+                    ηEtarget = Precision == Float32 ? 1e-4 : 1e-6
                     k = min(1.0,(1.0-t)*dt/dt_local) # initial guess for k, limited to not overshoot final time 
                     k_old = 1.0
                     k_next = 1.0
@@ -662,26 +669,35 @@ function update_momentum!(method::ERBEKrylovStruct,dt::T) where T
                             #display(method.Hs)
                             #display(method.Hsexp)
                             #display(exp(method.Hs))
-                            ferr = method.Hsexp[m,m+1]
+                            ferr = CUDA.@allowscalar method.Hsexp[m,m+1]
                             #println("dtscale: ", dtscale, " k: ", k, " ferr: ", ferr)
                             ηH = abs(k * dtscale * β * hmp1m * ferr) # error estimate from Krylov subspace approximation of exponential action
                             @views mul!(δ, method.V[1:n_momentum, 1:m], method.Hsexp[1:m, m+1],β*k,zero(Precision)) # δ is energy change
                             δ .*= D # scale δ back to original space
+                        
+
                         # block
-                            #expm_pade!(k, method.Hbexp, method.Hb, method.PadeExpWorkspace_s)
-                            #ferr = @view(method.Hbexp[m-3:m,m+1])
-                            #ηH = k * norm(Rlast * ferr)
-                            #@views mul!(δ, method.V[1:n_momentum, 1:m], method.Hbexp[1:m, m+1],one(Precision),zero(Precision)) # δ is energy change
-                            #δ .*= D # scale δ back to original space
+                        #=    expm_pade!(k, method.Hbexp, method.Hb, method.PadeExpWorkspace_s)
+                            ferr = @view(method.Hbexp[m-3:m,m+1])
+                            ηH = k * norm(Rlast * ferr)
+                            @views mul!(δ, method.V[1:n_momentum, 1:m], method.Hbexp[1:m, m+1],one(Precision),zero(Precision)) # δ is energy change
+                            δ .*= D # scale δ back to original space
 
                             #display(method.Hb)
                             #display(method.Hbexp)
+                        =#
 
                         @. fout = fold + δ
-                        #@. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
+                        @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
 
-                        Eold = dot(E, fold #=.+ df_Inj * k * dtscale=#)
+                        Eold = dot(E, fold .+ df_Inj * k * dtscale)
                         ηE = abs(dot(E, fout) / Eold - one(Precision))
+
+                        #println("max delta: $(maximum(δ)), min delta: $(minimum(δ)), sum delta: $(sum(δ))")
+                        #println("max fold: $(maximum(fold)), min fold: $(minimum(fold)), sum fold: $(sum(fold))")
+                        #println("max fout: $(maximum(fout)), min fout: $(minimum(fout)), sum fout: $(sum(fout))")
+
+                        #error("end for debugging, dtscale = $dtscale, errest = $ηH, eng err: $ηE")
 
                         # KIOPS adaptive time 
                         #=if substeps == 0 || substeps == 1
@@ -705,12 +721,12 @@ function update_momentum!(method::ERBEKrylovStruct,dt::T) where T
                         elseif ηE < ηEtarget && ηH < 1.4ηHtarget # good step
                             # define how large to guess the next step can be
                             k_next = min(sqrt(kE),sqrt(kH),1.5) # max k is 2.0 or 1.0-t to avoid overshooting final time
-                            println("Accepting step with k: ", k, " k_next: ", k_next, " t: ", t, " dt_local: ", dt_local," ηE: ", ηE, " ηH: ", ηH, " dtscale: ", dtscale)
+                            #println("Accepting step with k: ", k, " k_next: ", k_next, " t: ", t, " dt_local: ", dt_local," ηE: ", ηE, " ηH: ", ηH, " dtscale: ", dtscale)
                             break
                         else # 
                             k = min(0.9*kE,kH)
                             k = max(k,0.5*k_old)
-                            println("Rejecting step with k: ", k, " t: ", t, " dt_local: ", dt_local," ηE: ", ηE, " ηH: ", ηH)
+                            #println("Rejecting step with k: ", k, " t: ", t, " dt_local: ", dt_local," ηE: ", ηE, " ηH: ", ηH)
                         end
 
                         substeps += 1
