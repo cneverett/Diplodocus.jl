@@ -615,8 +615,8 @@ function update_momentum!(method::ERBEKrylovStruct,dt::T) where T
                     @. F *= invA
 
                     # Energy error estimate using F 
-                    #ηEest = abs(dot(E,F) * dtscale) / dot(E,fold)
-                    #println("Energy error estimate: ", ηEest)
+                    ηEest = abs(dot(E,F) * dtscale) / dot(E,fold)
+                    println("Energy error estimate: ", ηEest)
 
                     @. F += #=A *=# df_Inj
                     if norm(F) == zero(Precision) # no change in distribution
@@ -649,7 +649,7 @@ function update_momentum!(method::ERBEKrylovStruct,dt::T) where T
 
                     order = 1.0 # energy error is order 1
                     ηHtarget = 1e-16
-                    ηEtarget = Precision == Float32 ? 1e-4 : 1e-6
+                    ηEtarget = Precision == Float32 ? 1e-2 : 1e-6
                     k = min(1.0,(1.0-t)*dt/dt_local) # initial guess for k, limited to not overshoot final time 
                     k_old = 1.0
                     k_next = 1.0
@@ -721,12 +721,13 @@ function update_momentum!(method::ERBEKrylovStruct,dt::T) where T
                         elseif ηE < ηEtarget && ηH < 1.4ηHtarget # good step
                             # define how large to guess the next step can be
                             k_next = min(sqrt(kE),sqrt(kH),1.5) # max k is 2.0 or 1.0-t to avoid overshooting final time
-                            #println("Accepting step with k: ", k, " k_next: ", k_next, " t: ", t, " dt_local: ", dt_local," ηE: ", ηE, " ηH: ", ηH, " dtscale: ", dtscale)
+                            println("Accepting step with k: ", k, " k_next: ", k_next, " t: ", t, " dt_local: ", dt_local," ηE: ", ηE, " ηH: ", ηH, " dtscale: ", dtscale)
                             break
                         else # 
+                            k_old = k
                             k = min(0.9*kE,kH)
-                            k = max(k,0.5*k_old)
-                            #println("Rejecting step with k: ", k, " t: ", t, " dt_local: ", dt_local," ηE: ", ηE, " ηH: ", ηH)
+                            k = max(k,0.9*k_old)
+                            println("Rejecting step with k: ", k_old," k_next: ", k, " t: ", t, " dt_local: ", dt_local," ηE: ", ηE, " ηH: ", ηH)
                         end
 
                         substeps += 1

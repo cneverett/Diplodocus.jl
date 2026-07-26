@@ -56,7 +56,12 @@ function expm_pade!(dt::T, F::M, A::AbstractMatrix{T2},ws::PadeExpWorkspaceStruc
     copyto!(dtA, A)
     @views dtA[:,1:end-1] .*= dt
 
-    nrm = norm(dtA,1)
+    n = LinearAlgebra.checksquare(dtA)
+
+    # balance 
+    ilo, ihi, scale = LAPACK.gebal!('B', dtA) # modifies A
+
+    nrm = opnorm(dtA,1)
     #println("nrm = $nrm, 1-norm: $(norm(dtA,1))")
 
     if T === Float32
@@ -65,9 +70,9 @@ function expm_pade!(dt::T, F::M, A::AbstractMatrix{T2},ws::PadeExpWorkspaceStruc
         theta7 = 3.925724783138660f0
         theta9 = 6.42276f0 # more digits?
         if nrm <= theta3
-            return _pade3!(F, dtA, ws)
+            _pade3!(F, dtA, ws)
         elseif nrm <= theta5
-            return _pade5!(F, dtA, ws)
+            _pade5!(F, dtA, ws)
         else
             s = max(0, ceil(Int, log2(nrm / theta7)))
             #println("nrm = $nrm, theta7 = $theta7, s = $s")
@@ -88,7 +93,7 @@ function expm_pade!(dt::T, F::M, A::AbstractMatrix{T2},ws::PadeExpWorkspaceStruc
                 #mul!(T1, F, F)
                 #copyto!(F,T1)
             end
-            return F
+
         end
     else
         theta3  = 1.495585217958292e-2
@@ -97,31 +102,70 @@ function expm_pade!(dt::T, F::M, A::AbstractMatrix{T2},ws::PadeExpWorkspaceStruc
         theta9  = 2.097847961257068e0
         theta13 = 5.371920351148152e0
         if nrm <= theta3
-            return _pade3!(F, dtA, ws)
+            _pade3!(F, dtA, ws)
         elseif nrm <= theta5
-            return _pade5!(F, dtA, ws)
+            _pade5!(F, dtA, ws)
         elseif nrm <= theta7
-            return _pade7!(F, dtA, ws)
+            _pade7!(F, dtA, ws)
         elseif nrm <= theta9
-            return _pade9!(F, dtA, ws)
+            _pade9!(F, dtA, ws)
         else
             s = max(0, ceil(Int, log2(nrm / theta13)))
-            if isodd(s) # force s to be even to allow mul step below to always give F without need for mem copies
-                s += 1
-            end
+            #if isodd(s) # force s to be even to allow mul step below to always give F without need for mem copies
+            #    s += 1
+            #end
             @. dtA /= T(2)^s
             _pade13!(F, dtA, ws)
             T1 = ws.tmp1
             for sv in 1:s
-                if isodd(sv)
-                    mul!(T1, F, F)
-                else
-                    mul!(F, T1, T1)
-                end
+                #if isodd(sv)
+                #    mul!(T1, F, F)
+                #else
+                #    mul!(F, T1, T1)
+                #end
+                mul!(T1, F, F)
+                F .= T1
             end
-            return F
         end
     end
+
+    # Undo the balancing
+    for j in ilo:ihi
+        scj = scale[j]
+        for i in 1:n
+            F[j, i] *= scj
+        end
+        for i in 1:n
+            F[i, j] /= scj
+        end
+    end
+
+    if F isa StridedMatrix{<:LinearAlgebra.BLAS.BlasFloat}
+        if ilo > 1       # apply lower permutations in reverse order
+            for j in (ilo - 1):-1:1
+                LinearAlgebra.rcswap!(j, Int(scale[j]), F)
+            end
+        end
+        if ihi < n       # apply upper permutations in forward order
+            for j in (ihi + 1):n
+                LinearAlgebra.rcswap!(j, Int(scale[j]), F)
+            end
+        end
+    else
+        if ilo > 1       # apply lower permutations in reverse order
+            for j in (ilo - 1):-1:1
+                LinearAlgebra.rcswap!(j, bal.prow[j], F)
+            end
+        end
+        if ihi < n       # apply upper permutations in forward order
+            for j in (ihi + 1):n
+                LinearAlgebra.rcswap!(j, bal.pcol[j - ihi], F)
+            end
+        end
+    end
+
+    return F
+
 end
 
 function _finish_pade!(F::M, ws::PadeExpWorkspaceStruct{T}) where {T,M<:AbstractMatrix{T}}

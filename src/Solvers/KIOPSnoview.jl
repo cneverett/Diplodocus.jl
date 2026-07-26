@@ -218,14 +218,18 @@ function expm_kiops_pade!(F::M, A::M,ws::KIOPSRosenbrockWorkspace{T}) where {T,M
 end
 
 function _finish_pade!(F::M, ws::KIOPSRosenbrockWorkspace{T}) where {T,M<:AbstractMatrix{T}}
-    ws.lhs .= ws.Vmat.- ws.Umat
-    ws.rhs .= T(2) .* ws.Umat
+    ws.lhs .= ws.Vmat .- ws.Umat
+    #ws.rhs .= T(2) .* ws.Umat
+    ws.rhs .= ws.Vmat .+ ws.Umat
     L = ws.lhs
     R = ws.rhs
     #ldiv!(R, lu!(L),R)
-    luL = lu(L)
-    ldiv!(R,luL,R)
-    F .= R .+ ws.Id
+    #luL = lu(L)
+    #ldiv!(R,luL,R)
+    #F .= R .+ ws.Id
+
+    LAPACK.gesv!(L, R)
+    F .= R #.+ ws.Id
     return F
 end
 

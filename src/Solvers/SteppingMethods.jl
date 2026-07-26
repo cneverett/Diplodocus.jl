@@ -1675,7 +1675,7 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
             #end
             t = 0.0
 
-            dt_local = dt / 16 #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
+            dt_local = dt #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
 
             kE = 1.0
             kϕ = 1.0
@@ -1774,7 +1774,7 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
                         order = 1.0 # energy error is order 1
 
                         ηtarget = 1e-16
-                        ηEtarget = Precision == Float32 ? 1e-4 : 1e-6
+                        ηEtarget = Precision == Float32 ? 1e-4 : 1e-5
 
                         kE = (ηEtarget/(ηE+eps(ηEtarget)))^(1.0/(order+1)) # k from energy error estimate 
                         kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
