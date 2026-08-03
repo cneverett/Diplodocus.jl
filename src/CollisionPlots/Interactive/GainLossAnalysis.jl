@@ -11,9 +11,11 @@ function InteractiveBinaryGainLossPlot(Output::Tuple)
     p2_d = DC.deltaVector(p2_r);
     p2_m = DC.meanVector(p2_r);
     p3_r = DC.bounds(p3_low,p3_up,p3_num,p3_grid);
+    p3_r = [0.0 ; p3_r ; 2*p3_r[end]]; # includes under and overflow bins
     p3_d = DC.deltaVector(p3_r);
     p3_m = DC.meanVector(p3_r);
     p4_r = DC.bounds(p4_low,p4_up,p4_num,p4_grid);
+    p4_r = [0.0 ; p4_r ; 2*p4_r[end]]; # includes under and overflow bins
     p4_d = DC.deltaVector(p4_r);
     p4_m = DC.meanVector(p4_r);
     
@@ -103,14 +105,14 @@ function InteractiveBinaryGainLossPlot(Output::Tuple)
 
     Label(subgl2[4,1:2], label)
 
-    GainMatrix3 = Output[2]
-    GainMatrix3Avg = dropdims(sum(GainMatrix3,dims=(2,3,5,6,8,9)),dims=(2,3,5,6,8,9)) #= / sum(u3_d) * u3_d[1] =# / sum(u1_d) * u1_d[1] / sum(u2_d) * u2_d[1]# / (u1_num*h1_num*u2_num*h2_num*u3_num*h3_num)
-    GainMatrix4 = name1==name2 ? Output[2] : Output[3]
-    GainMatrix4Avg = dropdims(sum(GainMatrix4,dims=(2,3,5,6,8,9)),dims=(2,3,5,6,8,9)) #= / sum(u4_d) * u4_d[1] =# / sum(u1_d) * u1_d[1] / sum(u2_d) * u2_d[1]#/ (u1_num*h1_num*u2_num*h2_num*u4_num*h4_num)
-    LossMatrix1 = Output[4]
-    LossMatrix1Avg = dropdims(sum(LossMatrix1,dims=(2,3,5,6)),dims=(2,3,5,6)) #= / sum(u1_d) * u1_d[1] =# / sum(u2_d) * u2_d[1]#/ (u1_num*h1_num*u2_num*h2_num)
-    LossMatrix2 = name1==name2 ? Output[4] : Output[5]
-    LossMatrix2Avg = dropdims(sum(LossMatrix2,dims=(2,3,5,6)),dims=(2,3,5,6)) / sum(u1_d) * u1_d[1] #= / sum(u2_d) * u2_d[1] =##/ (u1_num*h1_num*u2_num*h2_num)
+    GainMatrix3 = @lift(Output[2][:,:,:,$p1_idx,:,:,$p2_idx,:,:])
+    GainMatrix3Avg = @lift(dropdims(sum($GainMatrix3,dims=(2,3,4,5,6,7)),dims=(2,3,4,5,6,7)) #= / sum(u3_d) * u3_d[1] =# / sum(u1_d) * u1_d[1] / sum(u2_d) * u2_d[1])# / (u1_num*h1_num*u2_num*h2_num*u3_num*h3_num)
+    GainMatrix4 = @lift(name3==name4 ? Output[2][:,:,:,$p1_idx,:,:,$p2_idx,:,:] : Output[3][:,:,:,$p1_idx,:,:,$p2_idx,:,:])
+    GainMatrix4Avg = @lift(dropdims(sum($GainMatrix4,dims=(2,3,4,5,6,7)),dims=(2,3,4,5,6,7)) #= / sum(u4_d) * u4_d[1] =# / sum(u1_d) * u1_d[1] / sum(u2_d) * u2_d[1])#/ (u1_num*h1_num*u2_num*h2_num*u4_num*h4_num)
+    LossMatrix1 = @lift(Output[4][$p1_idx,:,:,$p2_idx,:,:])
+    LossMatrix1Avg = @lift(sum($LossMatrix1) #= / sum(u1_d) * u1_d[1] =# / sum(u2_d) * u2_d[1])#/ (u1_num*h1_num*u2_num*h2_num)
+    LossMatrix2 = @lift(Output[4][$p1_idx,:,:,$p2_idx,:,:])
+    LossMatrix2Avg = @lift(sum($LossMatrix2) / sum(u1_d) * u1_d[1]) #= / sum(u2_d) * u2_d[1] =##/ (u1_num*h1_num*u2_num*h2_num)
     #GainMatrix3 = Output[2]
     #GainMatrix4 = Output[3]
     #LossMatrix1 = Output[4]
@@ -122,11 +124,11 @@ function InteractiveBinaryGainLossPlot(Output::Tuple)
 
 
     # Loss Matrix   
-    p1_loss = @lift($(cbAngAvg.checked) ? log10.(LossMatrix1Avg[$p1_idx,$p2_idx]) : log10.(LossMatrix1[$p1_idx,$u1_idx,$h1_idx,$p2_idx,$u2_idx,$h2_idx]))
-    p2_loss = @lift($(cbAngAvg.checked) ? log10.(LossMatrix2Avg[$p2_idx,$p1_idx]) : log10.(LossMatrix2[$p2_idx,$u2_idx,$h2_idx,$p1_idx,$u1_idx,$h1_idx]))
+    p1_loss = @lift($(cbAngAvg.checked) ? log10.($LossMatrix1Avg) : log10.($LossMatrix1[$u1_idx,$h1_idx,$u2_idx,$h2_idx]))
+    p2_loss = @lift($(cbAngAvg.checked) ? log10.($LossMatrix2Avg) : log10.($LossMatrix2[$u1_idx,$h1_idx,$u2_idx,$h2_idx]))
     # Gain Matrix
-    p3_gain = @lift($(cbAngAvg.checked) ? log10.(GainMatrix3Avg[2:end-1,$p1_idx,$p2_idx]) : log10.(GainMatrix3[2:end-1,$u3_idx,$h3_idx,$p1_idx,$u1_idx,$h1_idx,$p2_idx,$u2_idx,$h2_idx]))
-    p4_gain = @lift($(cbAngAvg.checked) ? log10.(GainMatrix4Avg[2:end-1,$p1_idx,$p2_idx]) : log10.(GainMatrix4[2:end-1,$u4_idx,$h4_idx,$p1_idx,$u1_idx,$h1_idx,$p2_idx,$u2_idx,$h2_idx]))
+    p3_gain = @lift($(cbAngAvg.checked) ? log10.($GainMatrix3Avg) : log10.($GainMatrix3[:,$u3_idx,$h3_idx,$u1_idx,$h1_idx,$u2_idx,$h2_idx]))
+    p4_gain = @lift($(cbAngAvg.checked) ? log10.($GainMatrix4Avg) : log10.($GainMatrix4[:,$u4_idx,$h4_idx,$u1_idx,$h1_idx,$u2_idx,$h2_idx]))
 
     # limits
     y_max = @lift(max($p1_loss,$p2_loss,-40.0)+2.0)
