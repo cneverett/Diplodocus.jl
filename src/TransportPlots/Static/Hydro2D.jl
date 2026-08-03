@@ -3,7 +3,7 @@
 
 Returns a density plot of the bulk gamma of a `species` at a given `time_idx` on a specific spatial coordinate `surface`.
 """
-function BulkGammaPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::String,coordinates::AbstractCoordinates,surface::Tuple{String,Int64},time_idx::Int64;fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,wide=false,plot_limits=(nothing,nothing),gamma_sign::Bool=true,figsize::Tuple{Int64,Int64}=(576,216))
+function BulkGammaPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::String,coordinates::AbstractCoordinates,surface::Tuple{String,Int64},time_idx::Int64;fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,wide=false,plot_limits=(nothing,nothing),gamma_sign::Bool=true,gamma_z::Bool=false,figsize::Tuple{Int64,Int64}=(576,216))
 
     surface_string = surface[1]
     surface_index = surface[2]
@@ -44,9 +44,12 @@ function BulkGammaPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputSt
     species_index = findfirst(x->x==species,name_list)
 
     e_plot::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
+    inve_plot::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
+    e_sim::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
     inve_sim::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
     pos_sim::MVector{4,Float64} = zeros(Float64,4)
     pos_plot::MVector{4,Float64} = zeros(Float64,4)
+    g::MMatrix{4,4,Float64,16} = zeros(Float64,4,4)
 
     Uₐ::Vector{Float64} = [-1.0,0.0,0.0,0.0] # static observer
 
@@ -63,22 +66,38 @@ function BulkGammaPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputSt
         pos_sim[3] = my_sim[y]
         pos_sim[4] = mz_sim[z]
 
+        MetricComponents!(pos_sim,g,metric,sim_coordinates)
+
         CoordinateTransform!(pos_sim,pos_plot,sim_coordinates,coordinates)
 
         InverseTetradComponents!(pos_sim,inve_sim,metric,sim_coordinates,tetrad)
+        TetradComponents!(pos_sim,e_sim,metric,sim_coordinates,tetrad)
         TetradComponents!(pos_plot,e_plot,metric,coordinates,StationaryObserverTetrad())
+        InverseTetradComponents!(pos_plot,inve_plot,metric,coordinates,StationaryObserverTetrad())
 
-        Nᵃ_sim = Float64.(FourFlow(sol.f[time_idx],PhaseSpace,species_index;x_idx=x,y_idx=y,z_idx=z))      
+        Nᵃ_sim = Float64.(FourFlow(sol.f[time_idx],PhaseSpace,species_index;x_idx=x,y_idx=y,z_idx=z))     
+        Nᵃ_sim = Float64[1.0,0.0,0.0,0.0]  # for testing
         n = ScalarNumberDensity(Nᵃ_sim,Uₐ)
 
         if n != 0.0
             Vᵇ = HydroFourVelocity(Nᵃ_sim)
-            CoordinateTransform!(inve_sim * Vᵇ,Vᵇ,sim_coordinates,coordinates)
-            Vᵃ = e_plot * Vᵇ # transform to stationary tetrad frame
-            if gamma_sign
-                Γ = (-transpose(Uₐ) * Vᵃ) * sign(Vᵃ[4]) # bulk gamma with sign of velocity to distinguish inflow vs outflow
+            CoordinateBasisTransform!(e_sim' * Vᵇ,Vᵇ,pos_sim,sim_coordinates,coordinates)
+            Vᵃ = inve_plot' * Vᵇ # transform to stationary tetrad frame
+            if gamma_z # static observed z component of bulk gamma
+                if gamma_sign
+                    βz = Vᵃ[4]/Vᵃ[1]
+                    Γ = 1/sqrt(1 - βz^2) * sign(Vᵃ[4]) # bulk gamma with sign of velocity to distinguish inflow vs outflow
+                else
+                    βz = Vᵃ[4]/Vᵃ[1]
+                    println("βz = $βz at (x,y,z) = ($x,$y,$z),V=$Vᵃ, Vb = $Vᵇ, N = $Nᵃ_sim, n = $n")
+                    Γ = 1/sqrt(1 - βz^2) # bulk gamma without sign, so all flow contributes positively
+                end
             else
-                Γ = -transpose(Uₐ) * Vᵃ # bulk gamma without sign, so all flow contributes positively
+                if gamma_sign
+                    Γ = (-transpose(Uₐ) * Vᵃ) * sign(Vᵃ[4]) # bulk gamma with sign of velocity to distinguish inflow vs outflow
+                else
+                    Γ = -transpose(Uₐ) * Vᵃ # bulk gamma without sign, so all flow contributes positively
+                end
             end
         else
             Γ = NaN
@@ -118,7 +137,7 @@ function BulkGammaPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputSt
 
     t_unit_string = TimeUnits()
 
-    Colorbar(fig[1,2],hm,label=L"$\Gamma\,$")
+    Colorbar(fig[1,2],hm,label= gamma_z ? L"$\Gamma_z\,$" : L"$\Gamma\,$")
 
     end # with_theme
 
