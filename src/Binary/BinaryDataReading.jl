@@ -29,11 +29,10 @@ Returns a tuple of the data stored in the file. The fields are as follows:
 function BinaryFileLoad_All(fileLocation::String,fileName::String;corrected::Bool=false)
         
     filePath = joinpath(fileLocation,fileName)
-    fileExist = isfile(filePath)
+    fileExist = isdir(filePath)
 
     if fileExist
-        f = jldopen(filePath,"r");
-
+        f = zopen(filePath,"r");
         Parameters = f["Parameters"]
         if corrected
             GainMatrix3 = f["CorrectedGainMatrix3"];
@@ -50,7 +49,9 @@ function BinaryFileLoad_All(fileLocation::String,fileName::String;corrected::Boo
         GainWeights4 = f["GainWeights4"];
         LossTally = f["LossTally"];
 
-        close(f)  
+        j = jldopen(filePath*"/data.jld2","r") 
+        Parameters = j["Parameters"]
+        close(j)  
     else
         error("no file with name $fileName found at location $fileLocation")
     end
@@ -89,8 +90,7 @@ function BinaryFileLoad_Matrix(fileLocation::String,fileName::String;corrected::
             GainMatrix3 = f["GainMatrix3"];
             GainMatrix4 = f["GainMatrix4"];
             LossMatrix = f["LossMatrix"];
-        end
-        #close(f) 
+        end 
         j = jldopen(filePath*"/data.jld2","r") 
         Parameters = j["Parameters"]
         close(j) 
