@@ -5,6 +5,62 @@
 
 =#
 
+"""
+    SpaceScalarForceFunction!(::SpaceScalarForce,PhaseSpace,x_idx,y_idx,z_idx)
+
+Returns the spatial component of the force flux through the I,J,K surface for a given space scalar force. 
+"""
+SpaceScalarForceFunction!(force,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+
+"""
+    MomentumScalarForceFunction!(::SpaceScalarForce,MScaForce::MMatrix{3,2,T},PhaseSpace,x_idx,y_idx,z_idx)
+
+Modifies the 2D array of momentum components of the force flux through the I,J,K surface for a given space scalar force. The last dimension of the array corresponds to the plus and minus fluxes through the surface.  
+"""
+MomentumScalarForceFunction!(force,MScaForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+
+"""
+    SpaceVectorForceFunction!(::SpaceVectorForce,SVecForce::MVector{4,T},PhaseSpace,x_idx,y_idx,z_idx)
+
+Modifies the 1D array of spatial components of the force flux through the I,J,K surface for a given space vector force. 
+"""
+SpaceVectorForceFunction!(force,SVecForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+
+"""
+    MomentumScalarForceFunction!(::SpaceVectorForce,MVecForce::MArray{Tuple{3,4,2},T,3,24},PhaseSpace,x_idx,y_idx,z_idx)
+
+Modifies the 3D array of momentum components of the force flux through the I,J,K surface for a given space scalar force. The last dimension of the array corresponds to the plus and minus fluxes through the surface.   
+"""
+MomentumVectorForceFunction!(force,MVecForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+
+"""
+    SpaceMatrixForceFunction!(::SpaceMatrixForce,SMatForce::MMatrix{4,4,T},PhaseSpace,x_idx,y_idx,z_idx)
+
+Modifies the 2D array of spatial components of the force flux through the I,J,K surface for a given space vector force. 
+"""
+SpaceMatrixForceFunction!(force,SMatForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+
+"""
+    MomentumMatrixForceFunction!(::SpaceMatrixForce,MMatForce::MArray{Tuple{3,4,4,2},T,4,96},PhaseSpace,x_idx,y_idx,z_idx)
+
+Modifies the 4D array of momentum components of the force flux through the I,J,K surface for a given space scalar force. The last dimension of the array corresponds to the plus and minus fluxes through the surface.   
+"""
+MomentumMatrixForceFunction!(force,MMatForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+
+"""
+    Space3TensorForceFunction!(::Space3TensorForce,SMatForce::MArray{Tuple{4,4,4},T,3,64},PhaseSpace,x_idx,y_idx,z_idx)
+
+Modifies the 3D array of spatial components of the force flux through the I,J,K surface for a given space vector force. 
+"""
+Space3TensorForceFunction!(force,SMatForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+
+"""
+    Momentum3TensorForceFunction!(::Space3TensorForce,M3TenForce::MArray{Tuple{3,4,4,4,2},T,5,384},PhaseSpace,x_idx,y_idx,z_idx)
+
+Modifies the 5D array of momentum components of the force flux through the I,J,K surface for a given space scalar force. The last dimension of the array corresponds to the plus and minus fluxes through the surface.
+"""
+Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+
 # ======= First Order Guiding Centre ============== #
 
     function SpaceVectorForceFunction!(force::FirstOrderGuidingCentre,SVecForce::MVector{4,T},PhaseSpace::PhaseSpaceStruct,x_idx::Int64,y_idx::Int64,z_idx::Int64) where T
@@ -68,7 +124,7 @@
 
     end
 
-    function MomentumMatrixForceFunction!(force::FirstOrderGuidingCentre,MMatForce::MArray{Tuple{3,4,2},T,3,24},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
+    function MomentumVectorForceFunction!(force::FirstOrderGuidingCentre,MMatForce::MArray{Tuple{3,4,2},T,3,24},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
 
         fill!(MMatForce, zero(T))
 
@@ -95,8 +151,8 @@
             MMatForce[1,3,1] = p1^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(ch0 - ch1)/(8*sqrt(m^2 + p1^2))
             MMatForce[1,4,1] = -(h0 - h1)*p1^2*(-2u0^2 + u0^4 + 2u1^2 - u1^4)/(4*sqrt(m^2 + p1^2))
             # I_minus
-            MMatForce[1,2,2] =  -p0^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(sh0 - sh1)/(8*sqrt(m^2 + p0^2))
-            MMatForce[1,3,2] =  p0^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(ch0 - ch1)/(8*sqrt(m^2 + p0^2))
+            MMatForce[1,2,2] = -p0^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(sh0 - sh1)/(8*sqrt(m^2 + p0^2))
+            MMatForce[1,3,2] = p0^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(ch0 - ch1)/(8*sqrt(m^2 + p0^2))
             MMatForce[1,4,2] = -(h0 - h1)*p0^2*(-2u0^2 + u0^4 + 2u1^2 - u1^4)/(4*sqrt(m^2 + p0^2))
             # J_plus 
             MMatForce[2,2,1] = -(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u1*(1 - u1^2)^(3/2)*(sh0 - sh1)

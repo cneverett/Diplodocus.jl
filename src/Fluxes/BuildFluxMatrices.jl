@@ -756,11 +756,19 @@ function FillMomentumFlux!(PhaseSpace::PhaseSpaceStruct,Forces::Vector{AbstractF
     @inline CoordinateForceSpaceIntegrand_func!(pos_local,CFSpaceArray_local) = CoordinateForceSpaceIntegrand!(pos_local,CFSpaceArray_local,metric,coordinates,tetrad,e,inve,Γ,∂inve,inv_tetrad_func!,cfg)
 
     # setup for space scalar forces
-    MVecForce = MMatrix{3,2,Float64}(zeros(Float64,3,2))
+    MScaForce = MMatrix{3,2,Float64}(zeros(Float64,3,2))
 
     # setup for space vector forces
     SVecForce = MVector{4,Float64}(zeros(Float64,4))
-    MMatForce = MArray{Tuple{3,4,2},Float64,3,24}(zeros(Float64,3,4,2))
+    MVecForce = MArray{Tuple{3,4,2},Float64,3,24}(zeros(Float64,3,4,2))
+
+    # setup for space matrix forces
+    SMatForce = MMatrix{4,4,Float64}(zeros(Float64,4,4))
+    MMatForce = MArray{Tuple{3,4,4,2},Float64,4,96}(zeros(Float64,3,4,4,2))
+
+    # setup for space 3 tensor forces
+    S3TenForce = MArray{Tuple{4,4,4},Float64,3,64}(zeros(Float64,4,4,4))
+    M3TenForce = MArray{Tuple{3,4,4,4,2},Float64,5,384}(zeros(Float64,3,4,4,4,2))
 
     # non-dimensional normalisation
     non_dimensional_factor::Float64 = CONST_c * Characteristic.CHAR_time / Characteristic.CHAR_length
@@ -847,15 +855,15 @@ function FillMomentumFlux!(PhaseSpace::PhaseSpaceStruct,Forces::Vector{AbstractF
                 for x in 1:x_num, y in 1:y_num, z in 1:z_num
                     SScaForce = SpaceScalarForceFunction(Forces[f],PhaseSpace,x,y,z)
                     for px in 1:px_num, py in 1:py_num, pz in 1:pz_num
-                        MomentumVectorForceFunction!(Forces[f],MVecForce,PhaseSpace,name,px,py,pz)
+                        MomentumScalarForceFunction!(Forces[f],MScaForce,PhaseSpace,name,px,py,pz)
                         # M[flux_dir,pm]
                         # integration sign introduced here
-                        I_plus_array[x,y,z,px,py,pz] += SScaForce * MVecForce[1,1]
-                        I_minus_array[x,y,z,px,py,pz] -= SScaForce * MVecForce[1,2]
-                        J_plus_array[x,y,z,px,py,pz] += SScaForce * MVecForce[2,1]
-                        J_minus_array[x,y,z,px,py,pz] -= SScaForce * MVecForce[2,2]
-                        K_plus_array[x,y,z,px,py,pz] += SScaForce * MVecForce[3,1]
-                        K_minus_array[x,y,z,px,py,pz] -= SScaForce * MVecForce[3,2]
+                        I_plus_array[x,y,z,px,py,pz] += SScaForce * MScaForce[1,1]
+                        I_minus_array[x,y,z,px,py,pz] -= SScaForce * MScaForce[1,2]
+                        J_plus_array[x,y,z,px,py,pz] += SScaForce * MScaForce[2,1]
+                        J_minus_array[x,y,z,px,py,pz] -= SScaForce * MScaForce[2,2]
+                        K_plus_array[x,y,z,px,py,pz] += SScaForce * MScaForce[3,1]
+                        K_minus_array[x,y,z,px,py,pz] -= SScaForce * MScaForce[3,2]
                     end
                 end
 
@@ -872,16 +880,70 @@ function FillMomentumFlux!(PhaseSpace::PhaseSpaceStruct,Forces::Vector{AbstractF
                     
                     SpaceVectorForceFunction!(Forces[f],SVecForce,PhaseSpace,x,y,z)
                     for px in 1:px_num, py in 1:py_num, pz in 1:pz_num
+                        MomentumVectorForceFunction!(Forces[f],MVecForce,PhaseSpace,name,px,py,pz)
+                        # M[flux_dir,a,pm]
+                        # integration sign introduced here
+                        @inbounds for a in 1:4
+                            I_plus_array[x,y,z,px,py,pz] += SVecForce[a] * MVecForce[1,a,1]
+                            I_minus_array[x,y,z,px,py,pz] -= SVecForce[a] * MVecForce[1,a,2]
+                            J_plus_array[x,y,z,px,py,pz] += SVecForce[a] * MVecForce[2,a,1]
+                            J_minus_array[x,y,z,px,py,pz] -= SVecForce[a] * MVecForce[2,a,2]
+                            K_plus_array[x,y,z,px,py,pz] += SVecForce[a] * MVecForce[3,a,1]
+                            K_minus_array[x,y,z,px,py,pz] -= SVecForce[a] * MVecForce[3,a,2]
+                        end
+                    end
+                end
+
+            elseif Forces[f] isa SpaceMatrixForce
+
+                for x in 1:x_num, y in 1:y_num, z in 1:z_num
+
+                    if hasfield(typeof(Forces[f]), :Domain)
+                        off_space = (x-1)*y_num*z_num+(y-1)*z_num+z-1
+                        if !isnothing(Forces[f].Domain) && !(off_space in Forces[f].Domain)
+                            continue
+                        end
+                    end
+                    
+                    SpaceMatrixForceFunction!(Forces[f],SMatForce,PhaseSpace,x,y,z)
+                    for px in 1:px_num, py in 1:py_num, pz in 1:pz_num
                         MomentumMatrixForceFunction!(Forces[f],MMatForce,PhaseSpace,name,px,py,pz)
                         # M[flux_dir,a,pm]
                         # integration sign introduced here
-                        for a in 1:4
-                            I_plus_array[x,y,z,px,py,pz] += SVecForce[a] * MMatForce[1,a,1]
-                            I_minus_array[x,y,z,px,py,pz] -= SVecForce[a] * MMatForce[1,a,2]
-                            J_plus_array[x,y,z,px,py,pz] += SVecForce[a] * MMatForce[2,a,1]
-                            J_minus_array[x,y,z,px,py,pz] -= SVecForce[a] * MMatForce[2,a,2]
-                            K_plus_array[x,y,z,px,py,pz] += SVecForce[a] * MMatForce[3,a,1]
-                            K_minus_array[x,y,z,px,py,pz] -= SVecForce[a] * MMatForce[3,a,2]
+                        @inbounds for a in 1:4, b in 1:4
+                            I_plus_array[x,y,z,px,py,pz] += SMatForce[a,b] * MMatForce[1,a,b,1]
+                            I_minus_array[x,y,z,px,py,pz] -= SMatForce[a,b] * MMatForce[1,a,b,2]
+                            J_plus_array[x,y,z,px,py,pz] += SMatForce[a,b] * MMatForce[2,a,b,1]
+                            J_minus_array[x,y,z,px,py,pz] -= SMatForce[a,b] * MMatForce[2,a,b,2]
+                            K_plus_array[x,y,z,px,py,pz] += SMatForce[a,b] * MMatForce[3,a,b,1]
+                            K_minus_array[x,y,z,px,py,pz] -= SMatForce[a,b] * MMatForce[3,a,b,2]
+                        end
+                    end
+                end
+
+            elseif Forces[f] isa Space3TensorForce
+
+                for x in 1:x_num, y in 1:y_num, z in 1:z_num
+
+                    if hasfield(typeof(Forces[f]), :Domain)
+                        off_space = (x-1)*y_num*z_num+(y-1)*z_num+z-1
+                        if !isnothing(Forces[f].Domain) && !(off_space in Forces[f].Domain)
+                            continue
+                        end
+                    end
+                    
+                    Space3TensorForceFunction!(Forces[f],S3TenForce,PhaseSpace,x,y,z)
+                    for px in 1:px_num, py in 1:py_num, pz in 1:pz_num
+                        Momentum3TensorForceFunction!(Forces[f],M3TenForce,PhaseSpace,name,px,py,pz)
+                        # M[flux_dir,a,pm]
+                        # integration sign introduced here
+                        @inbounds for a in 1:4, b in 1:4, c in 1:4
+                            I_plus_array[x,y,z,px,py,pz] += S3TenForce[a,b,c] * M3TenForce[1,a,b,c,1]
+                            I_minus_array[x,y,z,px,py,pz] -= S3TenForce[a,b,c] * M3TenForce[1,a,b,c,2]
+                            J_plus_array[x,y,z,px,py,pz] += S3TenForce[a,b,c] * M3TenForce[2,a,b,c,1]
+                            J_minus_array[x,y,z,px,py,pz] -= S3TenForce[a,b,c] * M3TenForce[2,a,b,c,2]
+                            K_plus_array[x,y,z,px,py,pz] += S3TenForce[a,b,c] * M3TenForce[3,a,b,c,1]
+                            K_minus_array[x,y,z,px,py,pz] -= S3TenForce[a,b,c] * M3TenForce[3,a,b,c,2]
                         end
                     end
                 end

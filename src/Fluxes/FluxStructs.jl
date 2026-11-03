@@ -27,6 +27,8 @@ end
 #=========================#
 
 abstract type AbstractForce end
+abstract type Space3TensorForce <: AbstractForce end
+abstract type SpaceMatrixForce <: AbstractForce end
 abstract type SpaceVectorForce <: AbstractForce end
 abstract type SpaceScalarForce <: AbstractForce end
 abstract type AnalyticForce <: AbstractForce end
