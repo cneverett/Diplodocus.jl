@@ -61,6 +61,141 @@ Modifies the 5D array of momentum components of the force flux through the I,J,K
 """
 Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
 
+
+# ======= Local Lorentz Force Zeroth Order ============ # 
+
+    function SpaceMatrixForceFunction!(force::LocalLorentzForceZerothOrder,SMatForce::MMatrix{4,4,T},PhaseSpace::PhaseSpaceStruct,x_idx::Int64,y_idx::Int64,z_idx::Int64) where T
+
+        Grids = PhaseSpace.Grids
+        Characteristic = PhaseSpace.Characteristic
+        metric = PhaseSpace.Spacetime.metric
+        tetrad = PhaseSpace.Spacetime.tetrad
+        coordinates = PhaseSpace.Spacetime.coordinates
+
+        t0 = Grids.tr[1]
+        t1 = Grids.tr[2]
+        x0 = Grids.xr[x_idx]
+        x1 = Grids.xr[x_idx+1]
+        y0 = Grids.yr[y_idx]
+        y1 = Grids.yr[y_idx+1]
+        z0 = Grids.zr[z_idx]
+        z1 = Grids.zr[z_idx+1]
+
+        pos = MVector{4,T}(zeros(T,4))
+
+        @inline B_func(pos_local) = tetrad.Bfunction(pos_local,coordinates)
+        @inline SpaceIntegrand!(pos_local,SpaceMatrix_local) = LocalLorentzForceZerothOrderSpaceIntegrand!(pos_local,SpaceMatrix_local,metric,coordinates)
+
+        # flux must have no dimensions
+        flux_non_dimensional::T = CONST_c * Characteristic.CHAR_time / Characteristic.CHAR_length
+
+        a::SVector{4,T} = [t0,x0,y0,z0]
+        b::SVector{4,T} = [t1,x1,y1,z1]
+        n::SVector{4,Int64} = [2,16,16,16] # number of points for integration, can be changed to increase accuracy
+
+        # Integrate space part of force
+        Simpson4D!(SpaceIntegrand!,SMatForce,a,b,n)
+
+        # put a tolerance on integration to avoid small numerical errors causing a non-zero flux when the flux should be zero
+        tolerance::T = 1e-16
+        SMatForce[abs.(SMatForce) .< tolerance] .= zero(T)
+
+        SMatForce .*= flux_non_dimensional
+
+    end
+
+    @inline function LocalLorentzForceZerothOrderSpaceIntegrand!(pos::MVector{4,T},SMatForce::MMatrix{4,4,T},metric::AbstractMetric,coordinates::AbstractCoordinates) where T
+
+        #= zeroth order Lorentz force
+
+            F^a = q/m (F^{ab}p_b)
+            so spatial integral is 
+            ∫ χ F^{ab} dtdxdydz 
+            and momentum integral is 
+            ∫ D^i_j R^j_a q/m p_b * m/p^0
+
+            F^{ab} = (0,0,0,0 ; 0,0,-B,0; 0,B,0,0; 0,0,0,0) for local observer
+        =#
+
+        fill!(SMatForce, zero(T))
+        χ::T = VolumeElement(pos,metric,coordinates)
+
+        SMatForce[1,2] = -χ * B_func(pos)
+        SMatForce[2,1] = χ * B_func(pos)
+        
+        return nothing
+
+    end
+
+    function MomentumMatrixForceFunction!(force::LocalLorentzForceZerothOrder,MMatForce::MArray{Tuple{3,4,4,2},T,3,96},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
+
+        #= zeroth order Lorentz force
+
+            F^a = q/m (F^{ab}p_b)
+            so spatial integral is 
+            ∫ χ F^{ab} dtdxdydz 
+            and momentum integral is 
+            ∫ D^i_j R^j_a q/m p_b * m/p^0
+
+            F^{ab} = (0,0,0,0 ; 0,0,-B,0; 0,B,0,0; 0,0,0,0) for local observer
+        =#
+
+        fill!(MMatForce, zero(T))
+
+        Grids = PhaseSpace.Grids
+
+        m = Grids.mass_list[species_idx]
+        Z = Grids.charge_list[species_idx]
+        p0 = Grids.pxr_list[species_idx][px_idx]
+        p1 = Grids.pxr_list[species_idx][px_idx+1]
+        u0 = Grids.pyr_list[species_idx][py_idx]
+        u1 = Grids.pyr_list[species_idx][py_idx+1]
+        h0 = Grids.pzr_list[species_idx][pz_idx]
+        h1 = Grids.pzr_list[species_idx][pz_idx+1]
+
+        h0divpi = h0/pi
+        h1divpi = h1/pi
+        sh0, ch0 = sincospi(h0divpi)
+        sh1, ch1 = sincospi(h1divpi)
+
+        if m != 0 && Z != 0
+
+            # I_plus
+            p = p1
+                # due to symmetries these will all cancel out with Space Matrix when summed
+
+            # I_minus
+            p = p0
+                # due to symmetries these will all cancel out with Space Matrix when summed 
+
+            # J_plus 
+            u = u1
+                # due to symmetries these will all cancel out with Space Matrix when summed 
+  
+            # J_minus
+            u = u0
+                # due to symmetries these will all cancel out with Space Matrix when summed 
+
+            # K_plus
+            h = h1
+            hdivpi = h1divpi
+                # Only elements 2,3 and 3,2 are needed as F^{ab} is only non-zero for 2,3 and 3,2 
+            MMatForce[3,2,3,1] = (-u0 + u1)*(asinh(p0/m) - asinh(p1/m)) * sinpi(h1divpi)^2
+            MMatForce[3,3,2,1] = (-u0 + u1)*(-asinh(p0/m) + asinh(p1/m)) * cospi(h1divpi)^2
+
+            # K_minus
+            h = h0
+            hdivpi = h0divpi
+                # Only elements 2,3 and 3,2 are needed as F^{ab} is only non-zero for 2,3 and 3,2 
+            MMatForce[3,2,3,1] = (-u0 + u1)*(asinh(p0/m) - asinh(p1/m)) * sinpi(h0divpi)^2
+            MMatForce[3,3,2,1] = (-u0 + u1)*(-asinh(p0/m) + asinh(p1/m)) * cospi(h0divpi)^2
+
+        end
+
+        return nothing
+
+    end
+
 # ======= First Order Guiding Centre ============== #
 
     function SpaceVectorForceFunction!(force::FirstOrderGuidingCentre,SVecForce::MVector{4,T},PhaseSpace::PhaseSpaceStruct,x_idx::Int64,y_idx::Int64,z_idx::Int64) where T
@@ -124,9 +259,9 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
 
     end
 
-    function MomentumVectorForceFunction!(force::FirstOrderGuidingCentre,MMatForce::MArray{Tuple{3,4,2},T,3,24},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
+    function MomentumVectorForceFunction!(force::FirstOrderGuidingCentre,MVecForce::MArray{Tuple{3,4,2},T,3,24},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
 
-        fill!(MMatForce, zero(T))
+        fill!(MVecForce, zero(T))
 
         Grids = PhaseSpace.Grids
 
@@ -146,30 +281,30 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
 
         if m != 0 && Z != 0
 
-            # I_plus#
-            MMatForce[1,2,1] = -p1^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(sh0 - sh1)/(8*sqrt(m^2 + p1^2))
-            MMatForce[1,3,1] = p1^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(ch0 - ch1)/(8*sqrt(m^2 + p1^2))
-            MMatForce[1,4,1] = -(h0 - h1)*p1^2*(-2u0^2 + u0^4 + 2u1^2 - u1^4)/(4*sqrt(m^2 + p1^2))
+            # I_plus
+            MVecForce[1,2,1] = -p1^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(sh0 - sh1)/(8*sqrt(m^2 + p1^2))
+            MVecForce[1,3,1] = p1^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(ch0 - ch1)/(8*sqrt(m^2 + p1^2))
+            MVecForce[1,4,1] = -(h0 - h1)*p1^2*(-2u0^2 + u0^4 + 2u1^2 - u1^4)/(4*sqrt(m^2 + p1^2))
             # I_minus
-            MMatForce[1,2,2] = -p0^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(sh0 - sh1)/(8*sqrt(m^2 + p0^2))
-            MMatForce[1,3,2] = p0^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(ch0 - ch1)/(8*sqrt(m^2 + p0^2))
-            MMatForce[1,4,2] = -(h0 - h1)*p0^2*(-2u0^2 + u0^4 + 2u1^2 - u1^4)/(4*sqrt(m^2 + p0^2))
+            MVecForce[1,2,2] = -p0^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(sh0 - sh1)/(8*sqrt(m^2 + p0^2))
+            MVecForce[1,3,2] = p0^2*(-5u0*sqrt(1 - u0^2) + 2u0^3*sqrt(1 - u0^2) + 5u1*sqrt(1 - u1^2) - 2u1^3*sqrt(1 - u1^2) + 3acos(u0) - 3acos(u1))*(ch0 - ch1)/(8*sqrt(m^2 + p0^2))
+            MVecForce[1,4,2] = -(h0 - h1)*p0^2*(-2u0^2 + u0^4 + 2u1^2 - u1^4)/(4*sqrt(m^2 + p0^2))
             # J_plus 
-            MMatForce[2,2,1] = -(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u1*(1 - u1^2)^(3/2)*(sh0 - sh1)
-            MMatForce[2,3,1] = (sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u1*(1 - u1^2)^(3/2)*(ch0 - ch1)
-            MMatForce[2,4,1] = (h0 - h1)*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(-1 + u1^2)^2
+            MVecForce[2,2,1] = -(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u1*(1 - u1^2)^(3/2)*(sh0 - sh1)
+            MVecForce[2,3,1] = (sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u1*(1 - u1^2)^(3/2)*(ch0 - ch1)
+            MVecForce[2,4,1] = (h0 - h1)*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(-1 + u1^2)^2
             # J_minus
-            MMatForce[2,2,2] = -(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u0*(1 - u0^2)^(3/2)*(sh0 - sh1)
-            MMatForce[2,3,2] = (sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u0*(1 - u0^2)^(3/2)*(ch0 - ch1)
-            MMatForce[2,4,2] = (h0 - h1)*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(-1 + u0^2)^2
+            MVecForce[2,2,2] = -(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u0*(1 - u0^2)^(3/2)*(sh0 - sh1)
+            MVecForce[2,3,2] = (sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*u0*(1 - u0^2)^(3/2)*(ch0 - ch1)
+            MVecForce[2,4,2] = (h0 - h1)*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(-1 + u0^2)^2
             # K_plus
-            MMatForce[3,2,1] = -0.5*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(u0 * sqrt(1 - u0^2) - u1 * sqrt(1 - u1^2) - acos(u0) + acos(u1)) * sh1
-            MMatForce[3,3,1] = 0.5*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(u0 * sqrt(1 - u0^2) - u1 * sqrt(1 - u1^2) - acos(u0) + acos(u1)) * ch1
-            MMatForce[3,4,1] = 0.0
+            MVecForce[3,2,1] = -0.5*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(u0 * sqrt(1 - u0^2) - u1 * sqrt(1 - u1^2) - acos(u0) + acos(u1)) * sh1
+            MVecForce[3,3,1] = 0.5*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(u0 * sqrt(1 - u0^2) - u1 * sqrt(1 - u1^2) - acos(u0) + acos(u1)) * ch1
+            MVecForce[3,4,1] = 0.0
             # K_minus
-            MMatForce[3,2,1] = -0.5*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(u0 * sqrt(1 - u0^2) - u1 * sqrt(1 - u1^2) - acos(u0) + acos(u1)) * sh0
-            MMatForce[3,3,1] = 0.5*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(u0 * sqrt(1 - u0^2) - u1 * sqrt(1 - u1^2) - acos(u0) + acos(u1)) * ch0
-            MMatForce[3,4,1] = 0.0
+            MVecForce[3,2,1] = -0.5*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(u0 * sqrt(1 - u0^2) - u1 * sqrt(1 - u1^2) - acos(u0) + acos(u1)) * sh0
+            MVecForce[3,3,1] = 0.5*(sqrt(m^2 + p0^2) - sqrt(m^2 + p1^2))*(u0 * sqrt(1 - u0^2) - u1 * sqrt(1 - u1^2) - acos(u0) + acos(u1)) * ch0
+            MVecForce[3,4,1] = 0.0
 
         end
 

@@ -825,7 +825,7 @@ function FillMomentumFlux!(PhaseSpace::PhaseSpaceStruct,Forces::Vector{AbstractF
                     χ = VolumeElement(pos,metric,coordinates)
                     tolerance::T = 1e-8
                     for idx in eachindex(CFSpaceArray)
-                         if abs(CFSpaceArray[idx]) < tolerance * χ
+                        if abs(CFSpaceArray[idx]) < tolerance * χ
                             CFSpaceArray[idx] = zero(T)
                         end
                     end

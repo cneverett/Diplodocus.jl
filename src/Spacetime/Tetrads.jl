@@ -1,10 +1,4 @@
 abstract type AbstractTetrad end
-
-""" 
-    ZeroRicciTetrad 
-
-A `ZeroRicciTetrad` is a tetrad that maps a coordinate system to a fixed set of basis vectors in Minkowski spacetime. By this all Ricci rotation coefficients are zero across the whole spacetime, simplifying the calculation of IJK fluxes.
-"""
 abstract type ElectromagneticTetrad <: AbstractTetrad end
 abstract type ForceFreeTetrad <: ElectromagneticTetrad end
 
