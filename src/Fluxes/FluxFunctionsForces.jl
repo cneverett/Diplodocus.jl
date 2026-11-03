@@ -81,8 +81,6 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
         z0 = Grids.zr[z_idx]
         z1 = Grids.zr[z_idx+1]
 
-        pos = MVector{4,T}(zeros(T,4))
-
         @inline B_func(pos_local) = tetrad.Bfunction(pos_local,coordinates)
         @inline SpaceIntegrand!(pos_local,SpaceMatrix_local) = LocalLorentzForceZerothOrderSpaceIntegrand!(pos_local,SpaceMatrix_local,metric,coordinates)
 
@@ -97,8 +95,8 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
         Simpson4D!(SpaceIntegrand!,SMatForce,a,b,n)
 
         # put a tolerance on integration to avoid small numerical errors causing a non-zero flux when the flux should be zero
-        tolerance::T = 1e-16
-        SMatForce[abs.(SMatForce) .< tolerance] .= zero(T)
+        tolerance::T = 100*eps(T)
+        SMatForce[abs.(SMatForce) .< tolerance * max(abs.(SMatForce))] .= zero(T)
 
         SMatForce .*= flux_non_dimensional
 
@@ -234,8 +232,8 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
         Simpson4D!(SpaceIntegrand!,SVecForce,a,b,n)
 
         # put a tolerance on integration to avoid small numerical errors causing a non-zero flux when the flux should be zero
-        tolerance::T = 1e-16
-        SVecForce[abs.(SVecForce) .< tolerance] .= zero(T)
+        tolerance::T = 100*eps(T)
+        SVecForce[abs.(SVecForce) .< tolerance * max(abs.(SVecForce))] .= zero(T)
 
         SVecForce .*= flux_non_dimensional
 
