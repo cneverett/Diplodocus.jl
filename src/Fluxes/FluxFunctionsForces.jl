@@ -48,11 +48,11 @@ Modifies the 4D array of momentum components of the force flux through the I,J,K
 MomentumMatrixForceFunction!(force,MMatForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
 
 """
-    Space3TensorForceFunction!(::Space3TensorForce,SMatForce::MArray{Tuple{4,4,4},T,3,64},PhaseSpace,x_idx,y_idx,z_idx)
+    Space3TensorForceFunction!(::Space3TensorForce,S3TenForce::MArray{Tuple{4,4,4},T,3,64},PhaseSpace,x_idx,y_idx,z_idx)
 
 Modifies the 3D array of spatial components of the force flux through the I,J,K surface for a given space vector force. 
 """
-Space3TensorForceFunction!(force,SMatForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
+Space3TensorForceFunction!(force,S3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
 
 """
     Momentum3TensorForceFunction!(::Space3TensorForce,M3TenForce::MArray{Tuple{3,4,4,4,2},T,5,384},PhaseSpace,x_idx,y_idx,z_idx)
@@ -189,6 +189,9 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
             MMatForce[3,3,2,1] = (-u0 + u1)*(-asinh(p0/m) + asinh(p1/m)) * cospi(h0divpi)^2
 
         end
+
+        # scale by q and mEle as q/m is in dimensional units but the non-dimensional part of m cancels out with m/p^0 in momentum integral
+        MMatForce .*= Z * CONST_q / CONST_mEle
 
         return nothing
 
