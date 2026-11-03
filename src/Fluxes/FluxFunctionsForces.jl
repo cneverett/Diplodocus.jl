@@ -62,9 +62,9 @@ Modifies the 5D array of momentum components of the force flux through the I,J,K
 Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = error("Function not defined for this force type $(typeof(force))).")
 
 
-# ======= Local Lorentz Force Zeroth Order ============ # 
+# ======= Local Lorentz Force ============ # 
 
-    function SpaceMatrixForceFunction!(force::LocalLorentzForceZerothOrder,SMatForce::MMatrix{4,4,T},PhaseSpace::PhaseSpaceStruct,x_idx::Int64,y_idx::Int64,z_idx::Int64) where T
+    function SpaceMatrixForceFunction!(force::LocalLorentzForce,SMatForce::MMatrix{4,4,T},PhaseSpace::PhaseSpaceStruct,x_idx::Int64,y_idx::Int64,z_idx::Int64) where T
 
         Grids = PhaseSpace.Grids
         Characteristic = PhaseSpace.Characteristic
@@ -102,9 +102,9 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
 
     end
 
-    @inline function LocalLorentzForceZerothOrderSpaceIntegrand!(pos::MVector{4,T},SMatForce::MMatrix{4,4,T},metric::AbstractMetric,coordinates::AbstractCoordinates) where T
+    @inline function LocalLorentzForceSpaceIntegrand!(pos::MVector{4,T},SMatForce::MMatrix{4,4,T},metric::AbstractMetric,coordinates::AbstractCoordinates) where T
 
-        #= zeroth order Lorentz force
+        #= Lorentz force
 
             F^a = q/m (F^{ab}p_b)
             so spatial integral is 
@@ -125,9 +125,9 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
 
     end
 
-    function MomentumMatrixForceFunction!(force::LocalLorentzForceZerothOrder,MMatForce::MArray{Tuple{3,4,4,2},T,3,96},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
+    function MomentumMatrixForceFunction!(force::LocalLorentzForce,MMatForce::MArray{Tuple{3,4,4,2},T,3,96},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
 
-        #= zeroth order Lorentz force
+        #= Lorentz force
 
             F^a = q/m (F^{ab}p_b)
             so spatial integral is 
