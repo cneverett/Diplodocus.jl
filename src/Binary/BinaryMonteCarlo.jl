@@ -161,12 +161,12 @@ function BinaryMonteCarlo!(OldGainWeights3::ZArray,OldGainWeights4::ZArray,OldLo
         r4 = CartesianIndices((1:(p4_num+2), 1:u4_num, 1:h4_num,p1loc:p1loc, 1:u1_num, 1:h1_num,p2loc:p2loc, 1:u2_num, 1:h2_num))
         r = CartesianIndices((p1loc:p1loc, 1:u1_num, 1:h1_num,p2loc:p2loc, 1:u2_num, 1:h2_num))
 
-        Zarr.readblock!(OldChunkGainMatrix3Full,OldGainMatrix3,r3)
-        Zarr.readblock!(OldChunkGainMatrix4Full,OldGainMatrix4,r4)
-        Zarr.readblock!(OldChunkLossMatrixFull,OldLossMatrix,r)
-        Zarr.readblock!(OldChunkGainWeights3Full,OldGainWeights3,r3)
-        Zarr.readblock!(OldChunkGainWeights4Full,OldGainWeights4,r4)
-        Zarr.readblock!(OldChunkLossTallyFull,OldLossTally,r)
+        Zarr.ZarrCore.readblock!(OldChunkGainMatrix3Full,OldGainMatrix3,r3)
+        Zarr.ZarrCore.readblock!(OldChunkGainMatrix4Full,OldGainMatrix4,r4)
+        Zarr.ZarrCore.readblock!(OldChunkLossMatrixFull,OldLossMatrix,r)
+        Zarr.ZarrCore.readblock!(OldChunkGainWeights3Full,OldGainWeights3,r3)
+        Zarr.ZarrCore.readblock!(OldChunkGainWeights4Full,OldGainWeights4,r4)
+        Zarr.ZarrCore.readblock!(OldChunkLossTallyFull,OldLossTally,r)
 
         # does not work, do not know why
         #readblock_singlechunk!(OldChunkGainMatrix3Full,OldGainMatrix3,gain3loc)
@@ -406,12 +406,12 @@ function BinaryMonteCarlo!(OldGainWeights3::ZArray,OldGainWeights4::ZArray,OldLo
 
         # ===== Saving Unsymmetrised/Uncorrected Arrays ===== #
 
-            #Zarr.writeblock!(OldChunkGainMatrix3Full,OldGainMatrix3,r3)
-            #Zarr.writeblock!(OldChunkGainMatrix4Full,OldGainMatrix4,r4)
-            #Zarr.writeblock!(OldChunkLossMatrixFull,OldLossMatrix,r)
-            #Zarr.writeblock!(OldChunkGainWeights3Full,OldGainWeights3,r3)
-            #Zarr.writeblock!(OldChunkGainWeights4Full,OldGainWeights4,r4)
-            #Zarr.writeblock!(OldChunkLossTallyFull,OldLossTally,r)
+            #Zarr.ZarrCore.writeblock!(OldChunkGainMatrix3Full,OldGainMatrix3,r3)
+            #Zarr.ZarrCore.writeblock!(OldChunkGainMatrix4Full,OldGainMatrix4,r4)
+            #Zarr.ZarrCore.writeblock!(OldChunkLossMatrixFull,OldLossMatrix,r)
+            #Zarr.ZarrCore.writeblock!(OldChunkGainWeights3Full,OldGainWeights3,r3)
+            #Zarr.ZarrCore.writeblock!(OldChunkGainWeights4Full,OldGainWeights4,r4)
+            #Zarr.ZarrCore.writeblock!(OldChunkLossTallyFull,OldLossTally,r)
 
 
             Zarr.write_singlechunk_fastpath!(OldGainMatrix3,OldChunkGainMatrix3Full,gain3loc)
@@ -434,9 +434,9 @@ function BinaryMonteCarlo!(OldGainWeights3::ZArray,OldGainWeights4::ZArray,OldLo
 
         # ========== Save Symmetrised/Corrected Chunks to Zarr ============== #
 
-            #Zarr.writeblock!(OldChunkGainMatrix3Full,CorrectedGainMatrix3,r3)
-            #Zarr.writeblock!(OldChunkGainMatrix4Full,CorrectedGainMatrix4,r4)
-            #Zarr.writeblock!(OldChunkLossMatrixFull,CorrectedLossMatrix,r)
+            #Zarr.ZarrCore.writeblock!(OldChunkGainMatrix3Full,CorrectedGainMatrix3,r3)
+            #Zarr.ZarrCore.writeblock!(OldChunkGainMatrix4Full,CorrectedGainMatrix4,r4)
+            #Zarr.ZarrCore.writeblock!(OldChunkLossMatrixFull,CorrectedLossMatrix,r)
 
             Zarr.write_singlechunk_fastpath!(CorrectedGainMatrix3,OldChunkGainMatrix3Full,gain3loc)
             Zarr.write_singlechunk_fastpath!(CorrectedGainMatrix4,OldChunkGainMatrix4Full,gain4loc)

@@ -625,9 +625,9 @@ function DoesConserve(Output::Tuple{Tuple,ZArray,ZArray,ZArray};Tuple_Output::Bo
         r4 = CartesianIndices((1:(p4_num+2), 1:u4_num, 1:h4_num,p1:p1, 1:u1_num, 1:h1_num,p2:p2, 1:u2_num, 1:h2_num))
         r = CartesianIndices((p1:p1, 1:u1_num, 1:h1_num,p2:p2, 1:u2_num, 1:h2_num))
 
-        Zarr.readblock!(ChunkGainMatrix3Full,GainMatrix3,r3)
-        Zarr.readblock!(ChunkGainMatrix4Full,GainMatrix4,r4)
-        Zarr.readblock!(ChunkLossMatrixFull,LossMatrix,r)
+        Zarr.ZarrCore.readblock!(ChunkGainMatrix3Full,GainMatrix3,r3)
+        Zarr.ZarrCore.readblock!(ChunkGainMatrix4Full,GainMatrix4,r4)
+        Zarr.ZarrCore.readblock!(ChunkLossMatrixFull,LossMatrix,r)
 
         # does not work, do not know why
         #readblock_singlechunk!(ChunkGainMatrix3Full,GainMatrix3,gain3loc)
