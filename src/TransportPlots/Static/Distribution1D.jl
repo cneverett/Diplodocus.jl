@@ -596,3 +596,183 @@ function MomentumAndPolarAngleDistribution1DPlot(type::Static,sol,PhaseSpace::Ph
     end # with_theme
 
 end
+
+
+
+
+################# Plots that only work with Paraboloidal coordinates ############### 
+function EquatorialPlaneMomentumDistributionPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol,species::Vector{String};theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,thermal=false,plot_limits=(nothing,nothing),wide=false,legend=true)
+
+    CairoMakie.activate!(inline=true) # plot in vs code window
+
+    with_theme(theme) do
+
+    CHAR_n = PhaseSpace.Characteristic.CHAR_number_density
+
+    name_list = PhaseSpace.name_list
+    Momentum = PhaseSpace.Momentum
+    Space = PhaseSpace.Spacetime
+    Grids = PhaseSpace.Grids
+    x_num = Space.x_num
+    y_num = Space.y_num
+    z_num = Space.z_num
+    dx = Grids.dx
+    dy = Grids.dy
+    dz = Grids.dz
+    mx = Grids.mx
+    my = Grids.my
+    mz = Grids.mz
+    xr = Grids.xr
+    yr = Grids.yr
+    zr = Grids.zr
+
+    if wide
+        fig = Figure(size=(576,234)) # double column 8:3 aspect ratio
+    else
+        fig = Figure() # default single column 4:3 aspect ratio
+    end
+    xlab = L"$\log_{10}\left(p\,[m_ec]\right)$"
+    if order == 1
+        ylab = L"$\log_{10}\left(p\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,\left[\text{m}^{-3}\right]\right)$"
+    elseif order == 2
+        ylab = L"$\log_{10}\left(p^{2}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,\left[\text{m}^{-3}\left(m_ec\right)\right]\right)$"
+    elseif order == -2
+        ylab=L"$\log_{10}\left(\frac{\mathrm{d}N}{p^2\mathrm{d}p\mathrm{d}V}\,\left[\text{m}^{-3}\left(m_ec\right)^{-3}\right]\right)$"
+    elseif order == 100 
+        ylab = L"$\log_{10}\left(p^{2}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,\left[\text{J}\,c^{-1}\,\text{m}^{-3}\right]\right)$"
+    else
+        ylab = L"$\log_{10}\left(p^{%$(order)}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,\left[\text{m}^{-3}\left(m_ec\right)^{%$(order-1)}\right]\right)$"
+    end
+
+    if order == 100 
+        order_power = 2 
+    else
+        order_power = order
+    end
+
+    zlab = L"$\log_{10}\left(\rho\,[r_\text{s}]\right)$"
+
+    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,aspect=DataAspect(),xticks=-20:5:20,yticks=-20:5:20)
+    ax.limits = plot_limits
+
+    linestyles = [(:dash,:dense),:solid,(:dot),(:dashdot),(:dashdotdot)]
+    max_total = -Inf
+    p_min = Inf
+    p_max = -Inf
+
+    legend_elements = []
+    line_labels = []
+
+    min_dir = log10(1.0) #log10(yr[1] * zr[1])
+    max_dir = log10(yr[end] * zr[end])
+
+    for (species_idx, species_name) in enumerate(species) 
+
+        species_index = findfirst(x->x==species_name,name_list)
+
+        p_num = Momentum.px_num_list[species_index]  
+        u_num = Momentum.py_num_list[species_index]
+        h_num = Momentum.pz_num_list[species_index]
+        dp = Grids.dpx_list[species_index]
+        du = Grids.dpy_list[species_index]
+        meanp = Grids.mpx_list[species_index]
+        if PhaseSpace.Momentum.px_grid_list[species_index] == "l"
+            mp_plot = log10.(meanp)
+        elseif  PhaseSpace.Momentum.px_grid_list[species_index] == "u"
+            mp_plot = meanp
+        end
+        meanu = Grids.mpy_list[species_index]
+        meanh = Grids.mpz_list[species_index]
+        p_r = Grids.pxr_list[species_index]
+        u_r = Grids.pyr_list[species_index]
+        h_r = Grids.pzr_list[species_index]
+        mass = Grids.mass_list[species_index]
+
+        f3D = zeros(Float32,p_num,u_num,h_num)
+        f1D = zeros(Float32,p_num*u_num*h_num)
+
+        pdNdp = zeros(Float64,p_num)
+
+        p_min = min(p_min,p_r[1])
+        p_max = max(p_max,p_r[end])
+
+        @assert y_num == z_num "y_num must equal z_num for equatorial plane plot"
+
+        for t_idx in [1,length(sol.t)] # only plot initial and final time steps
+
+            if t_idx == 1 
+                linestyle_idx = 1
+            elseif t_idx == length(sol.t)
+                linestyle_idx = 2
+            end
+
+        for space_idx in 1:y_num
+
+            ρ = my[space_idx] * mz[space_idx] # radial coordinate
+
+            f1D .= copy(LocationSpeciesToStateVector(sol.f[t_idx],PhaseSpace,species_index=species_index,x_idx=1,y_idx=space_idx,z_idx=space_idx))
+
+            f3D .= reshape(f1D,(p_num,u_num,h_num))
+
+            @. f3D = f3D*(f3D!=Inf)
+            # scale by order
+            # f = dN/dpdudh * dpdudh therefore dN/dp = f / dp and p^order * dN/dp = f * mp^order / dp
+            for px in 1:p_num, py in 1:u_num, pz in 1:h_num
+                f3D[px,py,pz] = f3D[px,py,pz] * (meanp[px]^(order_power)) / dp[px] * CHAR_n
+            end
+
+            pdNdp = dropdims(sum(f3D, dims=(2,3)),dims=(2,3))
+            if order == 100 
+                pdNdp .*= PhaseSpace.Characteristic.CHAR_energy_density / DiplodocusTransport.CONST_c # convert to J c^-1 m^-3
+            end
+
+            color = theme.colormap[][(log10(ρ) - min_dir) / (max_dir - min_dir)]
+            x = (ρ - min_dir) / (max_dir - min_dir)
+
+            # plot individual lines for each position along the desired direction
+            if sum(@. !isnan(pdNdp) * !isinf(pdNdp) * !iszero(pdNdp)) == 1 # there is only one valid position so scatterlines doesn't work
+                idx = findfirst(!iszero,pdNdp)
+                lines!(ax,[mp_plot[idx], mp_plot[idx]],[-20.0, log10(pdNdp[idx])],linewidth=2.0,color = color,linestyle=linestyles[linestyle_idx])
+            else
+                scatterlines!(ax,mp_plot,log10.(pdNdp),linewidth=2.0,color=color,markersize=0.0,linestyle=linestyles[linestyle_idx])
+            end  
+
+            max_f = maximum(x for x in pdNdp if !isnan(x))
+            max_total = max(max_f,max_total) 
+
+        end
+
+        end 
+
+        push!(legend_elements,LineElement(color = theme.textcolor[], linestyle = linestyles[1],linewidth = 2.0))
+        if species_name == "Ele"
+            push!(line_labels,"Electron")
+        elseif species_name == "Pos"
+            push!(line_labels,"Positron")
+        elseif species_name == "Pho"
+            push!(line_labels,"Photon")
+        end
+
+    end # species loop 
+
+    t_unit_string = TimeUnits()
+
+    if legend
+        axislegend(ax,legend_elements,line_labels,position = :lt)
+    end
+
+    println("max_total = $max_total")
+    if plot_limits == (nothing,nothing)
+        xlims!(ax,(log10(p_min)-1.0,log10(p_max)))
+        ylims!(ax,(log10(max_total)-9.0,log10(max_total)+1.0)) 
+    end
+    #println("$((log10(p_min)-1.0,log10(p_max)+1.0))")
+    #println("$((log10(max_total)-9.0,log10(max_total)+1.0))")
+
+    Colorbar(fig[1,2],colormap = theme.colormap,limits=(min_dir,max_dir),label=zlab,vertical = true,flipaxis = true,tellheight=false)
+
+    return fig
+
+    end # with_theme
+
+end

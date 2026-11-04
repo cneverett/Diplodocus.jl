@@ -5,20 +5,28 @@ authors = ["Christopher Everett <cn.everett@outlook.com> and contributors"]
 
 [deps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 DiplodocusCollisions = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
 DiplodocusTransport = "f63b9913-7a9a-464d-82b9-3e1e536d6db0"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
+GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
+GeometryOps = "3251bfac-6a57-4b6d-aa61-ac1fef2975ab"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 CairoMakie = "0.13.7"
+ColorSchemes = "3.31.0"
 DiplodocusCollisions = "0.2.2"
 DiplodocusTransport = "1.0.0"
 GLMakie = "0.11.8"
+GeometryBasics = "0.5.11"
+GeometryOps = "0.1.33"
 LinearAlgebra = "1.12.0"
 Revise = "3.8.0"
+SparseArrays = "1.12.0"
 StaticArrays = "1.9.18"
 julia = "1.12.0"
 

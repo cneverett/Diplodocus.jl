@@ -16,7 +16,7 @@ module DiplodocusPlots
     export DistributionPlot1D, NumberDensityPlot1D, NumberPlot1D
 
     # 2D plots
-    export NumberDensityPlot2D, NumberPlot2D, BulkGammaPlot2D
+    export NumberDensityPlot2D, NumberPlot2D, BulkGammaPlot2D, EnergyDensityPlot2D
 
     # Utilities 
     #export IsThermalPlot, IsIsotropicPlot, 
@@ -27,6 +27,7 @@ module DiplodocusPlots
     using GLMakie
     using StaticArrays
     using LinearAlgebra
+    using SparseArrays
 
     import DiplodocusCollisions as DC
     using DiplodocusTransport
@@ -62,5 +63,9 @@ module DiplodocusPlots
     include("TransportPlots/Static/NumberDensity2D.jl")
     include("TransportPlots/Static/Hydro2D.jl")
     include("TransportPlots/Static/Number2D.jl")
+    include("TransportPlots/Static/EnergyDensity2D.jl")
+    include("TransportPlots/Static/Magnetisation2D.jl")
+    include("TransportPlots/Static/ElectroMagneticEnergyDensity2D.jl")
+    include("TransportPlots/Static/ElectroMagneticField2D.jl")
 
 end

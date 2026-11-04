@@ -216,7 +216,7 @@ function NumberPlot2D(type::Animated,PhaseSpace::PhaseSpaceStruct,sol::OutputStr
             InverseTetradComponents!(pos_plot,inve_plot,metric,coordinates,StationaryObserverTetrad())
 
             Nᵇ = Float64.(FourFlow(sol.f[$time_idx],PhaseSpace,species_index;x_idx=x,y_idx=y,z_idx=z))
-            CoordinateBasisTransform!(e_sim' * Nᵇ,Nᵇ,sim_coordinates,coordinates) # transform vector from one coordinate basis to another 
+            CoordinateBasisTransform!(e_sim' * Nᵇ,Nᵇ,pos_sim,sim_coordinates,coordinates) # transform vector from one coordinate basis to another 
             Nᵃ = inve_plot' * Nᵇ # transform to stationary tetrad frame
             num_den = ScalarNumberDensity(Nᵃ,Uₐ)
             Vol = VolFunction(PhaseSpace,1,x,y,z)

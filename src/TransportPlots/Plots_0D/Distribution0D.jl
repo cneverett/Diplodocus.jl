@@ -58,7 +58,7 @@ function MomentumDistributionPlot0D(type::Static,PhaseSpace::PhaseSpaceStruct,so
     else
         ylab = L"$\log_{10}\left(p^{%$(order)}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)^{%$(order-1)}]\right)$"
     end
-    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab#=,aspect=DataAspect()=#)
+    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,aspect=DataAspect())
     ax.limits = plot_limits
 
     name_list = PhaseSpace.name_list
@@ -477,9 +477,11 @@ Animated arguments:
 - `filename`: the name of the file to save the animation to, default is "AngleDistribution.mp4".
 - `figure`: default is `nothing`, which creates a new figure. If a figure is provided, the plot is added to that figure instead of creating a new one, this should be of the form of a tuple of `figure` and `time_idx` from the main plot.
 """
-function AngleDistributionPlot(sol,species::Vector{String},PhaseSpace::PhaseSpaceStruct,type::Static,time_idx::Int64;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,plot_limits=(nothing,nothing),wide=false,legend=true,angle_step::Int64=1)
+function AngleDistributionPlot(type::Static,PhaseSpace::PhaseSpaceStruct,sol,species::Vector{String},time_idx::Int64;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,plot_limits=(nothing,nothing),wide=false,legend=true,angle_step::Int64=1,x_idx::Int64=1,y_idx::Int64=1,z_idx::Int64=1,total_line=false)
 
     CairoMakie.activate!(inline=true) # plot in vs code window
+
+    CHAR_n = PhaseSpace.Characteristic.CHAR_number_density
 
     with_theme(theme) do
 
@@ -490,9 +492,15 @@ function AngleDistributionPlot(sol,species::Vector{String},PhaseSpace::PhaseSpac
     end
     xlab = L"$\log_{10}\left(p [m_ec]\right)$"
     if order == 1
-        ylab = L"$\log_{10}\left(p\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V} [\text{m}^{-3}]\right)$"
-    elseif order != 1
-        ylab = L"$\log_{10}\left(p^{%$(order)}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V} [\text{m}^{-3}\left(m_ec\right)^{%$(order-1)}]\right)$"
+        ylab = L"$\log_{10}\left(p\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}]\right)$"
+    elseif order == 2
+        ylab = L"$\log_{10}\left(p^{2}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)]\right)$"
+    elseif order == -2
+        ylab=L"$\log_{10}\left(\frac{\mathrm{d}N}{p^2\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)^{-3}]\right)$"
+    elseif order == 0
+        ylab=L"$\log_{10}\left(\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}]\right)$"
+    else
+        ylab = L"$\log_{10}\left(p^{%$(order)}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)^{%$(order-1)}]\right)$"
     end
     ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,aspect=DataAspect())
     ax.limits = plot_limits
@@ -500,7 +508,6 @@ function AngleDistributionPlot(sol,species::Vector{String},PhaseSpace::PhaseSpac
     name_list = PhaseSpace.name_list
     Momentum = PhaseSpace.Momentum
     Grids = PhaseSpace.Grids
-    Time = PhaseSpace.Time
 
     linestyles = [:solid,(:dash,:dense),(:dot),(:dashdot,:dense),(:dashdotdot,:dense)]
     max_total = -Inf32
@@ -524,6 +531,11 @@ function AngleDistributionPlot(sol,species::Vector{String},PhaseSpace::PhaseSpac
     dp = Grids.dpx_list[species_index]
     du = Grids.dpy_list[species_index]
     meanp = Grids.mpx_list[species_index]
+    if PhaseSpace.Momentum.px_grid_list[species_index] == "l"
+        mp_plot = log10.(meanp)
+    elseif  PhaseSpace.Momentum.px_grid_list[species_index] == "u"
+        mp_plot = meanp
+    end
     meanu = Grids.mpy_list[species_index]
     meanh = Grids.mpz_list[species_index]
     p_r = Grids.pxr_list[species_index]
@@ -537,43 +549,60 @@ function AngleDistributionPlot(sol,species::Vector{String},PhaseSpace::PhaseSpac
     p_min = min(p_min,p_r[1])
     p_max = max(p_max,p_r[end])
 
-    t = sol.t[time_idx]
-
-    f1D .= copy(LocationSpeciesToStateVector(sol.f[time_idx],PhaseSpace,species_index=species_index))
+    f1D .= copy(LocationSpeciesToStateVector(sol.f[time_idx],PhaseSpace,species_index=species_index,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx))
 
     f3D .= reshape(f1D,(p_num,u_num,h_num))
     @. f3D = f3D*(f3D!=Inf)
     # scale by order
     # f = dN/dpdudh * dpdudh therefore dN/dp = f / dp and p^order * dN/dp = f * mp^order / dp
     for px in 1:p_num, py in 1:u_num, pz in 1:h_num
-        f3D[px,py,pz] = f3D[px,py,pz] * (meanp[px]^(order)) / dp[px]
+        f3D[px,py,pz] = f3D[px,py,pz] * (meanp[px]^(order)) / dp[px] * CHAR_n
     end
 
-    for i in ceil(Int64,u_num/2):angle_step:u_num
+    for i in 1:angle_step:u_num
 
         u_val = meanu[i]
 
-        color = theme.colormap[][(u_val - u_r[ceil(Int64,u_num/2)]) / (u_r[end] - u_r[ceil(Int64,u_num/2)])]
+        color = theme.colormap[][(u_val - u_r[1]) / (u_r[end] - u_r[1])]
 
-        pdNdp= dropdims(sum(f3D, dims=(3)),dims=(3))[:,i]
+        pdNdp = dropdims(sum(f3D, dims=(3)),dims=(3))[:,i]
 
         if sum(@. !isnan(pdNdp) * !isinf(pdNdp) * !iszero(pdNdp)) == 1 # there is only one valid position so scatterlines doesn't work
             idx = findfirst(!iszero,pdNdp)
-            lines!(ax,[log10(meanp[idx]), log10(meanp[idx])],[-20.0, log10(pdNdp[idx])],linewidth=2.0,color = color,linestyle=linestyles[species_idx])
+            lines!(ax,[mp_plot[idx], mp_plot[idx]],[-20.0, log10(pdNdp[idx])],linewidth=2.0,color = color,linestyle=linestyles[species_idx])
         else
-            scatterlines!(ax,log10.(meanp),log10.(pdNdp),linewidth=2.0,color = color,markersize=0.0,linestyle=linestyles[species_idx])
+            scatterlines!(ax,mp_plot,log10.(pdNdp),linewidth=2.0,color = color,markersize=0.0,linestyle=linestyles[species_idx])
         end
         max_f = maximum(x for x in pdNdp if !isnan(x))
         max_total = max(max_f,max_total)
 
         if legend==true && counter == 1 
-        u_val = meanu[i]
-        color = theme.colormap[][(u_val - u_r[ceil(Int64,u_num/2)]) / (u_r[end] - u_r[ceil(Int64,u_num/2)])]
-        push!(legend_elements_angle,LineElement(color = color, linestyle = :solid,linewidth = 2.0))
-        push!(line_labels_angle,L"$u=%$(round(u_val,sigdigits=2))$")
+            u_val = meanu[i]
+            color = theme.colormap[][(u_val - u_r[1]) / (u_r[end] - u_r[1])]
+            pushfirst!(legend_elements_angle,LineElement(color = color, linestyle = :solid,linewidth = 2.0))
+            pushfirst!(line_labels_angle,L"$u=%$(round(u_val,sigdigits=2))$")
         end
 
     end # angle loop
+
+        total = 1
+        if total_line == true
+
+            pdNdp = dropdims(sum(f3D, dims=(2,3)),dims=(2,3))
+            if sum(@. !isnan(pdNdp) * !isinf(pdNdp) * !iszero(pdNdp)) == 1 # there is only one valid position so scatterlines doesn't work
+                idx = findfirst(!iszero,pdNdp)
+                lines!(ax,[mp_plot[idx], mp_plot[idx]],[-20.0, log10(pdNdp[idx])],linewidth=2.0,color = theme.textcolor[],linestyle=linestyles[species_idx])
+            else
+                scatterlines!(ax,mp_plot,log10.(pdNdp),linewidth=2.0,color = theme.textcolor[],markersize=0.0,linestyle=linestyles[species_idx+1])
+            end
+
+            if total ==1 
+                pushfirst!(legend_elements_angle,LineElement(color = theme.textcolor[], linestyle = linestyles[species_idx+1],linewidth = 2.0))
+                pushfirst!(line_labels_angle,L"$\text{Total}$")
+            end
+
+            total +=1
+        end
 
         counter += 1
 
@@ -584,8 +613,8 @@ function AngleDistributionPlot(sol,species::Vector{String},PhaseSpace::PhaseSpac
 
 
     if legend
-        axislegend(ax,legend_elements,line_labels,position = :lt)
-        axislegend(ax,legend_elements_angle,line_labels_angle,position = :lb)
+        axislegend(ax,legend_elements,line_labels,position = :rt)
+        Legend(fig[1,2],legend_elements_angle,line_labels_angle)
     end
 
     if plot_limits == (nothing,nothing)
@@ -2376,3 +2405,205 @@ function find_closest(A::AbstractArray{T}, b::T) where {T<:Real}
     end
 end
 
+####### For Thesis ############ 
+
+function AngleDistributionWithPolarDistributionPlot(type::Static,PhaseSpace::PhaseSpaceStruct,sol,species::String,time_idx::Int64;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,plot_limits=(nothing,nothing),wide=false,legend=true,u_indices::Union{Vector{Int64},Nothing}=nothing,x_idx::Int64=1,y_indices::Vector{Int64}=[1],z_idx::Int64=1,dis_range::Float64=10.0,total_line=true)
+
+    CairoMakie.activate!(inline=true) # plot in vs code window
+
+    with_theme(theme) do
+
+    fig = Figure(size=(500,900)) # default single column 4:3 aspect ratio
+
+    name_list = PhaseSpace.name_list
+    Momentum = PhaseSpace.Momentum
+    Grids = PhaseSpace.Grids
+    species_index = findfirst(x->x==species,name_list)
+    CHAR_n = PhaseSpace.Characteristic.CHAR_number_density
+
+    p_num = Momentum.px_num_list[species_index]  
+    u_num = Momentum.py_num_list[species_index]
+    h_num = Momentum.pz_num_list[species_index]
+    dp = Grids.dpx_list[species_index]
+    du = Grids.dpy_list[species_index]
+    meanp = Grids.mpx_list[species_index]
+    if PhaseSpace.Momentum.px_grid_list[species_index] == "l"
+        mp_plot = log10.(meanp)
+    elseif  PhaseSpace.Momentum.px_grid_list[species_index] == "u"
+        mp_plot = meanp
+    end
+    meanu = Grids.mpy_list[species_index]
+    meanh = Grids.mpz_list[species_index]
+    p_r = Grids.pxr_list[species_index]
+    u_r = Grids.pyr_list[species_index]
+    h_r = Grids.pzr_list[species_index]
+    mass = Grids.mass_list[species_index]
+
+    xlab = L"$\log_{10}\left(p [m_ec]\right)$"
+    if order == 1
+        ylab = L"$\log_{10}\left(p\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}]\right)$"
+    elseif order == 2
+        ylab = L"$\log_{10}\left(p^{2}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)]\right)$"
+    elseif order == -2
+        ylab=L"$\log_{10}\left(\frac{\mathrm{d}N}{p^2\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)^{-3}]\right)$"
+    elseif order == 0
+        ylab=L"$\log_{10}\left(\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}]\right)$"
+    else
+        ylab = L"$\log_{10}\left(p^{%$(order)}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)^{%$(order-1)}]\right)$"
+    end
+    ax1 = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,width=200,height=200#=,aspect=DataAspect()=#,xticks=-15:5:15,yticks=-15:5:15)
+    ax1.limits = plot_limits
+    hidexdecorations!(ax1,grid=false)
+    ax2 = Axis(fig[2,1],xlabel=xlab,ylabel=ylab,width=200,height=200#=,aspect=DataAspect()=#,xticks=-15:5:15,yticks=-15:5:15)
+    ax2.limits = plot_limits
+    hidexdecorations!(ax2,grid=false)
+    ax3 = Axis(fig[3,1],xlabel=xlab,ylabel=ylab,width=200,height=200#=,aspect=DataAspect()=#,xticks=-15:5:15,yticks=-15:5:15)
+    ax3.limits = plot_limits
+
+    linkxaxes!(ax1,ax2,ax3)
+
+    axu1 = PolarAxis(fig[1,2],theta_0=-pi/2,direction=-1,radius_at_origin=log10(p_r[1])-1,rticks=0:5:5,width=165)
+    thetalims!(axu1,0,pi)
+    rlims!(axu1,log10(p_r[1]),log10(p_r[end]))
+
+    axu2 = PolarAxis(fig[2,2],theta_0=-pi/2,direction=-1,radius_at_origin=log10(p_r[1])-1,rticks=0:5:5,width=165)
+    thetalims!(axu2,0,pi)
+    rlims!(axu2,log10(p_r[1]),log10(p_r[end]))
+
+    axu3 = PolarAxis(fig[3,2],theta_0=-pi/2,direction=-1,radius_at_origin=log10(p_r[1])-1,rticks=0:5:5,width=165)
+    thetalims!(axu3,0,pi)
+    rlims!(axu3,log10(p_r[1]),log10(p_r[end]))
+
+    u_as_theta_grid = zeros(Float64,length(u_r))
+    u_as_theta_grid_tick_values = Vector{Float64}(-1:0.5:1)
+    u_as_theta_grid_tick_values_string = string.(u_as_theta_grid_tick_values)
+    u_as_theta_grid_tick_values_string[end] = "u=1.0" 
+    u_as_theta_grid_tick_locations = zeros(Float64,length(u_as_theta_grid_tick_values))
+    @. u_as_theta_grid = pi - pi * (u_r+1)/2 # convert u grid to a set of theta values such that u can be plotted as polar angle
+    @. u_as_theta_grid_tick_locations = pi - pi * (u_as_theta_grid_tick_values+1)/2 # convert u grid ticks to a set of theta values such that u can be plotted as polar angle
+
+    linestyles = [(:dash,:dense),:solid,(:dot),(:dashdot),(:dashdotdot),(:dash,:dense),:solid,(:dot),(:dashdot),(:dashdotdot)]
+    max_total = -Inf32
+    p_min = Inf32
+    p_max = -Inf32
+
+    legend_elements = []
+    line_labels = []
+    legend_elements_angle = []
+    line_labels_angle = []
+
+    if !isnothing(u_indices)
+        for (idx,u_idx) in enumerate(u_indices)
+            u_val = PhaseSpace.Grids.mpy_list[1][u_idx]
+            color = theme.colormap[][(u_val - u_r[1]) / (u_r[end] - u_r[1])]
+            pushfirst!(legend_elements_angle,LineElement(color = color, linestyle = :solid,linewidth = 2.0))
+            pushfirst!(line_labels_angle,L"$u=%$(round(u_val,sigdigits=2))$")
+        end
+    end
+
+    f3D = zeros(Float32,p_num,u_num,h_num)
+    f1D = zeros(Float32,p_num*u_num*h_num)
+
+    p_min = min(p_min,p_r[1])
+    p_max = max(p_max,p_r[end])
+
+    for (y_i,y_idx) in enumerate(y_indices) 
+
+        if y_i == 1
+            ax = ax3
+            axu = axu3
+            ax_col = fig[3,3]
+        elseif y_i == 2
+            ax = ax2
+            axu = axu2
+            ax_col = fig[2,3]
+        elseif y_i == 3
+            ax = ax1
+            axu = axu1
+            ax_col = fig[1,3]
+        end
+
+    f1D .= copy(LocationSpeciesToStateVector(sol.f[time_idx],PhaseSpace,species_index=species_index,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx))
+
+    f3D .= reshape(f1D,(p_num,u_num,h_num))
+    @. f3D = f3D*(f3D!=Inf)
+    # scale by order
+    # f = dN/dpdudh * dpdudh therefore dN/dp = f / dp and p^order * dN/dp = f * mp^order / dp
+    for px in 1:p_num, py in 1:u_num, pz in 1:h_num
+        f3D[px,py,pz] = f3D[px,py,pz] * (meanp[px]^(order)) / dp[px] * CHAR_n
+    end
+
+    for (i,u_idx) in enumerate(u_indices)
+
+        u_val = meanu[u_idx]
+
+        color = theme.colormap[][(u_val - u_r[1]) / (u_r[end] - u_r[1])]
+
+        pdNdp = dropdims(sum(f3D, dims=(3)),dims=(3))[:,u_idx]
+
+        if sum(@. !isnan(pdNdp) * !isinf(pdNdp) * !iszero(pdNdp)) == 1 # there is only one valid position so scatterlines doesn't work
+            idx = findfirst(!iszero,pdNdp)
+            lines!(ax,[mp_plot[idx], mp_plot[idx]],[-20.0, log10(pdNdp[idx])],linewidth=2.0,color = color,linestyle=:solid)
+        else
+            scatterlines!(ax,mp_plot,log10.(pdNdp),linewidth=2.0,color = color,markersize=0.0,linestyle=:solid)
+        end
+        max_f = maximum(x for x in pdNdp if !isnan(x))
+        max_total = max(max_f,max_total)
+
+    end # angle loop
+
+    pt = 4/3
+
+    if legend && y_i == 1
+        axislegend(ax,legend_elements_angle,line_labels_angle,position = :rt,labelsize=7pt,rowgap=-10)
+    end
+
+    # angle distribution plot 
+    dis = dropdims(sum(reshape(f3D,(p_num,u_num,h_num)), dims=(3)),dims=(3))
+    for px in 1:p_num, py in 1:u_num
+        dis[px,py] /= du[py]
+    end
+    replace!(dis,0.0 => NaN) # replace Inf with NaN for plotting
+
+    max_dis = maximum(x for x in dis if !isnan(x))
+    min_dis = minimum(x for x in dis if !isnan(x))
+    col_range = (log10(max_dis)-dis_range+0.25,log10(max_dis)+0.25)
+
+    
+
+    hm = heatmap!(axu,u_as_theta_grid,log10.(p_r),log10.(dis'),colormap=theme.colormap_var,colorrange=col_range,colorscale=x->asinh(x-col_range[2]),lowclip=theme.colormap_var[][0.0])
+
+    translate!(hm,0,0,-100)
+    axu.thetaticks = (u_as_theta_grid_tick_locations,u_as_theta_grid_tick_values_string)
+
+    if order == 1
+        Colorbar(ax_col,hm,label=L"$\log_{10}\left(p\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}u\mathrm{d}V}\,[\text{m}^{-3}]\right)$",flipaxis=false#=,height=Relative(0.75)=#,tellheight=false)
+    elseif order == -2
+        Colorbar(ax_col,hm,label=L"$\log_{10}\left(\frac{\mathrm{d}N}{p^2\mathrm{d}p\mathrm{d}u\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)^{-3}]\right)$",flipaxis=true#=,height=Relative(0.75)=#,tellheight=false)
+    elseif order == 0
+        Colorbar(ax_col,hm,label=L"$\log_{10}\left(\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}V}\,[\text{m}^{-3}]\right)$",flipaxis=false,height=Relative(0.75),tellheight=false)
+    else
+        Colorbar(ax_col,hm,label=L"$\log_{10}\left(p^{%$(order)}\,\frac{\mathrm{d}N}{\mathrm{d}p\mathrm{d}u\mathrm{d}V}\,[\text{m}^{-3}\left(m_ec\right)^{%$(order-1)}]\right)$",flipaxis=true,height=Relative(0.75))
+    end
+    
+    text!(axu,L"$\log_{10}\left(p\,[m_ec]\right)$",position=(-3.05,log10(p_r[end])-1),rotation=pi/2,fontsize=9pt)
+
+    if plot_limits == (nothing,nothing)
+        xlims!(ax,(log10(p_min)-1.0,log10(p_max)+1.0))
+        ylims!(ax,(log10(max_total)-9.0,log10(max_total)+1.0)) 
+    end
+
+    end # y values
+
+    colsize!(fig.layout,1,Aspect(1,1))
+    colsize!(fig.layout,2,Fixed(100))
+    #colsize!(fig.layout,3,Fixed(5))
+
+    rowgap!(fig.layout,1,0.0)
+    rowgap!(fig.layout,2,0.0)
+
+    return fig
+
+    end # with_theme
+
+end
