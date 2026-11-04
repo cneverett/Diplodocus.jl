@@ -239,7 +239,7 @@ function MomentumDistribution1DPlot(type::Static,sol,species::Vector{String},Pha
 
 end
 
-function MomentumDistribution1DPlot(type::Animated,sol,species::Vector{String},PhaseSpace::PhaseSpaceStruct,direction::String;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,thermal=false,plot_limits=(nothing,nothing),wide=false,legend=true,framerate=12,filename="MomentumDistribution1D.mp4",figure=nothing)
+function MomentumDistributionPlot1D(type::Animated,sol,species::Vector{String},PhaseSpace::PhaseSpaceStruct,direction::String;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,thermal=false,plot_limits=(nothing,nothing),wide=false,legend=true,framerate=12,filename="MomentumDistribution1D.mp4",figure=nothing)
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
