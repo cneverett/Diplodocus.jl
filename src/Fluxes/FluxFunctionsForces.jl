@@ -82,7 +82,7 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
         z1 = Grids.zr[z_idx+1]
 
         @inline B_func(pos_local) = tetrad.Bfunction(pos_local,coordinates)
-        @inline SpaceIntegrand!(pos_local,SpaceMatrix_local) = LocalLorentzForceZerothOrderSpaceIntegrand!(pos_local,SpaceMatrix_local,metric,coordinates)
+        @inline SpaceIntegrand!(pos_local,SpaceMatrix_local) = LocalLorentzForceSpaceIntegrand!(pos_local,SpaceMatrix_local,metric,coordinates)
 
         # flux must have no dimensions
         flux_non_dimensional::T = CONST_c * Characteristic.CHAR_time / Characteristic.CHAR_length
