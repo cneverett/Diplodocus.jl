@@ -6,7 +6,6 @@ export UserBinaryParameters, UserEmissionParameters
 
     using JLD2
     using Base.Threads
-    using BenchmarkTools
     using Bessels
     using ProgressMeter
     using Random: shuffle!
@@ -14,7 +13,7 @@ export UserBinaryParameters, UserEmissionParameters
     using Statistics
     using ChunkSplitters
     using Zarr
-    Zarr.Blosc.set_num_threads(1)
+    Zarr.ZarrBlosc.Blosc.set_num_threads(1)
 
     # include Common files
         include("Common/Constants.jl")
