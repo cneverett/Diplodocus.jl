@@ -23,12 +23,12 @@ module DiplodocusTransport
     export BuildFluxMatrices, VolFunction
     # Collisions
     export AbstractInteraction, BinaryInteraction, EmissiveInteraction
-    export LoadMatrices, BuildBinaryMatrices, BuildEmissionMatrices
+    export BuildBinaryMatrices, BuildEmissionMatrices
     # Initial and Injection Conditions
     export InitialiseInitialCondition, InitialConstant!, InitialMaxwellJuttner!, InitialPowerLaw!, InitialBoostedPowerLaw!, InitialBlackBody!, InitialPowerLawExpDecay!, InitialKappa!, InitialKappaExpDecay!
     export InitialiseInjectionCondition, InjectionConstant!, InjectionMaxwellJuttner!, InjectionPowerLaw!, InjectionBoostedPowerLaw!, InjectionBlackBody!, InjectionPowerLawExpDecay!, InjectionKappa!, InjectionKappaExpDecay!
     # Solvers 
-    export AbstractSteppingMethod, ImplicitSteppingMethod, ExplicitSteppingMethod, Solve, ForwardEulerStruct, ForwardSymplecticEulerStruct, SymplecticMPEStruct
+    export Solve, AbstractSteppingMethod, ImplicitSteppingMethod, ExplicitSteppingMethod, ForwardEulerStruct, ForwardSymplecticEulerStruct, ExponentialRosenbrockEulerKrylovStruct, ExponentialRosenbrockEulerKrylovMixedStruct
     export OutputStruct, SolutionFileLoad
     # Utilities
     export GlobalIndicesToStateIndex,LocationSpeciesToStateVector, CoordinateTransform!, CoordinateBasisTransform!, InclusiveDomainMask, ExclusiveDomainMask
@@ -43,7 +43,7 @@ module DiplodocusTransport
     using Statistics
     using SparseArrays
     using CUDA
-    using CUDA.CUSPARSE
+    using CUDA.cuSPARSE
     using MKL
     using MKLSparse
     using HCubature
@@ -51,9 +51,6 @@ module DiplodocusTransport
     using ForwardDiff, Preferences
     set_preferences!(ForwardDiff, "nansafe_mode" => true) # safer 
     using ExponentialUtilities
-    using KernelAbstractions
-    using KernelAbstractions.Extras: @unroll
-    using Atomix: @atomic
     using Zarr
 
     include("Constants.jl")

@@ -113,7 +113,7 @@ function Allocate_M_Emi(PhaseSpace::PhaseSpaceStruct,loading_check::Bool,Precisi
 
 end
 
-function Fill_M_Emi!(PhaseSpace::PhaseSpaceStruct,names::Tuple{Int64,Int64,Int64},x::Int64,y::Int64,z::Int64;GainMatrix2=nothing,GainMatrix3=nothing,LossMatrix1=nothing,mode::AbstractMode=Ani(),M_Emi::Union{Nothing,Matrix{F}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function Fill_M_Emi!(PhaseSpace::PhaseSpaceStruct,names::Tuple{Int64,Int64,Int64},x::Int64,y::Int64,z::Int64;GainMatrix2=nothing,GainMatrix3=nothing,LossMatrix1=nothing,mode::AbstractMode=Ani(),M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     Grids = PhaseSpace.Grids
 
@@ -135,7 +135,7 @@ function Fill_M_Emi!(PhaseSpace::PhaseSpaceStruct,names::Tuple{Int64,Int64,Int64
 end
 
 
-function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractArray{Float64,6},name2::Int64,name1::Int64,x::Int64,y::Int64,z::Int64,mode::AbstractMode;M_Emi::Union{Nothing,Matrix{F}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractArray{Float64,6},name2::Int64,name1::Int64,x::Int64,y::Int64,z::Int64,mode::AbstractMode;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     vol = VolFunction(PhaseSpace,1,x,y,z)
 
@@ -191,9 +191,9 @@ function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractA
                 if is_sparse
                     push!(M_Emi_I,Int32(a))
                     push!(M_Emi_J,Int32(b))
-                    push!(M_Emi_V,convert(F,val*w*vol))
+                    push!(M_Emi_V,convert(eltype(M_Emi_V),val*w*vol))
                 else
-                    M_Emi[a,b] += convert(F,val*w*vol) 
+                    M_Emi[a,b] += convert(eltype(M_Emi),val*w*vol) 
                 end
 
             end
@@ -204,7 +204,7 @@ function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractA
 
 end
 
-function LossMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,LossMatrix::Array{Float64,2},name1::Int64,x::Int64,y::Int64,z::Int64,mode::AbstractMode;M_Emi::Union{Nothing,Matrix{F}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function LossMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,LossMatrix::Array{Float64,2},name1::Int64,x::Int64,y::Int64,z::Int64,mode::AbstractMode;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     vol = VolFunction(PhaseSpace,1,x,y,z)
 
@@ -270,9 +270,9 @@ function LossMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,LossMatrix::Array{Flo
                 if is_sparse
                     push!(M_Emi_I,Int32(a))
                     push!(M_Emi_J,Int32(b))
-                    push!(M_Emi_V,-convert(F,val*w*vol))
+                    push!(M_Emi_V,-convert(eltype(M_Emi_V),val*w*vol))
                 else
-                    M_Emi[a,b] -= convert(F,val*w*vol)
+                    M_Emi[a,b] -= convert(eltype(M_Emi),val*w*vol)
                 end 
 
             end
@@ -289,7 +289,7 @@ end
 
 Generates `I_Flux` terms in the Emission matrix `M_Emi` if the emission interaction has an associated `Force`.
 """
-function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{T}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{T}}=nothing) where T<:Union{Float32,Float64}
+function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     Spacetime = PhaseSpace.Spacetime
     Momentum = PhaseSpace.Momentum
@@ -398,42 +398,42 @@ function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::In
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(bp))
-                push!(M_Emi_V,convert(T,(I_plus * h_plus_right) / Mom_Normp))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_plus * h_plus_right) / Mom_Normp))
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(I_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,bp] += convert(T,(I_plus * h_plus_right) / Mom_Normp)
-                M_Emi[a,b] += convert(T,(I_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,bp] += convert(eltype(M_Emi),(I_plus * h_plus_right) / Mom_Normp)
+                M_Emi[a,b] += convert(eltype(M_Emi),(I_plus * h_plus_left) / Mom_Norm)
             end
         elseif BCp isa Open # b=bp
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(I_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(I_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(I_plus * h_plus_left) / Mom_Norm) 
             end
         end
         if b != bm
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(bm))
-                push!(M_Emi_V,convert(T,(I_minus * h_minus_left) / Mom_Normm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_minus * h_minus_left) / Mom_Normm))
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(I_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(I_minus * h_minus_right) / Mom_Norm) 
-                M_Emi[a,bm] += convert(T,(I_minus * h_minus_left) / Mom_Normm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(I_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,bm] += convert(eltype(M_Emi),(I_minus * h_minus_left) / Mom_Normm) 
             end
         elseif BCm isa Open # b=bm
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(I_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(I_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(I_minus * h_minus_right) / Mom_Norm) 
             end
         end
 
@@ -446,7 +446,7 @@ end
 
 Generates `J_Flux` term in the Emission matrix `M_Emi` if the emission interaction has an associated `Force`.
 """
-function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{T}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{T}}=nothing) where T<:Union{Float32,Float64}
+function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     Spacetime = PhaseSpace.Spacetime
     Momentum = PhaseSpace.Momentum
@@ -555,42 +555,42 @@ function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::In
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(bp))
-                push!(M_Emi_V,convert(T,(J_plus * h_plus_right) / Mom_Normp))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_plus * h_plus_right) / Mom_Normp))
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(J_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,bp] += convert(T,(J_plus * h_plus_right) / Mom_Normp)
-                M_Emi[a,b] += convert(T,(J_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,bp] += convert(eltype(M_Emi),(J_plus * h_plus_right) / Mom_Normp)
+                M_Emi[a,b] += convert(eltype(M_Emi),(J_plus * h_plus_left) / Mom_Norm) 
             end
         elseif BCp isa Open # b=bp
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(J_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(J_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(J_plus * h_plus_left) / Mom_Norm) 
             end
         end
         if b != bm
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(bm))
-                push!(M_Emi_V,convert(T,(J_minus * h_minus_left) / Mom_Normm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_minus * h_minus_left) / Mom_Normm))
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(J_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(J_minus * h_minus_right) / Mom_Norm) 
-                M_Emi[a,bm] += convert(T,(J_minus * h_minus_left) / Mom_Normm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(J_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,bm] += convert(eltype(M_Emi),(J_minus * h_minus_left) / Mom_Normm) 
             end
         elseif BCm isa Open # b=bm
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(J_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(J_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(J_minus * h_minus_right) / Mom_Norm) 
             end
         end
 
@@ -602,7 +602,7 @@ end
 
 Generates `K_Flux` terms in the Emission matrix `M_Emi` if the emission interaction has an associated `Force`.
 """
-function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{T}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{T}}=nothing) where T<:Union{Float32,Float64}
+function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     Spacetime = PhaseSpace.Spacetime
     Momentum = PhaseSpace.Momentum
@@ -710,42 +710,42 @@ function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::In
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(bp))
-                push!(M_Emi_V,convert(T,(K_plus * h_plus_right) / Mom_Normp))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_plus * h_plus_right) / Mom_Normp))
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(K_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,bp] += convert(T,(K_plus * h_plus_right) / Mom_Normp) 
-                M_Emi[a,b] += convert(T,(K_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,bp] += convert(eltype(M_Emi),(K_plus * h_plus_right) / Mom_Normp) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(K_plus * h_plus_left) / Mom_Norm) 
             end
         elseif BCp isa Open # b=bp
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(K_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(K_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(K_plus * h_plus_left) / Mom_Norm) 
             end
         end
         if b != bm
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(bm))
-                push!(M_Emi_V,convert(T,(K_minus * h_minus_left) / Mom_Normm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_minus * h_minus_left) / Mom_Normm))
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(K_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(K_minus * h_minus_right) / Mom_Norm) 
-                M_Emi[a,bm] += convert(T,(K_minus * h_minus_left) / Mom_Normm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(K_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,bm] += convert(eltype(M_Emi),(K_minus * h_minus_left) / Mom_Normm) 
             end
         elseif BCm isa Open # b=bm
             if is_sparse
                 push!(M_Emi_I,Int32(a))
                 push!(M_Emi_J,Int32(b))
-                push!(M_Emi_V,convert(T,(K_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(K_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(K_minus * h_minus_right) / Mom_Norm) 
             end
         end
                 

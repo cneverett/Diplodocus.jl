@@ -3,7 +3,7 @@
 
 Function that builds the big matrices associated with binary and emissive interactions. If there are such interactions, first space is allocated for the arrays, then data is loaded into these arrays from the desired `DataDirectory` location and finally the big matrices are returned as an immutable `BinaryMatricesStruct`.
 """
-function BuildBinaryMatrices(PhaseSpace::PhaseSpaceStruct,Binary_list::Vector{BinaryInteraction},Domain::Union{Vector{Int64},Nothing},DataDirectory::String;symmetric::Bool=false,loading_check::Bool=false,Bin_Mode::AbstractMode=Ani(),Bin_corrected::Bool=true,Bin_sparse::Bool=false,gain_loss::Union{Nothing,String}=nothing)
+function BuildBinaryMatrices(PhaseSpace::PhaseSpaceStruct,Binary_list::Vector{BinaryInteraction},Domain::Union{Vector{Int64},Nothing},DataDirectory::String;symmetric::Bool=true,loading_check::Bool=false,Bin_Mode::AbstractMode=Ani(),Bin_corrected::Bool=true,Bin_sparse::Bool=true,gain_loss::Union{Nothing,String}=nothing)
 
     Precision::DataType = getfield(Main,Symbol("Precision"))
 
@@ -70,7 +70,7 @@ end
 
 Fills the big matrix `M_Bin` directly if dense or the vectors of rows, columns and values `M_Bin_I`, `M_Bin_J``, `M_Bin_V` if sparse, with the interaction rates for a specific binary interactions given by `name_locs` and the collision arrays `GainMatrix3`, `GainMatrix4`, `LossMatrix1`, `LossMatrix2`.
 """
-function Fill_M_Bin!(name_locs::Tuple{Int64,Int64,Int64,Int64},PhaseSpace::PhaseSpaceStruct,GainMatrix3::ZArray,GainMatrix4::ZArray,LossMatrix::ZArray,GainScale::Float64,LossScale::Float64,Indistinguishable_12::Bool;mode::AbstractMode=Ani(),symmetric::Bool=false,M_Bin::Union{Nothing,Matrix{F}}=nothing,M_Bin_I::Union{Nothing,Vector{Int32}}=nothing,M_Bin_J::Union{Nothing,Vector{Int32}}=nothing,M_Bin_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function Fill_M_Bin!(name_locs::Tuple{Int64,Int64,Int64,Int64},PhaseSpace::PhaseSpaceStruct,GainMatrix3::ZArray,GainMatrix4::ZArray,LossMatrix::ZArray,GainScale::Float64,LossScale::Float64,Indistinguishable_12::Bool;mode::AbstractMode=Ani(),symmetric::Bool=false,M_Bin::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Bin_I::Union{Nothing,Vector{Int32}}=nothing,M_Bin_J::Union{Nothing,Vector{Int32}}=nothing,M_Bin_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     Grids = PhaseSpace.Grids
     offset = Grids.momentum_species_offset
@@ -156,7 +156,7 @@ function Fill_M_Bin!(name_locs::Tuple{Int64,Int64,Int64,Int64},PhaseSpace::Phase
 
 end
 
-function GainMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,GainMatrix::ZArray,offset3::Int64,offset1::Int64,offset2::Int64,mode::AbstractMode,dpy1::Vector{Float64},dpz1::Vector{Float64},dpy2::Vector{Float64},dpz2::Vector{Float64},dpy3::Vector{Float64},dpz3::Vector{Float64},GainScale::Float64;symmetric::Bool=false,M_Bin::Union{Nothing,Matrix{F}}=nothing,M_Bin_I::Union{Nothing,Vector{Int32}}=nothing,M_Bin_J::Union{Nothing,Vector{Int32}}=nothing,M_Bin_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function GainMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,GainMatrix::ZArray,offset3::Int64,offset1::Int64,offset2::Int64,mode::AbstractMode,dpy1::Vector{Float64},dpz1::Vector{Float64},dpy2::Vector{Float64},dpz2::Vector{Float64},dpy3::Vector{Float64},dpz3::Vector{Float64},GainScale::Float64;symmetric::Bool=false,M_Bin::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Bin_I::Union{Nothing,Vector{Int32}}=nothing,M_Bin_J::Union{Nothing,Vector{Int32}}=nothing,M_Bin_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     px3_num = size(GainMatrix,1)-2 # ignore underflow and overflow bins
     py3_num = size(GainMatrix,2)
@@ -272,48 +272,48 @@ function GainMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,GainMatrix::ZArray,of
                         if b == c 
                             push!(M_Bin_I,Int32((b-1)*N+(a-1)+1))
                             push!(M_Bin_J,Int32(c))
-                            push!(M_Bin_V,convert(F,val*w * GainScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,convert(eltype(M_Bin_V),val*w * GainScale #=* E[a] / E[b] / E[c]=#))
                         else
                             push!(M_Bin_I,Int32((b-1)*N+(a-1)+1))
                             push!(M_Bin_J,Int32(c))
-                            push!(M_Bin_V,convert(F,val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,convert(eltype(M_Bin_V),val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#))
                             push!(M_Bin_I,Int32((c-1)*N+(a-1)+1))
                             push!(M_Bin_J,Int32(b))
-                            push!(M_Bin_V,convert(F,val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,convert(eltype(M_Bin_V),val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#))
                         end
                     else
                         # M_Bin terms allocated symmetrically except for if offset3==offset1 or offset3==offset2 but not both then assigned to the ij diagonal to match M-Matrix structure 
                         if offset3 == offset1 && offset3 != offset2
                             push!(M_Bin_I,Int32((b-1)*N+(a-1)+1))
                             push!(M_Bin_J,Int32(c))
-                            push!(M_Bin_V,convert(F,val*w * GainScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,convert(eltype(M_Bin_V),val*w * GainScale #=* E[a] / E[b] / E[c]=#))
                         elseif offset3 == offset2 && offset3 != offset1 
                             push!(M_Bin_I,Int32((c-1)*N+(a-1)+1))
                             push!(M_Bin_J,Int32(b))
-                            push!(M_Bin_V,convert(F,val*w * GainScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,convert(eltype(M_Bin_V),val*w * GainScale #=* E[a] / E[b] / E[c]=#))
                         else # asign symmetrically in jk
                             push!(M_Bin_I,Int32((b-1)*N+(a-1)+1))
                             push!(M_Bin_J,Int32(c))
-                            push!(M_Bin_V,convert(F,val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,convert(eltype(M_Bin_V),val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#))
                             push!(M_Bin_I,Int32((c-1)*N+(a-1)+1))
                             push!(M_Bin_J,Int32(b))
-                            push!(M_Bin_V,convert(F,val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,convert(eltype(M_Bin_V),val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#))
                         end
                     end
                 else
                     if symmetric 
                         # symmetric in jk, non M-Matrix structure but good for Jacobian 
-                        M_Bin[(b-1)*N+(a-1)+1,c] += convert(F,val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#)
-                        M_Bin[(c-1)*N+(a-1)+1,b] += convert(F,val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#)
+                        M_Bin[(b-1)*N+(a-1)+1,c] += convert(eltype(M_Bin),val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#)
+                        M_Bin[(c-1)*N+(a-1)+1,b] += convert(eltype(M_Bin),val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#)
                     else
                         # M_Bin terms allocated symmetrically except for if offset3==offset1 or offset3==offset2 but not both then assigned to the ij diagonal to match M-Matrix structure 
                         if offset3 == offset1 && offset3 != offset2
-                            M_Bin[(b-1)*N+(a-1)+1,c] += convert(F,val*w * GainScale #=* E[a] / E[b] / E[c]=#)
+                            M_Bin[(b-1)*N+(a-1)+1,c] += convert(eltype(M_Bin),val*w * GainScale #=* E[a] / E[b] / E[c]=#)
                         elseif offset3 == offset2 && offset3 != offset1 
-                            M_Bin[(c-1)*N+(a-1)+1,b] += convert(F,val*w * GainScale #=* E[a] / E[b] / E[c]=#)
+                            M_Bin[(c-1)*N+(a-1)+1,b] += convert(eltype(M_Bin),val*w * GainScale #=* E[a] / E[b] / E[c]=#)
                         else # asign symmetrically in jk
-                            M_Bin[(b-1)*N+(a-1)+1,c] += convert(F,val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#)
-                            M_Bin[(c-1)*N+(a-1)+1,b] += convert(F,val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#)
+                            M_Bin[(b-1)*N+(a-1)+1,c] += convert(eltype(M_Bin),val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#)
+                            M_Bin[(c-1)*N+(a-1)+1,b] += convert(eltype(M_Bin),val*w/2 * GainScale #=* E[a] / E[b] / E[c]=#)
                         end
                     end
                 end
@@ -328,7 +328,7 @@ function GainMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,GainMatrix::ZArray,of
 
 end
 
-function LossMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,LossMatrix::ZArray,offset1::Int64,offset2::Int64,mode::AbstractMode,dpy1::Vector{Float64},dpz1::Vector{Float64},dpy2::Vector{Float64},dpz2::Vector{Float64},LossScale::Float64,Indistinguishable_12::Bool;symmetric::Bool=false,M_Bin::Union{Nothing,Matrix{F}}=nothing,M_Bin_I::Union{Nothing,Vector{Int32}}=nothing,M_Bin_J::Union{Nothing,Vector{Int32}}=nothing,M_Bin_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function LossMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,LossMatrix::ZArray,offset1::Int64,offset2::Int64,mode::AbstractMode,dpy1::Vector{Float64},dpz1::Vector{Float64},dpy2::Vector{Float64},dpz2::Vector{Float64},LossScale::Float64,Indistinguishable_12::Bool;symmetric::Bool=false,M_Bin::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Bin_I::Union{Nothing,Vector{Int32}}=nothing,M_Bin_J::Union{Nothing,Vector{Int32}}=nothing,M_Bin_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     px1_num = size(LossMatrix,1)  
     py1_num = size(LossMatrix,2)
@@ -433,51 +433,51 @@ function LossMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,LossMatrix::ZArray,of
                         # symmetric in jk, non M-Matrix structure but good for Jacobian 
                         push!(M_Bin_I,Int32((b-1)*N+(a-1)+1))
                         push!(M_Bin_J,Int32(c))
-                        push!(M_Bin_V,-convert(F,val*w/2 * LossScale))
+                        push!(M_Bin_V,-convert(eltype(M_Bin_V),val*w/2 * LossScale))
                         push!(M_Bin_I,Int32((c-1)*N+(a-1)+1))
                         push!(M_Bin_J,Int32(b))
-                        push!(M_Bin_V,-convert(F,val*w/2 * LossScale))
+                        push!(M_Bin_V,-convert(eltype(M_Bin_V),val*w/2 * LossScale))
                         if !Indistinguishable_12 # need to add Loss terms corresponding to particle 2 being different from particle 1 (swap a with c and b with d)
                             push!(M_Bin_I,Int32((d-1)*N+(c-1)+1))
                             push!(M_Bin_J,Int32(a))
-                            push!(M_Bin_V,-convert(F,val*w/2 * LossScale))
+                            push!(M_Bin_V,-convert(eltype(M_Bin_V),val*w/2 * LossScale))
                             push!(M_Bin_I,Int32((a-1)*N+(c-1)+1))
                             push!(M_Bin_J,Int32(d))
-                            push!(M_Bin_V,-convert(F,val*w/2 * LossScale))
+                            push!(M_Bin_V,-convert(eltype(M_Bin_V),val*w/2 * LossScale))
                         end
                     else
                         # diagonal in ij entries so that total matrix has an M-Matrix structure
                         push!(M_Bin_I,Int32((a-1)*N+(a-1)+1))
                         push!(M_Bin_J,Int32(c))
-                        push!(M_Bin_V,-convert(F,val*w/2 * LossScale #=* E[a] / E[b] / E[c]=#))
+                        push!(M_Bin_V,-convert(eltype(M_Bin_V),val*w/2 * LossScale #=* E[a] / E[b] / E[c]=#))
                         push!(M_Bin_I,Int32((c-1)*N+(c-1)+1))
                         push!(M_Bin_J,Int32(b))
-                        push!(M_Bin_V,-convert(F,val*w/2 * LossScale #=* E[a] / E[b] / E[c]=#))
+                        push!(M_Bin_V,-convert(eltype(M_Bin_V),val*w/2 * LossScale #=* E[a] / E[b] / E[c]=#))
                         if !Indistinguishable_12 # need to add Loss terms corresponding to particle 2 being different from particle 1 (swap a with c and b with d)
                             push!(M_Bin_I,Int32((c-1)*N+(c-1)+1))
                             push!(M_Bin_J,Int32(a))
-                            push!(M_Bin_V,-convert(F,val*w/2 * LossScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,-convert(eltype(M_Bin_V),val*w/2 * LossScale #=* E[a] / E[b] / E[c]=#))
                             push!(M_Bin_I,Int32((a-1)*N+(a-1)+1))
                             push!(M_Bin_J,Int32(d))
-                            push!(M_Bin_V,-convert(F,val*w/2 * LossScale #=* E[a] / E[b] / E[c]=#))
+                            push!(M_Bin_V,-convert(eltype(M_Bin_V),val*w/2 * LossScale #=* E[a] / E[b] / E[c]=#))
                         end
                     end
                 else
                     if symmetric 
                         # symmetric in jk, non M-Matrix structure but good for Jacobian 
-                        M_Bin[(b-1)*N+(a-1)+1,c] -= convert(F,val*w/2 * LossScale)
-                        M_Bin[(c-1)*N+(a-1)+1,b] -= convert(F,val*w/2 * LossScale)
+                        M_Bin[(b-1)*N+(a-1)+1,c] -= convert(eltype(M_Bin),val*w/2 * LossScale)
+                        M_Bin[(c-1)*N+(a-1)+1,b] -= convert(eltype(M_Bin),val*w/2 * LossScale)
                         if !Indistinguishable_12 # need to add Loss terms corresponding to particle 2 being different from particle 1 (swap a with c and b with d)
-                            M_Bin[(d-1)*N+(c-1)+1,a] -= convert(F,val*w/2 * LossScale)
-                            M_Bin[(a-1)*N+(c-1)+1,d] -= convert(F,val*w/2 * LossScale)
+                            M_Bin[(d-1)*N+(c-1)+1,a] -= convert(eltype(M_Bin),val*w/2 * LossScale)
+                            M_Bin[(a-1)*N+(c-1)+1,d] -= convert(eltype(M_Bin),val*w/2 * LossScale)
                         end
                     else
                         # diagonal in ij entries so that total matrix has an M-Matrix structure
-                        M_Bin[(a-1)*N+(a-1)+1,c] -= convert(F,val*w/2 * LossScale)
-                        M_Bin[(c-1)*N+(c-1)+1,b] -= convert(F,val*w/2 * LossScale)
+                        M_Bin[(a-1)*N+(a-1)+1,c] -= convert(eltype(M_Bin),val*w/2 * LossScale)
+                        M_Bin[(c-1)*N+(c-1)+1,b] -= convert(eltype(M_Bin),val*w/2 * LossScale)
                         if !Indistinguishable_12 # need to add Loss terms corresponding to particle 2 being different from particle 1 (swap a with c and b with d)
-                            M_Bin[(c-1)*N+(c-1)+1,a] -= convert(F,val*w/2 * LossScale)
-                            M_Bin[(a-1)*N+(a-1)+1,d] -= convert(F,val*w/2 * LossScale)
+                            M_Bin[(c-1)*N+(c-1)+1,a] -= convert(eltype(M_Bin),val*w/2 * LossScale)
+                            M_Bin[(a-1)*N+(a-1)+1,d] -= convert(eltype(M_Bin),val*w/2 * LossScale)
                         end
                     end
                 end

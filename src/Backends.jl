@@ -23,7 +23,7 @@ end
 
 # sparse conversion 
 function SparseArrays.sparse(::CUDABackend,Precision::Type{<:AbstractFloat},SA::SparseMatrixCSC{T,I}) where {T<:AbstractFloat,I<:Integer}
-    return CUDA.CUSPARSE.CuSparseMatrixCSR(Precision.(SA))
+    return CuSparseMatrixCSR(Precision.(SA))
 end
 
 # sparse conversion 
