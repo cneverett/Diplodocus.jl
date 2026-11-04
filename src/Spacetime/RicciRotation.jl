@@ -90,6 +90,8 @@ function CoordinateForceSpaceIntegrand!(pos::MVector{4,Float64},CFSpaceArray::MA
     TetradComponents!(pos,e,metric,coordinates,tetrad)
     InverseTetradComponents!(pos,inve,metric,coordinates,tetrad)
 
+    fill!(∂inve, zero(T))
+
     ForwardDiff.jacobian!(∂inve, func!, inve, pos, cfg)
 
     χ::T = VolumeElement(pos,metric,coordinates)

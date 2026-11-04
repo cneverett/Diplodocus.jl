@@ -1,4 +1,122 @@
-using LinearAlgebra
+################### Modified ExponetialUtilities.jl functions for Arnoldi ####################
+
+# old function (slightly modified) from ExponentialUtilities.jl, kept for reference
+@inline function arnoldi_orthogonalize!(y,V,H::AbstractMatrix{U},j::Integer,lo::Integer,hi::Integer) where U
+    @inbounds for i in lo:hi
+        α = U(dot(@view(V[:, i]), y))
+        H[i, j] = α
+        axpy!(-α, @view(V[:, i]), y)
+    end
+    return nothing
+end
+
+#=@inline function arnoldi_orthogonalize!(y,V,H::AbstractMatrix{U},j::Integer,lo::Integer,hi::Integer) where U
+    # this version is only correct if the columns of V are actually orthogonal, use with caution
+    @inbounds begin 
+        @views mul!(H[lo:hi,j], transpose(V[:,lo:hi]),y,one(U),zero(U)) # H = V' * y
+        @views mul!(y,V[:,lo:hi],H[lo:hi,j],-one(U),one(U)) # y = y - V * H
+    end
+end=#
+
+@inline function arnoldi_reorthogonalize!(y,V,H::AbstractMatrix{U},j::Integer,lo::Integer,hi::Integer) where U
+    @inbounds for i in lo:hi
+        α = U(dot(@view(V[:, i]), y))
+        H[i, j] += α
+        axpy!(-α, @view(V[:, i]), y)
+    end
+end
+
+@inline function arnoldi_reorthogonalize_block!(y, V, H::AbstractMatrix{U},G,c, j::Integer, lo::Integer, hi::Integer) where U
+    @views begin
+        W = V[:, lo:hi]
+
+        mul!(c[lo:hi], transpose(W), y)          # use transpose(W) if real-only
+        mul!(G[lo:hi, lo:hi], transpose(W), W)
+
+        ldiv!(UnitLowerTriangular(G[lo:hi, lo:hi]), c[lo:hi]) # forward substitution
+
+        H[lo:hi, j] .+= c[lo:hi]
+        mul!(y, W, c[lo:hi], -one(U), one(U))
+    end
+end
+
+
+function firststep!(Ks::KrylovSubspace, V, H, b)
+    return @inbounds begin
+        Ks.beta = norm(b)
+        if !iszero(Ks.beta)
+            @. V[:, 1] = b / Ks.beta
+        end
+    end
+end
+
+function arnoldi_step!(j::Integer, iop::Integer, A::AT,V::AbstractMatrix{T}, H::AbstractMatrix{U};reorthogonalize::Bool = false,remove_drift::Bool = false) where {AT, T, U}
+
+    x, y = @view(V[:, j]), @view(V[:, j + 1])
+    mul!(y, A, x) # y = A * x
+
+    lo = max(1, j - iop + 1)
+
+    # First orthogonalization pass
+    arnoldi_orthogonalize!(y, V, H, j, lo, j) 
+
+    # Second pass (full reorthogonalization over the same window)
+    if reorthogonalize
+        arnoldi_reorthogonalize!(y, V, H, j, lo, j) # G = V' * V, c = V' * y
+    end
+
+    # remove energy drift from orthogonalisation
+    #drift_before = abs(sum(y)) / (sqrt(length(y))*norm(y))
+    if remove_drift
+        α = sum(y) / length(y)
+        y .-= α
+    end
+
+    #drift_after = abs(sum(y)) / (sqrt(length(y))*norm(y))
+    #println("drift after = $drift_after, drift before = $drift_before, j = $j")
+
+    β = H[j + 1, j] = norm(y)
+    if !iszero(β)
+        @. y /= β
+    end
+    return β
+end
+
+function arnoldi!(Ks::KrylovSubspace{T1, U}, A::AT, b; tol::Real = 1.0e-7,m::Int = min(Ks.maxiter, size(A, 1)),opnorm = nothing, iop::Int = 0,reorthogonalize::Bool = false, remove_drift::Bool = false, init::Int = 0, t::Number = NaN, mu::Number = NaN, l::Int = -1) where {T1 <: Number, U <: Number, AT}
+
+    Ks.wasbreakdown = false
+
+    m > Ks.maxiter ? resize!(Ks, m) : Ks.m = m
+
+    @inbounds V, H = ExponentialUtilities.getV(Ks), ExponentialUtilities.getH(Ks)
+    fill!(H, zero(eltype(H)))
+    fill!(V, zero(eltype(V)))
+
+    if iszero(init)
+        ExponentialUtilities.firststep!(Ks::KrylovSubspace, V, H, b)
+        init = 1
+    end
+
+    iszero(Ks.beta) && return Ks
+    iszero(iop) && (iop = m)
+
+    #G = similar(Ks.H, Ks.m, Ks.m)
+    #c = similar(Ks.H, Ks.m)
+
+    for j in init:m
+        beta = arnoldi_step!(j, iop, A, V, H; reorthogonalize = reorthogonalize,remove_drift=remove_drift)
+        if beta < tol
+            Ks.m = j
+            Ks.wasbreakdown = true
+            break
+        end
+    end
+
+    return Ks
+end
+
+
+################ Experimental block Arnoldi implementation ################
 
 
 

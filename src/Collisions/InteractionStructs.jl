@@ -82,7 +82,7 @@ A struct for storing the big matrices associated with emission interactions and 
 """
 struct EmissionMatricesStruct{T<:Union{Float32,Float64}}
     
-    M_Emi::Vector{Union{Matrix{T},SparseMatrixCSC{T}}}  # big matrix for emission interactions
+    M_Emi::Vector{Union{Matrix{T},SparseMatrixCSC{T,Int32}}}  # big matrix for emission interactions
     Emission_list::Vector{EmissiveInteraction} # list of emission interactions
 
 end

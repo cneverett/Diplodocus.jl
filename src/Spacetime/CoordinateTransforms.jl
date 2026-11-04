@@ -1,7 +1,7 @@
 """
     CoordinateTransform(pos_from,pos_to,from::AbstractCoordinates,to::AbstractCoordinates)
 
-Converts the coordinates `pos_from` in the ``from`` coordinate system to the ``to`` coordinate system, storing the result in `pos_to`.
+Converts the coordinates `pos_from` in the `from` coordinate system to the `to` coordinate system, storing the result in `pos_to`.
 """
 CoordinateTransform!(pos_from,pos_to,from::AbstractCoordinates,to::AbstractCoordinates) = error("Coordinate transform function not defined for coordinates $(typeof(from)) to coordinates $(typeof(to)).")
 

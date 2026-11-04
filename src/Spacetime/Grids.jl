@@ -12,13 +12,13 @@ struct Log10Grid <: AbstractSpacetimeGrid
 end
 struct StretchGrid <: AbstractSpacetimeGrid
     low::Float64
-    a::Float64
-    ratio::Float64
+    up::Float64 
+    sub::Int64
     num::Int64
 end
 
 """
-    SpacetimeGrid!(pos,g,::AbstractMetric,::AbstractCoordinates,)
+    SpacetimeGrid!(grid::AbstractSpacetimeGrid)
 
 Returns a `num+1` long `Vector{Float}` of grid bounds for a given spacetime coordinate based on the type of `grid` specified.
 """
@@ -43,11 +43,14 @@ function SpacetimeGrid(grid::Log10Grid)
 end
 
 function SpacetimeGrid(grid::StretchGrid) 
-    #= stretch spacing
-        |       |      |           |              |                   |                   | 
-       low    (low+a) (low+a)*r   (low+a)*r^2   (low+a)*r^3         (low+a)*r^4      (low+a)*r^5         
+    #= stretch spacing 
+        grid starts at `low` and passes through `up` with `sub` grid points between `low` and `up`, the total number of grid cells is `num`. If `num` = `sub+2` then the grid ends at `up`, otherwise the grid continues beyond `up`. The spacing between grid points is determined by a geometric progressions with `ratio = 2^(1/(sub+1))`
     =#
-    @assert grid.ratio != 1.0 "Ratio must be different from 1 for stretch grid"
-    vec = [(grid.a-grid.low)*grid.ratio^i for i in 0:(grid.num-1)]
-    return prepend!(vec, grid.low)
+    r = 2^(1/(grid.sub+1))
+    vec = [grid.low + (grid.up - grid.low) * (r^i-1) / (r^(grid.sub+1)-1) for i in 0:(grid.num)]
+    return vec
 end
+
+
+grid = StretchGrid(0.0,1.0,1,8)
+SpacetimeGrid(grid)

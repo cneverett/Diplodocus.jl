@@ -354,6 +354,27 @@
 
 # ======================================================== #
 
+"""
+    IFluxFunction(force,PhaseSpace,species_idx,plus_minus,t_idx,x_idx,y_idx,z_idx,px_idx,py_idx,pz_idx)
+
+Returns the flux through the I surface (surface of constant p coordinate) for a given analytic force. plus_minus is a string that can be either "plus" or "minus" to indicate which p coordinate surface the flux is being evaluated at for a given px_idx. The indices t_idx, x_idx, y_idx, z_idx, px_idx, py_idx, and pz_idx specify the location in the phase space grid where the flux is being evaluated.   
+"""
+IFluxFunction(force::AnalyticForce,PhaseSpace::PhaseSpaceStruct,species_idx::Int64,plus_minus::String,t_idx::Int64,x_idx::Int64,y_idx::Int64,z_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) = error("I Flux Function not defined for this analytic force type $(typeof(force))).")
+
+"""
+    JFluxFunction(force,PhaseSpace,species_idx,plus_minus,t_idx,x_idx,y_idx,z_idx,px_idx,py_idx,pz_idx)
+
+Returns the flux through the J surface (surface of constant u coordinate) for a given analytic force. plus_minus is a string that can be either "plus" or "minus" to indicate which u coordinate surface the flux is being evaluate at for a given py_idx. The indices t_idx, x_idx, y_idx, z_idx, px_idx, py_idx, and pz_idx specify the location in the phase space grid where the flux is being evaluated.   
+"""
+JFluxFunction(force::AnalyticForce,PhaseSpace::PhaseSpaceStruct,species_idx::Int64,plus_minus::String,t_idx::Int64,x_idx::Int64,y_idx::Int64,z_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) = error("J Flux Function not defined for this analytic force type $(typeof(force))).")
+
+"""
+    KFluxFunction(force,PhaseSpace,species_idx,plus_minus,t_idx,x_idx,y_idx,z_idx,px_idx,py_idx,pz_idx)
+
+Returns the flux through the K surface (surface of constant phi coordinate) for a given analytic force. plus_minus is a string that can be either "plus" or "minus" to indicate which phi coordinate surface the flux is being evaluate at for a given pz_idx. The indices t_idx, x_idx, y_idx, z_idx, px_idx, py_idx, and pz_idx specify the location in the phase space grid where the flux is being evaluated.   
+"""
+KFluxFunction(force::AnalyticForce,PhaseSpace::PhaseSpaceStruct,species_idx::Int64,plus_minus::String,t_idx::Int64,x_idx::Int64,y_idx::Int64,z_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) = error("K Flux Function not defined for this analytic force type $(typeof(force))).")
+
 # =============== IJK Cartesian Ricci ==================== #
 
     function IFluxFunction(force::CoordinateForce,PhaseSpace::PhaseSpaceStruct,species_idx::Int64,plus_minus::String,t_idx::Int64,x_idx::Int64,y_idx::Int64,z_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64)

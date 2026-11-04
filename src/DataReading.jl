@@ -9,7 +9,7 @@ function SolutionFileLoad(fileLocation::String,fileName::String)
     fileExist = isfile(filePath)
 
     if fileExist
-        f = jldopen(filePath,"r+");
+        f = jldopen(filePath,"r");
 
         PhaseSpace = f["PhaseSpace"];
         sol = f["sol"];

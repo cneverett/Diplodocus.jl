@@ -451,7 +451,7 @@ end
 
 Modifies the initial state vector `Initial` with a kappa distribution with `κ` and temperature `T` for `species`, with an exponential cut-off. 
 """
-function InitialKappaExpDecay!(Initial::Vector{F},PhaseSpace::PhaseSpaceStruct,species::String,κ::Float64,T::Float64,pmax::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0,num_Init::F=1.0,x_idx=nothing,y_idx=nothing,z_idx=nothing,off_space_idx=nothing,method="hcubature",samples=32)  where F<:AbstractFloat
+function InitialKappaExpDecay!(Initial::Vector{F},PhaseSpace::PhaseSpaceStruct,species::String,κ::Float64,T::Float64,pmax::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0,num_Init::F=1.0,x_idx=nothing,y_idx=nothing,z_idx=nothing,off_space_idx=nothing,method="hcubature",samples=32,p_cut::Float64=1e2*pmax)  where F<:AbstractFloat
 
     Momentum = PhaseSpace.Momentum
     Grids = PhaseSpace.Grids
@@ -472,7 +472,7 @@ function InitialKappaExpDecay!(Initial::Vector{F},PhaseSpace::PhaseSpaceStruct,s
 
     f0_3D_species = zeros(Float64,p_num,u_num,h_num)
 
-    DistributionToDIPIntegration!(f0_3D_species,pr,ur,hr,method,samples,Distribution_KappaExpDecay,κ,T,pmax,mass,umin=umin,umax=umax,hmin=hmin,hmax=hmax)
+    DistributionToDIPIntegration!(f0_3D_species,pr,ur,hr,method,samples,Distribution_KappaExpDecay,κ,T,pmax,mass,umin=umin,umax=umax,hmin=hmin,hmax=hmax,p_cut=p_cut)
 
     # set values and normalise to initial number density (in m^{-3})
     num = sum(f0_3D_species)

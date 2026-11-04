@@ -1,10 +1,4 @@
 abstract type AbstractTetrad end
-
-""" 
-    ZeroRicciTetrad 
-
-A `ZeroRicciTetrad` is a tetrad that maps a coordinate system to a fixed set of basis vectors in Minkowski spacetime. By this all Ricci rotation coefficients are zero across the whole spacetime, simplifying the calculation of IJK fluxes.
-"""
 abstract type ElectromagneticTetrad <: AbstractTetrad end
 abstract type ForceFreeTetrad <: ElectromagneticTetrad end
 
@@ -42,10 +36,10 @@ end
 
 The force-free field configuration as described by Blandford1976. This is an analytic field configuration for flat spacetime and an arbitrary field line rotation rate `Ω(ρ,z=0)=Ω(ρ0)` where ρ and z are cylindrical coordinates. 
 """
-@kwdef struct ParabolicForceFreeFieldTetrad{T} <: ForceFreeTetrad
+@kwdef struct ParabolicForceFreeFieldTetrad{T,F,B} <: ForceFreeTetrad
     B0::T = 1.0 # strength of the uniform magnetic field (Tesla)
-    Ω = ΩZero # field line rotation rate as a function of cylindrical radius ρ0 in the equatorial plane (z=0)
-    Bfunction = LocalParabolicForceFreeBField
+    Ω::F = ΩZero # field line rotation rate as a function of cylindrical radius ρ0 in the equatorial plane (z=0)
+    Bfunction::B = LocalParabolicForceFreeBField
 end
 
 struct KwFunc{F,K}
@@ -62,13 +56,22 @@ end
 @inline function ΩConst(ρ0;Ω0=0.1) 
         return Ω0
 end
-@inline function ΩBHPlusDisk(ρ0;ΩH=0.1)
+@inline function ΩBHPlusDisk(ρ0;a=1.0,b=-3/2)
+    ΩF = 1/2 * a/(1+sqrt(1-a^2))  # ΩF = ΩH/2 = 1/2 * a/(1+sqrt(1-a^2)) where Ω has been normalised by c and r_s for field lines threading the horizon in the force-free limit
+        if ρ0 <= 1.0
+            return ΩF 
+        else
+            return ΩF * (ρ0)^(b)
+        end
+end
+#=@inline function ΩBHPlusDisk(ρ0;ΩH=0.1) # legacy version of ΩBHPlusDisk with ΩH as a keyword argument
         if ρ0 <= 1.0
             return ΩH/2 # ΩF = ΩH/2 for field lines threading the horizon in the force-free limit 
         else
             return ΩH/2 * (ρ0)^(-3/2)
         end
-end
+end=#
+
 @inline function LocalParabolicForceFreeBField(txyz::MVector{4,T},::Paraboloidal) where T
     u = txyz[3] 
     v = txyz[4]
@@ -82,9 +85,9 @@ end
         cond3 = u == v # z=0
     end
     if cond1 # z>0
-        return 1.0 / (u*sqrt(u^2+v^2))
+        return 2.0 / (u*sqrt(u^2+v^2)) # B at z=1 (u=sqrt(2),v=0) is B0, B at z=0 (u=v=1) is B0/sqrt(2)
     elseif cond2 # z<0
-        return 1.0 / (v*sqrt(u^2+v^2))
+        return 2.0 / (v*sqrt(u^2+v^2))
     else # z=0
         # TODO update with Omega != 0 
         return 0.0 #/ (u*v*sqrt(2))
@@ -109,7 +112,7 @@ TetradComponents!(pos,e,metric::AbstractMetric,coordinates::AbstractCoordinates,
 """
     InverseTetradComponents!(pos,inve,::AbstractMetric,::AbstractCoordinates,::AbstractTetrad)
 
-Returns the inverse tetrad components ``inve=inve^α_{~a}`` at a given point `pos` in spacetime defined by the coordinates `pos=(t,x,y,z)`. The tetrad components are stored in the static matrix inve, which are modified in-place. The specific form of the tetrad components depends on the type of metric, coordinate basis, and tetrad being used.
+Returns the inverse tetrad components ``inve=inve_α^{~a}`` at a given point `pos` in spacetime defined by the coordinates `pos=(t,x,y,z)`. The tetrad components are stored in the static matrix inve, which are modified in-place. The specific form of the tetrad components depends on the type of metric, coordinate basis, and tetrad being used.
 
 For force-free electromagnetic fields, the tetrad is given by e=(T^α,X^α,Y^α,Z^α), with ``Z^α=B^α/B`` and ``Y^α=E^α/E`` being the magnetic and electric field directions as measured by a static observer ``n_α``. The timelike vector ``T`` is the vector of an observer moving with the "ExB" drift velocity ``T=γ(n-U_⟂)`` where ``U_⟂=*(n∧E∧B)/B^2`` and ``γ=\\frac{B^2}{B^2-E^2}``. The final spacelike vector ``X`` is given by the orthonormality condition ``X=*(T∧Y∧Z)``.
 
@@ -601,43 +604,43 @@ CoordinateFluxSpaceDIntegrand!(txyz,D,metric::AbstractMetric,coordinates::Abstra
                 ρ0 = v^2
                 # T components T^α = g^αβT_β
                 e[1,1] = sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2)/sqrt(1 + v^4*Ω(ρ0)^2)
-                e[1,2] = -Ω(ρ0)/(sqrt(1 + v^4*Ω(ρ0)^2) * sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
+                e[1,2] = Ω(ρ0)/(sqrt(1 + v^4*Ω(ρ0)^2) * sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
                 e[1,3] = u*v^2*Ω(ρ0)^2/(sqrt(1 + v^4*Ω(ρ0)^2) * sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
                 # X components X^α = g^αβX_β
                 e[2,1] = u*v*Ω(ρ0)/sqrt(1 + v^4*Ω(ρ0)^2)
-                e[2,2] = u*v == zero(T) ? T(-1) : -1/(u*v*sqrt(1 + v^4*Ω(ρ0)^2))
+                e[2,2] = u*v == zero(T) ? T(1) : 1/(u*v*sqrt(1 + v^4*Ω(ρ0)^2))
                 e[2,3] = v*Ω(ρ0)/sqrt(1 + v^4*Ω(ρ0)^2)
                 # Y components Y^α = g^αβY_β
-                e[3,4] = u^2 + v^2 == zero(T) ? T(1) : 1/sqrt(u^2 + v^2)
+                e[3,4] = u^2 + v^2 == zero(T) ? T(-1) : -1/sqrt(u^2 + v^2)
                 # Z components Z^α = g^αβZ_β
-                e[4,2] = u == zero(T) ? T(1) : Ω(ρ0)*sqrt(u^2 + v^2)/(u*sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
+                e[4,2] = u == zero(T) ? T(-1) : -Ω(ρ0)*sqrt(u^2 + v^2)/(u*sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
                 e[4,3] = u^2 + v^2 == zero(T) ? T(1) : 1/(sqrt(u^2 + v^2) * sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
             elseif cond2 # z<0
                 ρ0 = u^2
                 # T components T^α = g^αβT_β
                 e[1,1] = sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2)/sqrt(1 + u^4*Ω(ρ0)^2)
-                e[1,2] = -Ω(ρ0)/(sqrt(1 + u^4*Ω(ρ0)^2) * sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
+                e[1,2] = Ω(ρ0)/(sqrt(1 + u^4*Ω(ρ0)^2) * sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
                 e[1,4] = u^2*v*Ω(ρ0)^2/(sqrt(1 + u^4*Ω(ρ0)^2) * sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
                 # X components X^α = g^αβX_β
                 e[2,1] = u*v*Ω(ρ0)/sqrt(1 + u^4*Ω(ρ0)^2)
-                e[2,2] = u*v == zero(T) ? T(-1) : -1/(u*v*sqrt(1 + u^4*Ω(ρ0)^2))
+                e[2,2] = u*v == zero(T) ? T(1) : 1/(u*v*sqrt(1 + u^4*Ω(ρ0)^2))
                 e[2,4] = u*Ω(ρ0)/sqrt(1 + u^4*Ω(ρ0)^2)
                 # Y components Y^α = g^αβY_β
-                e[3,3] = u^2 + v^2 == zero(T) ? T(1) : 1/sqrt(u^2 + v^2)
+                e[3,3] = u^2 + v^2 == zero(T) ? T(-1) : -1/sqrt(u^2 + v^2)
                 # Z components Z^α = g^αβZ_β
-                e[4,2] = v == zero(T) ? T(-1) : -Ω(ρ0)*sqrt(u^2 + v^2)/(v*sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
+                e[4,2] = v == zero(T) ? T(1) : Ω(ρ0)*sqrt(u^2 + v^2)/(v*sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
                 e[4,4] = u^2 + v^2 == zero(T) ? T(-1) : -1/(sqrt(u^2 + v^2) * sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
             else #u=v, z=0
                 ρ0 = u*v
                 # T components T^α = g^αβT_β
                 e[1,1] = 1/sqrt(1 - ρ0^2*Ω(ρ0)^2)
-                e[1,2] = -Ω(ρ0)/sqrt(1 - ρ0^2*Ω(ρ0)^2)
+                e[1,2] = Ω(ρ0)/sqrt(1 - ρ0^2*Ω(ρ0)^2)
                 # X components X^α = g^αβX_β
                 e[2,1] = ρ0*Ω(ρ0)/sqrt(1 - ρ0^2*Ω(ρ0)^2)
-                e[2,2] = ρ0==zero(T) ? T(-1) : -1/(ρ0*sqrt(1 - ρ0^2*Ω(ρ0)^2))
+                e[2,2] = ρ0==zero(T) ? T(1) : 1/(ρ0*sqrt(1 - ρ0^2*Ω(ρ0)^2))
                 # Y components Y^α = g^αβY_β
-                e[3,3] = ρ0 == zero(T) ? T(1) : 1/(2*sqrt(ρ0))
-                e[3,4] = ρ0 == zero(T) ? T(1) : 1/(2*sqrt(ρ0))
+                e[3,3] = ρ0 == zero(T) ? T(-1) : -1/(2*sqrt(ρ0))
+                e[3,4] = ρ0 == zero(T) ? T(-1) : -1/(2*sqrt(ρ0))
                 # Z components Z^α = g^αβZ_β
                 e[4,3] = ρ0 == zero(T) ? T(1) : 1/(2*sqrt(ρ0))
                 e[4,4] = ρ0 == zero(T) ? T(-1) : -1/(2*sqrt(ρ0))
@@ -669,43 +672,43 @@ CoordinateFluxSpaceDIntegrand!(txyz,D,metric::AbstractMetric,coordinates::Abstra
                 ρ0 = v^2
                 # T components -T_α = (1, 0, 0, 0)
                 inve[1,1] = sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2)/sqrt(1 + v^4*Ω(ρ0)^2)
-                inve[2,1] = u^2*v^2*Ω(ρ0)/(sqrt(1 + v^4*Ω(ρ0)^2)*sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
+                inve[2,1] = -u^2*v^2*Ω(ρ0)/(sqrt(1 + v^4*Ω(ρ0)^2)*sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
                 inve[3,1] = -u*v^2*(u^2 + v^2)*Ω(ρ0)^2/(sqrt(1 + v^4*Ω(ρ0)^2) * sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
                 # X components X_α = (0, uv, 0, 0)
                 inve[1,2] = -u*v*Ω(ρ0)/sqrt(1 + v^4*Ω(ρ0)^2)
-                inve[2,2] = -u*v/sqrt(1 + v^4*Ω(ρ0)^2)
+                inve[2,2] = u*v/sqrt(1 + v^4*Ω(ρ0)^2)
                 inve[3,2] = v*(u^2 + v^2)*Ω(ρ0)/sqrt(1 + v^4*Ω(ρ0)^2)            
                 # Y components Y_α = (0, 0, sqrt(u^2+v^2), 0)
-                inve[4,3] = sqrt(u^2 + v^2)
+                inve[4,3] = -sqrt(u^2 + v^2)
                 # Z components Z_α = (0, 0, 0, sqrt(u^2+v^2))
-                inve[2,4] = u*v^2*Ω(ρ0)*sqrt(u^2 + v^2)/sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2)
+                inve[2,4] = -u*v^2*Ω(ρ0)*sqrt(u^2 + v^2)/sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2)
                 inve[3,4] = sqrt(u^2 + v^2)/sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2)
             elseif cond2 # z<0
                 ρ0 = u^2
                 # T components -T_α = (1, 0, 0, 0)
                 inve[1,1] = sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2)/sqrt(1 + u^4*Ω(ρ0)^2)
-                inve[2,1] = u^2*v^2*Ω(ρ0)/(sqrt(1 + u^4*Ω(ρ0)^2)*sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
+                inve[2,1] = -u^2*v^2*Ω(ρ0)/(sqrt(1 + u^4*Ω(ρ0)^2)*sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
                 inve[4,1] = -u^2*v*(u^2 + v^2)*Ω(ρ0)^2/(sqrt(1 + u^4*Ω(ρ0)^2) * sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
                 # X components X_α = (0, uv, 0, 0)
                 inve[1,2] = -u*v*Ω(ρ0)/sqrt(1 + u^4*Ω(ρ0)^2)
-                inve[2,2] = -u*v/sqrt(1 + u^4*Ω(ρ0)^2)
+                inve[2,2] = u*v/sqrt(1 + u^4*Ω(ρ0)^2)
                 inve[4,2] = u*(u^2 + v^2)*Ω(ρ0)/sqrt(1 + u^4*Ω(ρ0)^2)            
                 # Y components Y_α = (0, 0, sqrt(u^2+v^2), 0)
-                inve[3,3] = sqrt(u^2 + v^2)
+                inve[3,3] = -sqrt(u^2 + v^2)
                 # Z components Z_α = (0, 0, 0, sqrt(u^2+v^2))
-                inve[2,4] = -u^2*v*Ω(ρ0)*sqrt(u^2 + v^2)/sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2)
+                inve[2,4] = u^2*v*Ω(ρ0)*sqrt(u^2 + v^2)/sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2)
                 inve[4,4] = -sqrt(u^2 + v^2)/sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2)
             else #u=v, z=0
                 ρ0 = u*v
                 # T components T^α = g^αβT_β
                 inve[1,1] = 1/sqrt(1 - ρ0^2*Ω(ρ0)^2)
-                inve[2,1] = ρ0^2/sqrt(1 - ρ0^2*Ω(ρ0)^2)
+                inve[2,1] = -ρ0^2*Ω(ρ0)/sqrt(1 - ρ0^2*Ω(ρ0)^2)
                 # X components X^α = g^αβX_β
                 inve[1,2] = -ρ0*Ω(ρ0)/sqrt(1 - ρ0^2*Ω(ρ0)^2)
-                inve[2,2] = -ρ0/sqrt(1 - ρ0^2*Ω(ρ0)^2)
+                inve[2,2] = ρ0/sqrt(1 - ρ0^2*Ω(ρ0)^2)
                 # Y components Y^α = g^αβY_β
-                inve[3,3] = sqrt(ρ0)
-                inve[4,3] = sqrt(ρ0)
+                inve[3,3] = -sqrt(ρ0)
+                inve[4,3] = -sqrt(ρ0)
                 # Z components Z^α = g^αβZ_β
                 inve[3,4] = sqrt(ρ0)
                 inve[4,4] = -sqrt(ρ0)
@@ -716,6 +719,7 @@ CoordinateFluxSpaceDIntegrand!(txyz,D,metric::AbstractMetric,coordinates::Abstra
         end
         @inline function CoordinateFluxSpaceAIntegrand!(xyzt::MVector{4,T},A::MVector{4,T},::Minkowski,::Paraboloidal,tetrad::ParabolicForceFreeFieldTetrad) where T 
             #= A=A_a=e_a^{~0}χ =#
+            fill!(A, zero(T)) 
             u = xyzt[2]
             v = xyzt[3]
             if u isa ForwardDiff.Dual
@@ -744,6 +748,7 @@ CoordinateFluxSpaceDIntegrand!(txyz,D,metric::AbstractMetric,coordinates::Abstra
         end
         @inline function CoordinateFluxSpaceBIntegrand!(yztx::MVector{4,T},B::MVector{4,T},::Minkowski,::Paraboloidal,tetrad::ParabolicForceFreeFieldTetrad) where T 
             #= B=B_a=e_a^{~1}χ =#
+            fill!(B, zero(T)) 
             u = yztx[1]
             v = yztx[2]
             if u isa ForwardDiff.Dual
@@ -758,14 +763,14 @@ CoordinateFluxSpaceDIntegrand!(txyz,D,metric::AbstractMetric,coordinates::Abstra
             Ω = tetrad.Ω
             if cond1 # z>0
                 ρ0 = v^2
-                B[1] = -u*v*(u^2 + v^2)*Ω(ρ0)/(sqrt(1 + v^4*Ω(ρ0)^2) * sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
-                B[2] = -(u^2 + v^2)/sqrt(1 + v^4*Ω(ρ0)^2)
-                B[4] = v*(u^2 + v^2)^(3/2)*Ω(ρ0)/sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2)
+                B[1] = u*v*(u^2 + v^2)*Ω(ρ0)/(sqrt(1 + v^4*Ω(ρ0)^2) * sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2))
+                B[2] = (u^2 + v^2)/sqrt(1 + v^4*Ω(ρ0)^2)
+                B[4] = -v*(u^2 + v^2)^(3/2)*Ω(ρ0)/sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2)
             elseif cond2 # z<0
                 ρ0 = u^2
-                B[1] = -u*v*(u^2 + v^2)*Ω(ρ0)/(sqrt(1 + u^4*Ω(ρ0)^2) * sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
-                B[2] = -(u^2 + v^2)/sqrt(1 + u^4*Ω(ρ0)^2)
-                B[4] = -u*(u^2 + v^2)^(3/2)*Ω(ρ0)/sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2)
+                B[1] = u*v*(u^2 + v^2)*Ω(ρ0)/(sqrt(1 + u^4*Ω(ρ0)^2) * sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))
+                B[2] = (u^2 + v^2)/sqrt(1 + u^4*Ω(ρ0)^2)
+                B[4] = u*(u^2 + v^2)^(3/2)*Ω(ρ0)/sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2)
             else # u=v, z=0
                 ρ0 = u*v
                 B[1] = T(0) #-2val^4*Ω(val)/sqrt(1 - val^4*Ω(val)^2) # avoid non-zero integral at z=0 for coordinate fluxes due to single non-zero point in Simpson integration
@@ -794,7 +799,7 @@ CoordinateFluxSpaceDIntegrand!(txyz,D,metric::AbstractMetric,coordinates::Abstra
                 C[4] = u*v*sqrt(u^2 + v^2)/sqrt(1 + v^2*(u^2 + v^2)*Ω(ρ0)^2)
             elseif cond2 # z<0
                 ρ0 = u^2
-                C[3] = u*v*sqrt(u^2 + v^2)
+                C[3] = -u*v*sqrt(u^2 + v^2)
             else # u=v, z=0
                 ρ0 = u*v
                 C[3] = T(0) #val^3 # avoid non-zero integral at z=0 for coordinate fluxes due to single non-zero point in Simpson integration
@@ -818,7 +823,7 @@ CoordinateFluxSpaceDIntegrand!(txyz,D,metric::AbstractMetric,coordinates::Abstra
             Ω = tetrad.Ω
             if cond1 # z>0
                 ρ0 = v^2
-                D[3] = u*v*sqrt(u^2 + v^2)
+                D[3] = -u*v*sqrt(u^2 + v^2)
             elseif cond2 # z<0
                 ρ0 = u^2
                 D[1] = u^3*v^2*(u^2 + v^2)*Ω(ρ0)^2/(sqrt(1 + u^4*Ω(ρ0)^2) * sqrt(1 + u^2*(u^2 + v^2)*Ω(ρ0)^2))

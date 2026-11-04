@@ -3,7 +3,7 @@
 
 Loads the binary interaction matrices from the specified `DataDirectory` for each interaction in `Binary_list` and fills the big matrix `M_Bin` either directly if `M_Bin` is dense or the vectors of rows, columns and values `M_Bin_I`, `M_Bin_J``, `M_Bin_V` if sparse, with the interaction rates for binary interactions between all particles in the simulation. The `corrected` argument specifies whether to load the number and energy corrected matrices. The `mode` argument specifies whether to assume these arrays are anisotropic, axisymmetric or isotropic.
 """
-function LoadMatrices_Binary(Binary_list::Vector{BinaryInteraction},DataDirectory::String,PhaseSpace::PhaseSpaceStruct,mode::AbstractMode=Ani(),corrected::Bool=true;symmetric::Bool=false,M_Bin::Union{Nothing,Matrix{F}}=nothing,M_Bin_I::Union{Nothing,Vector{Int64}}=nothing,M_Bin_J::Union{Nothing,Vector{Int64}}=nothing,M_Bin_V::Union{Nothing,Vector{F}}=nothing) where F<:AbstractFloat
+function LoadMatrices_Binary(Binary_list::Vector{BinaryInteraction},DataDirectory::String,PhaseSpace::PhaseSpaceStruct,mode::AbstractMode=Ani(),corrected::Bool=true;symmetric::Bool=false,M_Bin::Union{Nothing,Matrix{F}}=nothing,M_Bin_I::Union{Nothing,Vector{Int32}}=nothing,M_Bin_J::Union{Nothing,Vector{Int32}}=nothing,M_Bin_V::Union{Nothing,Vector{F}}=nothing,gain_loss::Union{Nothing,String}=nothing) where F<:AbstractFloat
 
     Bin_Norm = PhaseSpace.Characteristic.Bin_Norm
     
@@ -29,7 +29,7 @@ function LoadMatrices_Binary(Binary_list::Vector{BinaryInteraction},DataDirector
     py_num_list = Momentum.py_num_list
     pz_num_list = Momentum.pz_num_list
 
-    n_momentum = sum(px_num_list.*py_num_list.*pz_num_list)
+    n_momentum = PhaseSpace.Grids.n_momentum
 
     for i in eachindex(Binary_list)
 
@@ -39,6 +39,8 @@ function LoadMatrices_Binary(Binary_list::Vector{BinaryInteraction},DataDirector
         name2 = interaction.name2
         name3 = interaction.name3
         name4 = interaction.name4
+
+        Indistinguishable_12 = name1 == name2
 
         println("Filling M_Bin for binary interaction: $(name1) + $(name2) -> $(name3) + $(name4)")
 
@@ -130,21 +132,32 @@ function LoadMatrices_Binary(Binary_list::Vector{BinaryInteraction},DataDirector
         LossScale *= Bin_Norm
 
         Parameters = Output[1]
-        GainMatrix3 = Output[2] .* GainScale
-        GainMatrix4 = Output[3] .* GainScale
-        LossMatrix1 = Output[4] .* LossScale
-        LossMatrix2 = Output[5] .* LossScale
+        GainMatrix3 = Output[2]
+        GainMatrix4 = Output[3]
+        LossMatrix = Output[4]
+
+        if !isnothing(gain_loss) # used for timescale plots where it is useful to only load the gain or loss matrices to generate loss and gain rates
+            if gain_loss == "gain"
+                LossScale = 0.0  
+            elseif gain_loss == "loss"
+                GainScale = 0.0
+            end
+        end
 
         name_locs = (name1_loc,name2_loc,name3_loc,name4_loc)
 
-        DoesConserve(Output) # print conversion statistic
-        Fill_M_Bin!(name_locs,PhaseSpace,GainMatrix3,GainMatrix4,LossMatrix1,LossMatrix2,n_momentum;mode=mode,symmetric=symmetric,M_Bin=M_Bin,M_Bin_I=M_Bin_I,M_Bin_J=M_Bin_J,M_Bin_V=M_Bin_V)
+        #DoesConserve(Output) # print conversion statistic
+        M_Bin_I, M_Bin_J, M_Bin_V = Fill_M_Bin!(name_locs,PhaseSpace,GainMatrix3,GainMatrix4,LossMatrix,GainScale,LossScale,Indistinguishable_12;mode=mode,symmetric=symmetric,M_Bin=M_Bin,M_Bin_I=M_Bin_I,M_Bin_J=M_Bin_J,M_Bin_V=M_Bin_V)
 
+        println("size in memory of M_Bin_I: $(Base.summarysize(M_Bin_I)/1e9) GB")
+        println("size in memory of M_Bin_J: $(Base.summarysize(M_Bin_J)/1e9) GB")
+        println("size in memory of M_Bin_V: $(Base.summarysize(M_Bin_V)/1e9) GB")
 
     end # for
 
 end
 
+#=
 function LoadMatrices_BinaryGraphLaplacian(Binary_list::Vector{BinaryInteraction},DataDirectory::String,PhaseSpace::PhaseSpaceStruct,mode::AbstractMode=Ani(),corrected::Bool=true;M_Bin::Union{Nothing,Matrix{F}}=nothing,M_Bin_I::Union{Nothing,Vector{Int64}}=nothing,M_Bin_J::Union{Nothing,Vector{Int64}}=nothing,M_Bin_V::Union{Nothing,Vector{F}}=nothing) where F<:AbstractFloat
 
     Bin_Norm = PhaseSpace.Characteristic.Bin_Norm
@@ -570,9 +583,10 @@ function LoadMatrices_BinaryPatankarSymmetric(Binary_list::Vector{BinaryInteract
     end # for
 
 end
+=#
 
 
-function LoadMatrices_Emi!(M_Emi::Vector{Union{Matrix{F},SparseMatrixCSC{F}}},Emission_list::Vector{EmissiveInteraction},DataDirectory::String,PhaseSpace::PhaseSpaceStruct,BinM::BinaryMatricesStruct;Emi_corrected::Bool=true) where F<:AbstractFloat
+function LoadMatrices_Emi!(M_Emi::Vector{Union{Matrix{F},SparseMatrixCSC{F,Int32}}},Emission_list::Vector{EmissiveInteraction},DataDirectory::String,PhaseSpace::PhaseSpaceStruct,BinM::BinaryMatricesStruct;Emi_corrected::Bool=true) where F<:AbstractFloat
 
     Emi_Norm = PhaseSpace.Characteristic.Emi_Norm
 
@@ -606,8 +620,8 @@ function LoadMatrices_Emi!(M_Emi::Vector{Union{Matrix{F},SparseMatrixCSC{F}}},Em
     n_momentum = sum(px_num_list.*py_num_list.*pz_num_list)
 
     M_Emi_D = zeros(F,n_momentum,n_momentum)
-    M_Emi_I::Vector{Int64} = Int64[]
-    M_Emi_J::Vector{Int64} = Int64[]
+    M_Emi_I::Vector{Int32} = Int32[]
+    M_Emi_J::Vector{Int32} = Int32[]
     M_Emi_V::Vector{F} = F[]
 
     for i in eachindex(Emission_list)

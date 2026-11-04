@@ -222,10 +222,33 @@ function (method::ForwardEulerStruct)(t_start,t_stop,dt,Verbose::Int64)
 
 end
 
+function update_Big_Bin!(method::ExplicitSteppingMethod,f::AbstractVector)
+    
+    n_momentum=size(method.M_Bin,2)
+
+    for off_space in method.Bin_Domain
+
+        start_idx = n_momentum*off_space+1
+        end_idx = n_momentum*(off_space+1)
+
+        fView = @view(f[start_idx:end_idx])
+
+        df_BinView = @view method.df_Bin[start_idx:end_idx]
+        mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fView) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
+
+        @inbounds vol = method.Vol[off_space+1]
+        mul!(df_BinView,method.M_Bin_Mul_Step,fView,vol,zero(eltype(method.df_Bin)))
+
+    end
+
+    return nothing
+
+end
+
 """
     ForwardSymplecticEuler(t_start,t_stop,dt,Verbose)
 
-Forward Symplectic (Semi-Implicit) Euler time-stepping method for the transport equation. Symplectic integrator updates momentum space first then physical space.
+Forward Symplectic (Semi-Implicit) Euler time-stepping method for the transport equation. Symplectic integrator updates momentum space first then physical space, i.e. a full step in momentum followed by a full step in physical space using the updated distribution function.
 
 # Explicit method:
 Evaluates `dg`, ``dg = g^{t+1}-g^{t}`` from the following expression:
@@ -359,1120 +382,11 @@ function (method::ForwardSymplecticEulerStruct)(t_start,t_stop,dt,Verbose::Int64
 end
 
 """
-    Heun(t_start,t_stop,dt,Verbose)
-
-Heun's time-stepping method for the transport equation.
-"""
-function (method::HeunStruct)(t_start,t_stop,dt,Verbose::Int64)
-
-    method.step += 1
-
-    dt0 = method.dt0
-    Cr_prev = method.Cr
-
-    # scaling of time stepping
-
-    dt_scale = dt / dt0
-
-    # first step
-
-        mul!(method.df_Flux,method.F_Flux,method.f)
-        @. method.df_step = -method.df_Flux # minus sign as flux terms are on RHS of transport equation, also resets df_Flux
-        # create df_Emi due to emission terms
-        if method.Emission_Interactions
-            mul!(method.df_Emi,method.M_Emi,method.f)
-            @. method.df_step += method.df_Emi
-        end
-        # create df_Bin due to binary interactions
-        if method.Binary_Interactions
-            update_Big_Bin!(method,method.f)
-            @. method.df_step += method.df_Bin
-        end
-        @. method.df_step *= method.invAp_Flux * dt_scale # Assumes Ap_flux is diagonal and stored as a vector
-        # add injection term
-        @. method.df_step += method.df_Inj * dt_scale 
-
-        if !isfinite(sum(method.df_step))
-            println("non-finite value in df_step calculation")
-        end
-        # update state vector f_step 
-        @. method.f_step += method.df_step  
-
-        # removing negative values
-
-        @. method.f_step = method.f_step * (method.f_step>method.n_cut) * sign(method.f_step)
-
-    # second step
-
-        mul!(method.df_Flux,method.F_Flux,method.f_step)
-        @. method.df = -method.df_Flux # minus sign as flux terms are on RHS of transport equation, also resets df_Flux
-        # create df_Emi due to emission terms
-        if method.Emission_Interactions
-            mul!(method.df_Emi,method.M_Emi,method.f_step)
-            @. method.df += method.df_Emi
-        end
-        # create df_Bin due to binary interactions
-        if method.Binary_Interactions
-            update_Big_Bin!(method,method.f_step)
-            @. method.df += method.df_Bin
-        end
-        @. method.df *= method.invAp_Flux * dt_scale # Assumes Ap_flux is diagonal and stored as a vector
-        # add injection term
-        @. method.df += method.df_Inj * dt_scale 
-
-        if !isfinite(sum(method.df))
-            println("non-finite value in df calculation")
-        end
-
-    # update state vector df for both steps
-    
-        @. method.df += method.df_step
-
-        # mask of df regions
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-        if !isfinite(sum(method.df))
-            println("non-finite value in df calculation")
-        end
-
-    # Cr (CFL) condition check
-
-        Cr = 0.0
-        dt_old = dt
-        sum_f = sum(method.f)
-        if sum_f != 0.0
-            @. method.df_tmp = ifelse(method.f<=method.n_cut, Inf,method.df / method.f)
-            test = findmin(method.df_tmp)
-            println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]], " min f: ", method.f[test[2]], " min df_tmp old: ", (@. ifelse(isnan(method.df / method.f), Inf, method.df / method.f))[test[2]])
-            Cr = -minimum(method.df_tmp)
-        end
-
-        adaptive_factor = 1.0
-
-    # apply adaptive factor and update scaling
-
-        dt = dt * adaptive_factor
-        dt_scale = dt / dt0
-
-        if method.step == 1
-            method.Cr = Cr
-        else
-            method.Cr = Cr_prev + (Cr-Cr_prev) * adaptive_factor
-        end
-
-        # remove df that are small compared to f again after scaling time
-        @. method.df *= adaptive_factor
-        #@. method.df = ifelse(abs(method.df) < method.n_cut, zero(eltype(method.df)), method.df)
-        #@. method.df = ifelse(method.f + method.df < method.n_cut, zero(eltype(method.df)), method.df)
-
-    # will we reached the next t_save?
-
-        t_next = t_start + dt
-        if abs(t_next - t_stop) <= eps(t_stop) * 10 #eps(max(abs(t_next), abs(t_stop)))
-            save = true
-        elseif t_next >= t_stop
-            adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
-            dt = t_stop - t_start
-            save = true
-        else
-            save = false
-        end
-
-        if dt < 0.0
-            error("Negative time step calculated, something went wrong with the CFL condition calculation")
-        end
-
-    # output verbose information 
-
-        if Verbose == 1 && Cr > 1.0
-            println("step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)) system may be unstable")
-        elseif Verbose == 2
-            println("\r step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)), Cr_adapted = $(round(Cr*adaptive_factor,sigdigits=3))")
-        elseif Verbose == 3
-            println("step=$(method.step), Cr = $(round(Cr,sigdigits=3)),Cr_Bin = $(round(Cr_Bin,sigdigits=3)), Cr_Emi = $(round(Cr_Emi,sigdigits=3)), Cr_Flux = $(round(Cr_Flux,sigdigits=3)), t=$t_start, t_save =$t_stop, dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-        end
-        if Verbose > 0
-            flush(stdout)
-        end
-
-    # update state vector f 
-
-        two = eltype(method.f)(2)
-        @. method.f += method.df / two
-
-    # remove masked off domain regions
-
-        if !isnothing(method.f_mask)
-            @. method.f *= method.f_mask
-        end
-
-    # removing negative values (values less than 1f-28 for better stability)
-
-        @. method.f = ifelse(method.f<method.n_cut,method.n_cut,method.f) #method.f * (method.f>method.n_cut) * sign(method.f)
-        # hacky fix for inf values
-        #@. method.f = method.f * (method.f!=Inf)
-
-    return dt,save
-
-end
-
-"""
-    MPE(t_start,t_stop,dt,Verbose)
-
-Modified Patankar Euler time-stepping method for the transport equation.
-"""
-function (method::MPEStruct)(t_start,t_stop,dt,Verbose::Int64)
-
-    method.step += 1
-
-    dt0 = method.dt0
-    Cr_prev = method.Cr
-
-    # scaling of time stepping
-
-    dt_scale = dt / dt0
-
-    # Create Q matrix for Patankar update
-
-        println("1")
-        Q = copy(method.Q) # method.Q is (F+MEmi) with structural zeros for binary interactions 
-        println("max diag: ",maximum(diag(Q)))
-        println("min diag: ",minimum(diag(Q)))
-        println(length(Q.nzval))
-        println("maxnon diag: ",maximum(Q - spdiagm(diag(Q))))
-        println("minnon diag: ",minimum(Q - spdiagm(diag(Q))))
-        println("2")
-        # add M_Bin_Mul_Step to Q due to binary interactions
-        if method.Binary_Interactions
-            update_Big_Bin!(method,method.f,Q)
-        end # now Q = (F+MEmi+MBin)
-        println(length(Q.nzval))
-        println(maximum(abs.(Q)))
-        println("max diag: ",maximum(diag(Q)))
-        println("min diag: ",minimum(diag(Q)))
-        println("maxnon diag: ",maximum(Q - spdiagm(diag(Q))))
-        println("minnon diag: ",minimum(Q - spdiagm(diag(Q))))
-
-    # set up Ay=b system (where A=Q, y=f(t+1), b=A^-f(t)+df_Inj)
-
-        println("4")
-        Q = method.invA_Flux * Q # Assumes Ap_flux is diagonal and stored as a vector, also scales Q by dt_scale
-        println(length(Q.nzval)) 
-        
-        println("5")
-        @. Q.nzval *= dt_scale
-
-        println(maximum(diag(Q)))
-
-        println("6")
-        Q = I - Q 
-        println(length(Q.nzval))
-        
-        println("maxnon diag: ",maximum(Q - spdiagm(diag(Q))))
-        println("minnon diag: ",minimum(Q - spdiagm(diag(Q))))
-
-        println("7")
-        method.f_tmp .= method.f + method.df_Inj .* dt_scale #+ method.invA_Flux * (method.MEmi * method.f) .* dt_scale
-
-    # do inversion, gives f(t+1) in f_tmp using GMRES with ILU preconditioner
-
-        println(maximum(diag(Q)))
-        println("8")
-        Qpre = ilu(Q)
-        (x,stats) = gmres(Q,method.f_tmp, M=Qpre,ldiv=true,rtol=eps(eltype(Q)),atol=eps(eltype(Q)),restart=true)
-        display(stats)
-        method.f_tmp .= x
-
-        #Qfact = lu(Q)
-        #ldiv!(Qfact,method.f_tmp)
-
-    # mask of df regions
-
-        println("9")
-        @. method.df = method.f_tmp - method.f 
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-    # Cr (CFL) condition check
-
-        Cr = 0.0
-        dt_old = dt
-        sum_f = sum(method.f)
-        if sum_f != 0.0
-            @. method.df_tmp = ifelse(method.f<=method.n_cut, Inf,method.df / method.f)
-            test = findmin(method.df_tmp)
-            println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]], " min f: ", method.f[test[2]], " min df_tmp old: ", (@. ifelse(isnan(method.df / method.f), Inf, method.df / method.f))[test[2]])
-            Cr = -minimum(method.df_tmp)
-        end
-
-        adaptive_factor = 1.0
-
-    # apply adaptive factor and update scaling
-
-        dt = dt * adaptive_factor
-        dt_scale = dt / dt0
-
-        if method.step == 1
-            method.Cr = Cr
-        else
-            method.Cr = Cr_prev + (Cr-Cr_prev) * adaptive_factor
-        end
-
-        # remove df that are small compared to f again after scaling time
-        @. method.df *= adaptive_factor
-        #@. method.df = ifelse(abs(method.df) < method.n_cut, zero(eltype(method.df)), method.df)
-        #@. method.df = ifelse(method.f + method.df < method.n_cut, zero(eltype(method.df)), method.df)
-
-    # will we reached the next t_save?
-
-        t_next = t_start + dt
-        if abs(t_next - t_stop) <= eps(t_stop) * 10 #eps(max(abs(t_next), abs(t_stop)))
-            save = true
-        elseif t_next >= t_stop
-            adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
-            dt = t_stop - t_start
-            save = true
-        else
-            save = false
-        end
-
-        if dt < 0.0
-            error("Negative time step calculated, something went wrong with the CFL condition calculation")
-        end
-
-    # output verbose information 
-
-        if Verbose == 1 && Cr > 1.0
-            println("step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)) system may be unstable")
-        elseif Verbose == 2
-            println("\r step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)), Cr_adapted = $(round(Cr*adaptive_factor,sigdigits=3))")
-        elseif Verbose == 3
-            println("step=$(method.step), Cr = $(round(Cr,sigdigits=3)),Cr_Bin = $(round(Cr_Bin,sigdigits=3)), Cr_Emi = $(round(Cr_Emi,sigdigits=3)), Cr_Flux = $(round(Cr_Flux,sigdigits=3)), t=$t_start, t_save =$t_stop, dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-        end
-        if Verbose > 0
-            flush(stdout)
-        end
-
-    # update state vector f 
-
-        if !isnothing(method.df_mask)
-            @. method.f = (method.f_tmp * (method.df_mask)) + method.f * (1-method.df_mask)
-        else
-            @. method.f = method.f_tmp
-        end
-        #@. method.f += method.df
-
-    # remove masked off domain regions
-
-        if !isnothing(method.f_mask)
-            @. method.f *= method.f_mask
-        end
-
-    # removing n_cut values for saving
-
-        @. method.f = ifelse(method.f<=method.n_cut,zero(eltype(method.f)),method.f) #method.f * (method.f>method.n_cut) * sign(method.f)
-        #@. method.f = ifelse(method.f<method.n_cut,method.n_cut,method.f)
-        # hacky fix for inf values
-        #@. method.f = method.f * (method.f!=Inf)
-
-    return dt,save
-
-end
-
-"""
-    SymplecticMPE(t_start,t_stop,dt,Verbose)
-
-Symplectic Modified Patankar Euler time-stepping method for the transport equation. Momentum transport is updated first using the implicit MPE scheme then space transport is performed using simple Explicit Forward Euler. 
-"""
-function (method::SymplecticMPEStruct)(t_start,t_stop,dt,Verbose::Int64)
-
-    @. method.f = ifelse(method.f<=method.n_cut,zero(eltype(method.f)),method.f)
-
-    method.step += 1
-
-    dt0 = method.dt0
-    Cr_prev = method.Cr
-
-    # scaling of time stepping
-
-    dt_scale = method.Precision(dt / dt0)
-
-    # Create Q matrix for Patankar update and solve for momentum transport (includes injection)
-
-        updateMomentumPatankarEuler!(method,method.f,dt_scale)
-        if !isnothing(method.df_mask)
-            @. method.f_step = (method.f_step * method.df_mask) + method.f * (1-method.df_mask)
-        end 
-        if !isnothing(method.f_mask)
-            @. method.f_step *= method.f_mask
-        end
-
-    # removing n_cut values for saving
-
-        @. method.f_step = ifelse(method.f_step<=method.n_cut,zero(eltype(method.f_step)),method.f_step)
-
-    # Cr (CFL) condition check for momentum update
-
-        Cr_momentum = 0.0
-        dt_old = dt
-        sum_f = sum(method.f)
-        if sum_f != 0.0
-            @. method.df_tmp = ifelse(method.f<=0.0, Inf,(method.f_step - method.f) / method.f)
-            test = findmin(method.df_tmp)
-            println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]]+method.f_step[test[2]] - method.f[test[2]], " min f: ", method.f[test[2]])
-            Cr_momentum = -minimum(method.df_tmp)
-        end
-
-    # space transport
-
-        #@. method.f_step = method.f + method.df_Inj * dt_scale # add injection term to f_step for space transport
-        mul!(method.df_Flux,method.X_Flux,method.f_step)
-        method.df .= -method.invA_Flux * method.df_Flux * dt_scale # minus sign as flux terms are on RHS of transport equation, also resets df_Flux
-
-    # mask of df regions
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-    # Cr (CFL) condition check space update
-
-        Cr_space = 0.0
-        dt_old = dt
-        sum_f = sum(method.f_step)
-        if sum_f != 0.0
-            @. method.df_tmp = ifelse(method.f_step<=0.0, Inf,(method.df / method.f_step))
-            test = findmin(method.df_tmp)
-            println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]]+method.f_step[test[2]] - method.f[test[2]], " min f: ", method.f[test[2]])
-            Cr_space = -minimum(method.df_tmp)
-        end
-
-        adaptive_factor = 1.0
-
-    # apply adaptive factor and update scaling
-
-        dt = dt * adaptive_factor
-        dt_scale = dt / dt0
-
-        #if method.step == 1
-        #    method.Cr = Cr
-        #else
-        #    method.Cr = Cr_prev + (Cr-Cr_prev) * adaptive_factor
-        #end
-
-        # remove df that are small compared to f again after scaling time
-        #@. method.df *= adaptive_factor
-        #@. method.df = ifelse(abs(method.df) < method.n_cut, zero(eltype(method.df)), method.df)
-        #@. method.df = ifelse(method.f + method.df < method.n_cut, zero(eltype(method.df)), method.df)
-
-    # will we reached the next t_save?
-
-        t_next = t_start + dt
-        if abs(t_next - t_stop) <= eps(t_stop) * 10 #eps(max(abs(t_next), abs(t_stop)))
-            save = true
-        elseif t_next >= t_stop
-            adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
-            dt = t_stop - t_start
-            save = true
-        else
-            save = false
-        end
-
-        if dt < 0.0
-            error("Negative time step calculated, something went wrong with the CFL condition calculation")
-        end
-
-    # output verbose information 
-
-        if Verbose == 1 && Cr > 1.0
-            println("step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)) system may be unstable")
-        elseif Verbose == 2
-            println("\r step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr_momentum = $(round(Cr_momentum,sigdigits=3)), Cr_space = $(round(Cr_space,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-        elseif Verbose == 3
-            println("step=$(method.step), Cr = $(round(Cr,sigdigits=3)),Cr_Bin = $(round(Cr_Bin,sigdigits=3)), Cr_Emi = $(round(Cr_Emi,sigdigits=3)), Cr_Flux = $(round(Cr_Flux,sigdigits=3)), t=$t_start, t_save =$t_stop, dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-        end
-        if Verbose > 0
-            flush(stdout)
-        end
-
-    # update state vector f 
-
-        #println(sum(method.f[1:288]), " ", sum(method.df[1:288]), " ", sum(method.f_step[1:288]))
-        #println(sum(method.f[289:888]), " ", sum(method.df[289:888]), " ", sum(method.f_step[289:888]))
-        println(sum(method.f), " ", sum(method.df), " ", sum(method.f_step))
-
-        @. method.f = method.df + method.f_step
-
-    # remove masked off domain regions
-
-        if !isnothing(method.f_mask)
-            @. method.f *= method.f_mask
-        end
-
-    # removing n_cut values for saving
-
-        @. method.f = ifelse(method.f<=method.n_cut,zero(eltype(method.f)),method.f) #method.f * (method.f>method.n_cut) * sign(method.f)
-        #@. method.f = ifelse(method.f<method.n_cut,method.n_cut,method.f)
-        # hacky fix for inf values
-        #@. method.f = method.f * (method.f!=Inf)
-
-    return dt,save
-
-end
-
-function (method::SymplecticSymmetricMPEStruct)(t_start,t_stop,dt,Verbose::Int64)
-
-    @. method.f = ifelse(method.f<=method.n_cut,zero(eltype(method.f)),method.f)
-
-    method.step += 1
-
-    dt0 = method.dt0
-    Cr_prev = method.Cr
-
-    # scaling of time stepping
-
-    dt_scale = method.Precision(dt / dt0)
-
-    # Create Q matrix for Patankar update and solve for momentum transport (includes injection)
-
-        updateMomentumPatankarEulerSymmetric!(method,method.f,dt_scale)
-        if !isnothing(method.df_mask)
-            @. method.f_step = (method.f_step * method.df_mask) + method.f * (1-method.df_mask)
-        end 
-        if !isnothing(method.f_mask)
-            @. method.f_step *= method.f_mask
-        end
-
-    # removing n_cut values for saving
-
-        @. method.f_step = ifelse(method.f_step<=method.n_cut,zero(eltype(method.f_step)),method.f_step)
-
-    # Cr (CFL) condition check for momentum update
-
-        Cr_momentum = 0.0
-        dt_old = dt
-        sum_f = sum(method.f)
-        if sum_f != 0.0
-            @. method.df_tmp = ifelse(method.f<=0.0, Inf,(method.f_step - method.f) / method.f)
-            test = findmin(method.df_tmp)
-            println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]]+method.f_step[test[2]] - method.f[test[2]], " min f: ", method.f[test[2]])
-            Cr_momentum = -minimum(method.df_tmp)
-        end
-
-    # space transport
-
-        #@. method.f_step = method.f + method.df_Inj * dt_scale # add injection term to f_step for space transport
-        mul!(method.df_Flux,method.X_Flux,method.f_step)
-        method.df .= -method.invA_Flux * method.df_Flux * dt_scale # minus sign as flux terms are on RHS of transport equation, also resets df_Flux
-
-    # mask of df regions
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-    # Cr (CFL) condition check space update
-
-        Cr_space = 0.0
-        dt_old = dt
-        sum_f = sum(method.f_step)
-        if sum_f != 0.0
-            @. method.df_tmp = ifelse(method.f_step<=0.0, Inf,(method.df / method.f_step))
-            test = findmin(method.df_tmp)
-            println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]]+method.f_step[test[2]] - method.f[test[2]], " min f: ", method.f[test[2]])
-            Cr_space = -minimum(method.df_tmp)
-        end
-
-        adaptive_factor = 1.0
-
-    # apply adaptive factor and update scaling
-
-        dt = dt * adaptive_factor
-        dt_scale = dt / dt0
-
-        #if method.step == 1
-        #    method.Cr = Cr
-        #else
-        #    method.Cr = Cr_prev + (Cr-Cr_prev) * adaptive_factor
-        #end
-
-        # remove df that are small compared to f again after scaling time
-        #@. method.df *= adaptive_factor
-        #@. method.df = ifelse(abs(method.df) < method.n_cut, zero(eltype(method.df)), method.df)
-        #@. method.df = ifelse(method.f + method.df < method.n_cut, zero(eltype(method.df)), method.df)
-
-    # will we reached the next t_save?
-
-        t_next = t_start + dt
-        if abs(t_next - t_stop) <= eps(t_stop) * 10 #eps(max(abs(t_next), abs(t_stop)))
-            save = true
-        elseif t_next >= t_stop
-            adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
-            dt = t_stop - t_start
-            save = true
-        else
-            save = false
-        end
-
-        if dt < 0.0
-            error("Negative time step calculated, something went wrong with the CFL condition calculation")
-        end
-
-    # output verbose information 
-
-        if Verbose == 1 && Cr > 1.0
-            println("step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)) system may be unstable")
-        elseif Verbose == 2
-            println("\r step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr_momentum = $(round(Cr_momentum,sigdigits=3)), Cr_space = $(round(Cr_space,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-        elseif Verbose == 3
-            println("step=$(method.step), Cr = $(round(Cr,sigdigits=3)),Cr_Bin = $(round(Cr_Bin,sigdigits=3)), Cr_Emi = $(round(Cr_Emi,sigdigits=3)), Cr_Flux = $(round(Cr_Flux,sigdigits=3)), t=$t_start, t_save =$t_stop, dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-        end
-        if Verbose > 0
-            flush(stdout)
-        end
-
-    # update state vector f 
-
-        #println(sum(method.f[1:288]), " ", sum(method.df[1:288]), " ", sum(method.f_step[1:288]))
-        #println(sum(method.f[289:888]), " ", sum(method.df[289:888]), " ", sum(method.f_step[289:888]))
-        println(sum(method.f), " ", sum(method.df), " ", sum(method.f_step))
-
-        @. method.f = method.df + method.f_step
-
-    # remove masked off domain regions
-
-        if !isnothing(method.f_mask)
-            @. method.f *= method.f_mask
-        end
-
-    # removing n_cut values for saving
-
-        @. method.f = ifelse(method.f<=method.n_cut,zero(eltype(method.f)),method.f) #method.f * (method.f>method.n_cut) * sign(method.f)
-        #@. method.f = ifelse(method.f<method.n_cut,method.n_cut,method.f)
-        # hacky fix for inf values
-        #@. method.f = method.f * (method.f!=Inf)
-
-    return dt,save
-
-end
-
-"""
-    BackwardsEuler(dg,g,t,dt)
-
-Backwards (Implicit) Euler time-stepping method for the transport equation. 
-
-"""
-function (method::BackwardEulerStruct)(t_start,t_stop,dt,Verbose::Int64)
-
-    method.step += 1
-
-    dt0 = method.dt0
-
-    # will we reached the next t_save?
-
-    t_next = t_start + dt
-    if abs(t_next - t_stop) <= eps(t_stop) * 10 #eps(max(abs(t_next), abs(t_stop)))
-        save = true
-    elseif t_next >= t_stop
-        adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
-        dt = t_stop - t_start
-        save = true
-    else
-        save = false
-    end
-
-    if dt < 0.0
-        error("Negative time step calculated, something went wrong with the CFL condition calculation")
-    end
-
-    # scaling of time stepping
-
-    dt_scale = method.Precision(dt / dt0)
-        
-    # create df_Bin due to binary interactions (jacobians are added in update_Big_Bin! if implicit)
-    if method.Binary_Interactions
-        update_Big_Bin!(method,dt_scale)
-    end
-
-
-    
-    # removing negative values
-    @. method.fstep = method.fstep * (method.fstep>=method.n_cut)
-
-
-    Cr = 0.0
-    sum_f = sum(method.f)
-    if sum_f != 0.0
-
-        #@. method.df_tmp = ifelse(method.f + method.df < method.n_cut, zero(eltype(method.df)), method.df)
-        #@. method.df_tmp = method.df_tmp / method.f
-        @. method.df = method.fstep-method.f
-        @. method.df_tmp = method.df / method.f
-        @. method.df_tmp = ifelse(isnan(method.df_tmp), Inf, method.df_tmp)
-        test = findmin(method.df_tmp)
-        println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]], " min f: ", method.f[test[2]], " min df_tmp old: ", (@. ifelse(isnan(method.df / method.f), Inf, method.df / method.f))[test[2]])
-        Cr = -minimum(method.df_tmp) 
-
-    end
-
-    if Verbose == 1 && Cr > 1.0
-        println("step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)) system may be unstable")
-    elseif Verbose == 2
-        println("\r step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3))")
-    elseif Verbose == 3
-        println("step=$(method.step), Cr = $(round(Cr,sigdigits=3)),Cr_Bin = $(round(Cr_Bin,sigdigits=3)), Cr_Emi = $(round(Cr_Emi,sigdigits=3)), Cr_Flux = $(round(Cr_Flux,sigdigits=3)), t=$t_start, t_save =$t_stop, dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-    end
-    if Verbose > 0
-        flush(stdout)
-    end
-
-    method.f .= method.fstep
-
-    return dt,save
-
-end
-
-"""
-    ES2(dg,g,t,dt)
-
-2nd order Expontial integration time-stepping method for the transport equation. 
-
-"""
-function (method::ES2Struct)(t_start,t_stop,dt,Verbose::Int64)
-
-    method.step += 1
-
-    dt0 = method.dt0
-
-    # will we reached the next t_save?
-
-    t_next = t_start + dt
-    if abs(t_next - t_stop) <= eps(t_stop) * 10 #eps(max(abs(t_next), abs(t_stop)))
-        save = true
-    elseif t_next >= t_stop
-        adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
-        dt = t_stop - t_start
-        save = true
-    else
-        save = false
-    end
-
-    if dt < 0.0
-        error("Negative time step calculated, something went wrong with the CFL condition calculation")
-    end
-
-    # scaling of time stepping
-
-    dt_scale = method.Precision(dt / dt0)
-
-    ftmp = zeros(eltype(method.f),length(method.f))
-
-    # set fstep to intial value
-
-        @. method.fstep = method.f
-
-    # half space update
-
-        mul!(method.df,method.X_Flux,method.fstep)
-        method.df .= - method.invA_Flux * method.df .* dt_scale/2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
-
-        # mask of df regions
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-        @. method.fstep += method.df
-
-    # half momentum update
-
-        #=mul!(ftmp,method.invImMP,method.fstep+method.df_Inj * dt_scale/2) 
-
-        if !isnothing(method.df_mask)
-            @. method.fstep = ftmp * method.df_mask + method.fstep * (1-method.df_mask)
-        else
-            @. method.fstep = ftmp
-        end =#
-        
-    # binary update
-
-        if method.Binary_Interactions
-            update_momentum!(method,dt_scale)
-        end
-
-    # half momentum update
-
-        #=mul!(ftmp,method.invImMP,method.fstep+method.df_Inj * dt_scale/2) 
-
-        if !isnothing(method.df_mask)
-            @. method.fstep = ftmp * method.df_mask + method.fstep * (1-method.df_mask)
-        else
-            @. method.fstep = ftmp
-        end=#
-
-    # half space update
-
-        mul!(method.df,method.X_Flux,method.fstep)
-        method.df .= - method.invA_Flux * method.df .* dt_scale/2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-        @. method.fstep += method.df
-    
-    # removing negative values
-
-        @. method.fstep = ifelse(method.fstep<=method.n_cut,zero(eltype(method.fstep)),method.fstep)
-
-
-    Cr = 0.0
-    sum_f = sum(method.f)
-    if sum_f != 0.0
-
-        #@. method.df_tmp = ifelse(method.f + method.df < method.n_cut, zero(eltype(method.df)), method.df)
-        #@. method.df_tmp = method.df_tmp / method.f
-        @. method.df = method.fstep-method.f
-        @. method.df_tmp = method.df / method.f
-        @. method.df_tmp = ifelse(isnan(method.df_tmp), Inf, method.df_tmp)
-        test = findmin(method.df_tmp)
-        println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]], " min f: ", method.f[test[2]], " min df_tmp old: ", (@. ifelse(isnan(method.df / method.f), Inf, method.df / method.f))[test[2]])
-        Cr = -minimum(method.df_tmp) 
-
-    end
-
-    if Verbose == 1 && Cr > 1.0
-        println("step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)) system may be unstable")
-    elseif Verbose == 2
-        println("\r step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3))")
-    elseif Verbose == 3
-        println("step=$(method.step), Cr = $(round(Cr,sigdigits=3)),Cr_Bin = $(round(Cr_Bin,sigdigits=3)), Cr_Emi = $(round(Cr_Emi,sigdigits=3)), Cr_Flux = $(round(Cr_Flux,sigdigits=3)), t=$t_start, t_save =$t_stop, dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-    end
-    if Verbose > 0
-        flush(stdout)
-    end
-
-    method.f .= method.fstep
-
-    # remove masked off domain regions
-
-    if !isnothing(method.f_mask)
-        @. method.f *= method.f_mask
-    end
-
-    return dt,save
-
-end
-
-function update_momentum!(method::ES2Struct,dt_scale::T) where T
-
-    Precision = method.Precision
-    
-    n_momentum=method.PhaseSpace.Grids.n_momentum
-    n_space=method.PhaseSpace.Grids.n_space
-    
-    fold = zeros(Precision,n_momentum)
-    fxdiv2= zeros(Precision,n_momentum)
-    fx = zeros(Precision,n_momentum)
-    fz = zeros(Precision,n_momentum)
-    fnonzero = Diagonal(zeros(Precision,n_momentum))
-    J = method.J
-
-    n_species = length(method.PhaseSpace.name_list)
-
-    M = zeros(Precision,(n_species+1),n_momentum)
-
-    #LinearFlux = zeros(Precision,n_momentum,n_momentum)
-
-    @view(M[1:n_species,:]) .= method.N 
-    @view(M[n_species+1,:]) .= method.E
-
-    #A = [ zeros(Precision,n_momentum,n_momentum) zeros(Precision,n_momentum) ; zeros(Precision,n_momentum)' zero(Precision) ]
-
-    consv = zeros(n_species+1)
-    consv[end] = one(Precision)
-
-    for off_space in 0:n_space-1
-
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-
-        fstep = @view(method.fstep[start_idx:end_idx])
-        fin = zeros(Precision,n_momentum)
-        fout = zeros(Precision,n_momentum)
-        df_Inj = @view(method.df_Inj[start_idx:end_idx])
-        @inbounds vol = method.Vol[off_space+1]
-        invA_Flux = @view(method.invA_Flux[start_idx:end_idx,start_idx:end_idx])
-        A_Flux = @view(method.A_Flux[start_idx:end_idx,start_idx:end_idx])
-
-        @. fnonzero.diag = ifelse(fold > zero(Precision), one(Precision),zero(Precision))
-
-        #LinearFlux .= @view(method.P_Flux[start_idx:end_idx,start_idx:end_idx])
-        #if method.Emission_Interactions
-        #    LinearFlux .-= @view(method.M_Emi[start_idx:end_idx,start_idx:end_idx])
-        #end
-
-        if method.Binary_Interactions && off_space in method.Bin_Domain
-
-            fold .= @view(method.f[start_idx:end_idx]) 
-
-            #if sum(fold) == Precision(0)
-            #    continue
-            #end
-
-            α = Precision(1.0)
-            accurate = false
-            ΔE = zero(Precision)
-            step = zero(Float64)
-            dstep = one(Float64)
-            ϵ = eps(Precision)
-
-            while !accurate || step < 1.0
-
-                #fold .+= df_Inj * α * dt_scale
-
-            # linear flux update (should conserve energy directly) so do single exponential step
-            #LinearFlux .= invA_Flux * LinearFlux * fnonzero
-
-            #display(reshape(real.(eigvals(-LinearFlux .* dt_scale)) .* fnonzero,37,24))
-            #Println("max 1/τ: ", maximum(-real.(eigvals(-LinearFlux .* dt_scale) .* fnonzero) ))
-            #display(fnonzero)
-
-            #fold .= exp(-LinearFlux .* dt_scale) * fold
-
-            #@. fnonzero.diag = ifelse(fold > 0.0, 1.0,0.0)
-
-            # Second order in time ES2 method
-                # x/2 step
-
-                    @time mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fold,vol,zero(Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-                    fin .= A_Flux * fold
-
-                    #s = zeros(Precision,n_momentum)
-                    #D = Diagonal(s)
-                    #s .= max.(abs.(fin), 0.5*dt_scale*α * abs.(method.M_Bin_Mul_Step * fin), ϵ)
-                    #D = Diagonal(100 .*s)
-
-                    #println("max D: ", maximum(D), " min D : ", minimum(D))
-                    #println("max D: ", maximum(s), " min s : ", minimum(s))
-
-                    #display(D)
-
-                    #println("max J: ", maximum(method.M_Bin_Mul_Step), " min J : ", minimum(method.M_Bin_Mul_Step))
-
-                    method.M_Bin_Mul_Step += @view(method.M_Emi[start_idx:end_idx,start_idx:end_idx])
-
-                    D = Diagonal(1 ./ method.E)
-
-                    J .= D \ method.M_Bin_Mul_Step * D
-
-                    A = [J (D \ df_Inj) ; zeros(Precision,n_momentum+1)']
-
-                    #println("max J: ", maximum(J), " min J : ", minimum(J))
-
-                    #display(sparse(A))
-
-                    fin .= D \ fin 
-
-                    f = [fin ; one(Precision)]
-
-                    #fxdiv2 .= exp(method.M_Bin_Mul_Step .* dt_scale) * fin
-                    #fxdiv2 .= expv(0.5*dt_scale*α,method.M_Bin_Mul_Step,fin;tol=Precision(1e-8),m=100)
-                    f .= expv(dt_scale*α,A,f;tol=Precision(1e-12),m=500)
-
-                    fxdiv2 .= D * @view(f[1:n_momentum])
-
-                    #display(reshape(fxdiv2,37,24))
-                    #display(reshape(df_Inj*α*dt_scale,37,24))
-
-                    #F = schur(method.M_Bin_Mul_Step)
-                    #w = F.Z' * fin
-                    #fxdiv2 .= F.Z * expv(0.5*dt_scale*α,F.T,w;tol=Precision(1e-8),m=100)
-
-                    #println(maximum(real.(F.values)))
-
-
-
-                    #F = schur(J)
-                    #w = F.Z' * fin
-                    #fxdiv2 .= D * F.Z * expv(0.5*dt_scale*α,F.T,w;tol=Precision(1e-8),m=100)
-
-                    #display(F)
-                    #display(sum(F.values))
-                    #println(maximum(real.(F.values)))
-
-                    fxdiv2 .= invA_Flux * fxdiv2
-
-                    @. fxdiv2 = ifelse(fxdiv2<=method.n_cut,zero(eltype(fxdiv2)),fxdiv2)
-                
-                # z step 
-
-                    #=@time mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fxdiv2,vol,zero(Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-                    fin .= A_Flux * fold 
-
-                    s = max.(abs.(fin), dt_scale*α * abs.(method.M_Bin_Mul_Step*fin), ϵ)
-                    D = Diagonal(s)
-
-                    method.M_Bin_Mul_Step += @view(method.M_Emi[start_idx:end_idx,start_idx:end_idx])
-
-                    D = Diagonal(1 ./ method.E)
-
-                    J .= D \ method.M_Bin_Mul_Step * D
-
-                    #fz .= expv(dt_scale*α,method.M_Bin_Mul_Step,fin;tol=Precision(1e-8),m=100)
-
-                    fin .= D \ fin
-
-                    fz .= D * expv(dt_scale*α,J,fin;tol=Precision(1e-8),m=100)
-
-                    #F = schur(J)
-                    #w = F.Z' * fin
-                    #fz .= D * F.Z * expv(0.5*dt_scale*α,F.T,w;tol=Precision(1e-8),m=100)
-
-                    @. fz = ifelse(fz<=method.n_cut,zero(eltype(fz)),fz)
-
-                    fz .= invA_Flux * fz=#
-
-                # x step 
-
-                    #=@time mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fz,vol,zero(Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-                    fin .= A_Flux * fxdiv2
-
-                    s = max.(abs.(fin), 0.5*dt_scale*α * abs.(method.M_Bin_Mul_Step*fin), ϵ)
-                    D = Diagonal(s)
-
-                    method.M_Bin_Mul_Step += @view(method.M_Emi[start_idx:end_idx,start_idx:end_idx])  
-                    
-                    D = Diagonal(1 ./ method.E)
-
-                    J .= D \ method.M_Bin_Mul_Step * D
-
-                    #fx .= expv(0.5*dt_scale*α,method.M_Bin_Mul_Step,fin;tol=Precision(1e-8),m=100)
-
-                    fin .= D \ fin
-
-                    fx .= D * expv(0.5*dt_scale*α,J,fin;tol=Precision(1e-8),m=100)
-
-                    #F = schur(J)
-                    #w = F.Z' * fin
-                    #fx .= D * F.Z * expv(0.5*dt_scale*α,F.T,w;tol=Precision(1e-8),m=100)
-
-                    @. fx = ifelse(fx<=method.n_cut,zero(eltype(fx)),fx)
-
-                    fx .= invA_Flux * fx=#
-
-                # combine 
-               
-                #@. fx = (fx + fz) / 2
-
-                #@. fx = ifelse(fx<=method.n_cut,zero(eltype(fx)),fx)
-
-                @. fx = ifelse(fxdiv2<=method.n_cut,zero(eltype(fxdiv2)),fxdiv2)
-
-                #println(sum(fx), " ", sum(fold), " ", sum(fx-fold), " ", sum(df_Inj * α * dt_scale) )
-
-                #println(sum(fx[1:288]), " ", sum(fold[1:288]), " ", sum((fx-fold)[1:288]), " ", sum((df_Inj * α * dt_scale)[1:288]))
-
-                # energy correction  
-                ΔE = dot(method.E, fx) - dot(method.E, fold .+ df_Inj * α *dt_scale)
-
-                Eold = dot(method.E, fold .+ df_Inj * α *dt_scale)
-                Eerr = abs(dot(method.E, fx) / Eold - one(Precision))
-
-                #=if Eerr < 1e-3
-                    accurate = true
-                    step += dstep * α
-                    # error correction step to better improve accuracy``
-                    #ϵ = eps(Float64(method.n_cut))
-                    #Winv = method.E .* max.(fx, ϵ)
-                    #q = Winv .* method.E
-                    #q ./= dot(method.E, q)
-                    #@. fx -= ΔE * q
-  
-                    #=ϵ = eps(Float64(method.n_cut))
-                    Winv = method.E .* max.(fx, ϵ)
-                    B = M * Diagonal(Winv) * M'
-                    # precondition B with diagonal of B
-                    D = Diagonal(1.0 ./ sqrt.(diag(B)))
-                    Bs = D * B * D
-                    q = Diagonal(Winv) * (M' * D * (Bs \ (D * consv)))
-                    @. fx -= ΔE*q
-                    @. fx = ifelse(fx<=method.n_cut,zero(eltype(fx)),fx)=#
-                    fold .= fx
-                    println("step: ", step, " α: ", α, " Energy error: ", Eerr, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fx))
-                    if Eerr < 1e-4 
-                        if step + dstep * 4.0 * α < 1.0 
-                            # can fit two 2x steps
-                            α *= 2.0
-                        end
-                    end 
-                else
-                    accurate = false
-                    println("Energy error: ", Eerr, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fx), " reducing α: ", α)
-                    α *= 0.5
-                end=#
-
-                    ϵ = eps(Precision(method.n_cut))
-
-                    Winv = #=method.E .*=# max.(fx, ϵ)
-
-                    MW = M .* Winv'
-
-                    L = MW * M'
-
-                    display(M)
-                    display(M * fx)
-                    display([dot(method.N[1,:],fx) ; dot(method.N[2,:],fx) ; Eold])
-
-                    r = M * fx - [dot(method.N[1,:],fx) ; dot(method.N[2,:],fx) ; Eold]
-                    r = [0f0 ; 0f0 ; ΔE]
-
-                    println("r: ", r, " ΔE: ", ΔE)
-
-                    λ = L \ r
-
-                    δu = Winv .* (M' * λ)
-
-                    fx .-= δu
-
-                    accurate = true
-                    step += dstep * α
-
-            end # while not accurate
-
-            @. fstep = fx
-
-        else #
-
-            # linear flux update (should conserve energy directly) so do single exponential step
-            #@view(A[1:n_momentum,1:n_momentum]) .= -invA_Flux * LinearFlux
-
-            #fin = [fold ; one(Precision)]
-            #fout = similar(fin)
-
-            #fout .= expv(dt_scale,A,fin;tol=Precision(1e-6),m=50)
-
-            #fstep .= @view(fout[1:n_momentum])
-
-        end
-
-    end
-
-    return nothing
-
-end
-
-"""
     ExponentialRosenbrockEuler(dg,g,t,dt)
 
-2nd order Expontial integration time-stepping method for the transport equation. 
+2nd order Exponential integration time-stepping method for the transport equation. 
+
+An operator splitting method is used whereby the spatial flux terms are updated explicitly for a half-step, then the momentum distribution is updated using an exponential Rosenbrock method, and finally the spatial flux terms are updated again using a half-step.
 
 """
 function (method::ExponentialRosenbrockEulerKrylovStruct)(t_start,t_stop,dt,Verbose::Int64)
@@ -1514,12 +428,14 @@ function (method::ExponentialRosenbrockEulerKrylovStruct)(t_start,t_stop,dt,Verb
         method.df .= - method.invA_Flux * method.df .* dt_scale/2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
 
         # mask of df regions
-
         if !isnothing(method.df_mask)
             @. method.df *= method.df_mask
         end 
 
         @. method.fstep += method.df
+
+        @. method.fstep = ifelse(method.fstep < method.n_cut && method.fstep * method.E_long < method.n_cut, zero(eltype(method.fstep)),method.fstep)
+        
 
     # Half injection 
 
@@ -1527,7 +443,7 @@ function (method::ExponentialRosenbrockEulerKrylovStruct)(t_start,t_stop,dt,Verb
 
     # half momentum update
 
-        mul!(ftmp,method.invImMP,method.fstep) 
+        #=mul!(ftmp,method.invImMP,method.fstep) 
 
         if !isnothing(method.df_mask)
             @. method.fstep = ftmp * method.df_mask + method.fstep * (1-method.df_mask)
@@ -1535,13 +451,17 @@ function (method::ExponentialRosenbrockEulerKrylovStruct)(t_start,t_stop,dt,Verb
             @. method.fstep = ftmp
         end 
 
+        @. method.fstep = ifelse(method.fstep < method.n_cut && method.fstep * method.E_long < method.n_cut, zero(eltype(method.fstep)),method.fstep)
+        =#
+
     # binary update
 
+        # half momentum update
         update_momentum!(method,dt_scale)
 
     # half momentum update
 
-        mul!(ftmp,method.invImMP,method.fstep) 
+        #=mul!(ftmp,method.invImMP,method.fstep) 
 
         if !isnothing(method.df_mask)
             @. method.fstep = ftmp * method.df_mask + method.fstep * (1-method.df_mask)
@@ -1549,12 +469,16 @@ function (method::ExponentialRosenbrockEulerKrylovStruct)(t_start,t_stop,dt,Verb
             @. method.fstep = ftmp
         end
 
+        @. method.fstep = ifelse(method.fstep < method.n_cut && method.fstep * method.E_long < method.n_cut, zero(eltype(method.fstep)),method.fstep)
+        =#
+
     # Half injection 
 
         #@. method.fstep += method.df_Inj * dt_scale / 2
 
     # half space update
 
+        
         mul!(method.df,method.X_Flux,method.fstep)
         method.df .= - method.invA_Flux * method.df .* dt_scale/2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
 
@@ -1564,9 +488,8 @@ function (method::ExponentialRosenbrockEulerKrylovStruct)(t_start,t_stop,dt,Verb
 
         @. method.fstep += method.df
     
-    # removing negative values
-
-        @. method.fstep = ifelse(method.fstep<=method.n_cut,zero(eltype(method.fstep)),method.fstep)
+        @. method.fstep = ifelse(method.fstep < method.n_cut && method.fstep * method.E_long < method.n_cut, zero(eltype(method.fstep)),method.fstep)
+        
 
 
     Cr = 0.0
@@ -1635,12 +558,23 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
 
     δ = method.δ #::Vector{Precision} = zeros(Precision,n_momentum)
 
-    m = method.m # dimension of Krylov subspace for exponential action approximation, can adjust based on problem size and desired accuracy
+    mB = method.mB # dimension of Krylov subspace for exponential action approximation, can adjust based on problem size and desired accuracy
+    mL = method.mL
 
-    Ks = method.Ks
-    ϕcache = method.ϕcache
+    KsB = method.KsB
+    KsL = method.KsL
+    ϕcacheB = method.ϕcacheB
+    ϕcacheL = method.ϕcacheL
 
+    iop = 0
+    reorthogonalize = true
+    arnoldi_tol = 1e-16
+    correct = true
+    
     EmiTrue::Bool = true
+
+    ηtarget = 1e-45
+    #ηEtarget = 1e-5 # energy can be gained from P_Flux terms but limit this to a maximum fractional gain of 0.001% per time step, otherwise reduce time step
 
     for off_space in method.ActiveDomain
 
@@ -1658,15 +592,24 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
 
         @inbounds vol = method.Vol[off_space+1]
         @inbounds invA = method.invA[off_space+1]
+        @inbounds dt_guess = method.dt_guess[off_space+1]
+
+        @inbounds MEmiPFlux = method.MEmiPFlux[off_space+1]
 
         if method.Binary_Interactions && off_space in method.Bin_Domain
 
-            if isassigned(method.M_Emi, off_space+1)
+            if has_injection
+                ηEtarget = 5e-4
+            else
+                ηEtarget = 1e-3
+            end
+
+            #=if isassigned(method.M_Emi, off_space+1)
                 EmiTrue = true
                 @inbounds M_Emi = method.M_Emi[off_space+1]
             else
                 EmiTrue = false
-            end
+            end=#
 
             fold .= fstep 
 
@@ -1675,7 +618,9 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
             #end
             t = 0.0
 
-            dt_local = dt #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
+            dt_local = dt_guess #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
+
+            dt_old = dt_local
 
             kE = 1.0
             kϕ = 1.0
@@ -1683,7 +628,13 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
 
             while t < 1.0
 
-                dtscale = dt_local / method.dt0 # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
+                println("this cell $off_space injection = $HasInjection, type: binary")
+
+                dtscale = Precision(dt_local / method.dt0) # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
+
+                if dtscale < 1e-8 
+                    error("Time step too small")
+                end
 
                 kold = k 
                 kϕold = kϕ
@@ -1692,63 +643,71 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
 
                 # EXPRB First Order Exponential Rosenbrock method with adaptive timestepping
 
-                    mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fold,vol,zero(Precision))
+                    mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fold,vol,zero(Precision)) # about 1.1 seconds on i7.
+
+                    #threshold_Jcols!(method.M_Bin_Mul_Step; rtol=eps(Precision(1e-3)))
+                    #remove_small_J_contributions!(method.M_Bin_Mul_Step,method.J,fold; tol=eps(Precision(1e-3)))
+
                     # Form J
                     @. J = Precision(2) * method.M_Bin_Mul_Step
                     #fill!(J,zero(Precision))
-                    #fill!(method.M_Bin_Mul_Step,zero(Precision)) 
-                    if EmiTrue
+                    #fill!(method.M_Bin_Mul_Step,zero(Precision))
+                 
+                    #=if EmiTrue
                         @. J += M_Emi
                         @. method.M_Bin_Mul_Step += M_Emi
-                    end
+                        @. J -= P_Flux
+                        @. method.M_Bin_Mul_Step -= P_Flux
+                    end=#
+                    @. J += MEmiPFlux
+                    @. method.M_Bin_Mul_Step += MEmiPFlux
 
                     @. J *= dtscale * invA
 
                     # Form F
                     mul!(F,method.M_Bin_Mul_Step,fold)
-                    @. F *= invA
+                    @. F *= invA * dtscale
 
                     # Energy error estimate using F 
                     #ηEest = abs(dot(E,F) * dtscale) / dot(E,fold)
                     #println("Energy error estimate: ", ηEest)
 
-                    @. F += #=A *=# df_Inj #* dtldt0
-                    if norm(F) == zero(Precision) # no change in distribution
+                    @. F += #=A *=# df_Inj * dtscale #* dtldt0
+                    if norm(F) < Precision(1e-30) # no change in distribution or just small numerical round off
                         break
                     end
-                    lmul!(dtscale,F)
 
                     # Diagonal scaling of J and F to improve conditioning for Krylov subspace approximation
-                    J .*= D' # right mul
-                    J .*= Dinv # left mul
-                    F .*= Dinv # left mul
+                    J .*= (D').^2 # right mul
+                    J .*= (Dinv).^2 # left mul
+                    F .*= (Dinv).^2 # left mul
 
-                    #println("sum(F): $(sum(F)), max(F): $(maximum(F)), min(F): $(minimum(F))")
-                    #println("sum(J): $(sum(J)), max(J): $(maximum(J)), min(J): $(minimum(J))")
+                    #J64 = Float64.(J)
+                    #F64 = Float64.(F)
 
-                    arnoldi!(Ks, J, F;m=m,reorthogonalize=true,remove_drift=false,tol=1e-12)
+                    arnoldi!(KsB, J, F;m=mB,reorthogonalize=reorthogonalize,remove_drift=false,tol=arnoldi_tol,iop=iop)
 
-                    V = ExponentialUtilities.getV(Ks)[:,1:end-1]
-                    H = ExponentialUtilities.getH(Ks)[1:end-1,1:end]
+                    V = ExponentialUtilities.getV(KsB)[:,1:KsB.m]
+                    #H = ExponentialUtilities.getH(KsB)[1:end-1,1:end]
 
-                    #display(ExponentialUtilities.getH(Ks))
-                    #show(IOContext(stdout, :compact=>false), "text/plain", H[1:4,1:4])
-                    #error("Stopping for debugging old, dtscale = $dtscale")
-
-                    if #=cond((I - dt_local*H)) > 1f3 ||=#  norm(V' * V - I) > 1f-5 
+                    if iop == 0 && #=cond((I - dt_local*H)) > 1f3 ||=#  norm(V' * V - I) > 1e-5 
                         dt_local *= 0.5
-                        @warn "Krylov subspace has poor orthogonalisation $(norm(V' * V - I)), reducing time step to $dt_local"
+                        @warn "Krylov subspace has poor orthogonalisation $(norm(V' * V - I)), dimension $(KsB.m), max dimension $(KsB.maxiter), reducing time step to $dt_local"
+                        println("norm J: $(norm(J64)), norm F: $(norm(F64)), norm fscale: $(norm(fscale64))")
+                        display(V)
+                        H = ExponentialUtilities.getH(KsB)[1:end-1,1:end]
+                        display(H)
                         continue
                     end
 
                     # Compute φ functions of H
-                    _, errest = phiv!(ϕ,k,Ks,1;cache=ϕcache,correct=true,errest=true) # TODO: This allocates                  
-                    @. δ = D * @view(ϕ[:,2]) * k
+                    phiv!(ϕ,k,KsB,1;cache=ϕcacheB,correct=correct,errest=false) # TODO: This allocates                  
+                    @. δ = (D.^2) * @view(ϕ[:,2]) * k
                     @. fout = fold + δ
 
 
                     
-                        @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
+                        @. fout = ifelse(fout < zero(Precision), zero(Precision),fout)
 
                         # energy error
                         ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k*dtscale)
@@ -1773,18 +732,719 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
                         dt_old = dt_local
                         order = 1.0 # energy error is order 1
 
-                        ηtarget = 1e-16
-                        ηEtarget = Precision == Float32 ? 1e-4 : 1e-5
+                        kE = (ηEtarget/(ηE+eps(ηEtarget)))^(1.0/(order+1)) # k from energy error estimate 
+                        kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
+                        kϕ = min(kE,kϕmax) # max k is 2.0
+                        errest = Inf
+                        while errest > ηtarget # k from ϕv errestimate, can be more strict than energy error estimate
+                            _, errest = phiv!(ϕ,kϕ,KsB,1;cache=ϕcacheB,correct=correct,errest=true) # TODO: This allocates
+                            println("ϕv error estimate during: ", errest, " maxiter: ",mB, " m: ", KsB.m)
+                            if errest > ηtarget
+                                kϕ *= 0.77 * 0.5(tanh(log10(errest/ηtarget)+1)+1)
+                            end
+                        end
+                        #println("ϕv error estimate after: ", errest)
+                        k = min(kE,kϕ,2.0)
+                        println("kE: ", kE, " kϕ: ", kϕ, " errest: ", errest)
+
+                        #k = 1.0
+                        #println("dt_local: ", dt_local, " k: ", k, " new: ", dt_old*k, " old: ", dt_old)
+                        dt_local = k*dt_old
+                        #dt_local = max(dt_local, dt_old/1.01)
+                        #println(dt)
+                        if t + dt_local/dt > 1.0
+                            dt_local = (1.0 - t) * dt
+                            println("space: ", off_space," region: Binary", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
+                            t = 1.0
+                        else
+                            println("space: ", off_space," region: Binary", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
+                            t += dt_local/dt
+                        end
+                        k = dt_local / dt_old
+
+
+                    if k != 1.0
+                        phiv!(ϕ,k,KsB,1;cache=ϕcacheB,correct=correct,errest=false) # TODO: This allocates
+                        @. δ = (D.^2) * @view(ϕ[:,2]) * k
+                        @. fout = fold + δ
+
+                        # energy after correction  
+                        #ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k * dtscale)
+                        #Eold = dot(E, fold .+ df_Inj * k * dtscale)
+                        #ηE = abs(dot(E, fout) / Eold - one(Precision))
+                        #println("Energy error after adaption: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
+                        @. fout = ifelse(fout < zero(Precision), zero(Precision),fout)
+                    end
+
+                    # number and energy cut 
+                    @. fout = ifelse(fout < method.n_cut && fout * E < method.n_cut, zero(Precision),fout)
+
+                    #=if ηE > 2e-4
+                        @warn "Energy error in EXPRB1 step is large $ηE, may be unstable, consider reducing time step or adjusting ηtarget"
+                    end=#
+
+                    #@. fold = ifelse(fout <= method.n_cut, zero(Precision),fout)
+                    #@. fold = max(fout, zero(Precision))
+
+                    #println(minimum(fold), " ", maximum(fold))
+
+                    @. fold = fout
+
+            end # while not accurate
+
+            # number and energy cut 
+            #@. fold = ifelse(fold < method.n_cut && fold * E < method.n_cut, zero(Precision),fold)
+
+            @. fstep = fold
+
+            @inbounds method.dt_guess[off_space+1] = dt_old # update dt_guess with last plus one dt (avoid last as this could be limited by (1.0-t))
+
+
+        else #
+
+            if has_injection
+                ηEtarget = 5e-4
+            else
+                ηEtarget = 1e-3
+            end
+
+            #=if isassigned(method.M_Emi, off_space+1)
+                @inbounds M_Emi = method.M_Emi[off_space+1]
+            else
+                EmiTrue = false
+            end=#
+
+            fold .= fstep 
+
+            #if sum(fold) == Precision(0)
+            #    continue
+            #end
+            t = 0.0
+
+            dt_local = dt_guess #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
+
+            dt_old = dt_local
+
+            kE = 1.0
+            kϕ = 1.0
+            k = 1.0
+
+            while t < 1.0
+
+                println("this cell $off_space, injection = $HasInjection, type: linear")
+
+                dtscale = Precision(dt_local / method.dt0) # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
+
+                if dtscale < 1e-8 
+                    error("Time step too small")
+                end
+
+                kold = k 
+                kϕold = kϕ
+                kEold = kE
+                k = 1.0 # time step as a ratio of dt_local to dt_local before adaptive
+
+                # EXPRB First Order Exponential Rosenbrock method with adaptive timestepping
+
+                # Form J
+                #copyto!(Jsparse,M_Emi)
+                #Jsparse .-= P_Flux
+                copyto!(Jsparse,MEmiPFlux)
+                @. Jsparse.nzval *= dtscale * invA
+
+                # Form F
+                mul!(F,Jsparse,fold)
+                @. F += #=A *=# df_Inj * dtscale
+                if norm(F) < Precision(1e-30) # no change in distribution or small changed from numerical round off
+                    break
+                end
+
+                Jsparse .*= D' # right mul
+                Jsparse .*= Dinv # left mul
+                F .*= Dinv # left mul
+
+                #Jsparse64 = Float64.(Jsparse)
+                #F64 = Float64.(F)
+
+
+                if has_injection
+                    arnoldi!(KsL,Jsparse,F;m=mL,reorthogonalize=reorthogonalize,tol=arnoldi_tol,iop=iop)
+                else # no injection, just linear Jacobian so use exp over phi
+                    @. fscale = Dinv * fold # left mul
+                    #fscale64 = Float64.(fscale)
+                    arnoldi!(KsL,Jsparse,fscale;m=mL,reorthogonalize=reorthogonalize,tol=arnoldi_tol,iop=iop)
+                end
+
+                V = ExponentialUtilities.getV(KsL)[:,1:end-1]
+                #H = ExponentialUtilities.getH(KsL)[1:end-1,1:end]
+
+                norm_unscaled = norm(V' * V - I)
+                if isnan(norm_unscaled) # no J or F means no Krylov subspace generated, so just accept step as is and move on,
+                    break
+                end
+
+                if iop == 0 && norm(V' * V - I) > 1e-5 
+                    dt_local = dt_local * 0.5
+                    @warn "Krylov subspace has poor orthogonalisation $(norm(V' * V - I)), KsL.m: $(KsL.m), reducing time step to $dt_local"
+                    println("norm J: $(norm(Jsparse)), norm F: $(norm(F)), norm fscale: $(norm(fscale))")
+                    display(V)
+                    display(V' * V)
+                    H = ExponentialUtilities.getH(KsL)[1:end-1,1:end]
+                    display(H)
+                    continue
+                end
+
+                # Compute φ functions of H
+                if has_injection
+                    if KsL.m != 1  
+                        phiv!(ϕ,k,KsL,1;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
+                        @. δ = D * @view(ϕ[:,2]) * k
+                        @. fout = fold + δ
+                    else # J has no entries so just linearly add df_Inj * k * dtscale to fold
+                        @. fout = fold + df_Inj * k * dtscale
+                    end
+                else # no injection, just linear Jacobian so use exp over phi
+                    expv!(δ,k#=*invA=#,KsL) # TODO: add cache for expv to avoid repeated allocations, maybe replace with phiv! with dimension 0 to just return ϕ0=exp
+                    @. fout = D * δ
+                end
+
+
+                # adaptive time stepping
+
+                    @. fout = ifelse(fout < zero(Precision), zero(Precision),fout)
+
+                    # energy error
+                    if has_injection
+                        ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * dtscale)
+                        Eold = dot(E, fold .+ df_Inj * dtscale)
+                    else
+                        ΔE = dot(E, fout) - dot(E, fold)
+                        Eold = dot(E, fold)
+                    end
+                    ηE = abs(dot(E, fout) / Eold - one(Precision))
+                    #println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
+
+                    if isinf(ηE)
+                        @warn "Energy error is Inf or NaN, may be unstable, consider reducing time step or adjusting ηtarget"
+                        dt_local = ldexp(dt_local, -1)
+                        continue
+                    end
+
+                    dt_old = dt_local
+                    order = 1.0 # energy error is order 1
+
+                    kE = (ηEtarget/(ηE+eps(ηEtarget)))^(1.0/(order+1)) # k from energy error estimate
+                    if has_injection && KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
+                        kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
+                        kϕ = min(kE,kϕmax) # max k is 2.0
+                        errest = Inf
+                        while errest > ηtarget # k from ϕv errestimate, can be more strict than energy error estimate
+                            _, errest = phiv!(ϕ,kϕ,KsL,1;cache=ϕcacheL,correct=correct,errest=true) # TODO: This allocates
+                            println("ϕv error estimate during: ", errest, " maxiter: ",mL, " m: ", KsL.m)
+                            if errest > ηtarget
+                                kϕ *= 0.77 * 0.5(tanh(log10(errest/ηtarget)+1)+1)
+                            end
+                        end
+                        #println("ϕv error estimate after: ", errest)
+                        k = min(kE,kϕ,2.0)
+                        #println("kE: ", kE, " kϕ: ", kϕ, " errest: ", errest)
+                    else
+                        k = min(kE,2.0)
+                    end
+                    #k = 1.0
+                    #println("dt_local: ", dt_local, " k: ", k, " new: ", dt_old*k, " old: ", dt_old)
+                    dt_local = k*dt_old
+                    #dt_local = max(dt_local, dt_old/1.01)
+                    #println(dt)
+                    if t + dt_local/dt > 1.0
+                        dt_local = (1.0 - t) * dt
+                        println("space: ", off_space," region: Linear", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
+                        t = 1.0
+                    else
+                        println("space: ", off_space," region: Linear", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
+                        t += dt_local/dt
+                    end
+                    k = dt_local / dt_old
+
+                if k != 1.0
+                    if has_injection
+                        if KsL.m != 1 
+                            phiv!(ϕ,k,KsL,1;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
+                            @. δ = D * @view(ϕ[:,2]) * k
+                            @. fout = fold + δ
+                        else # J has no entries so just linearly add df_Inj * k * dtscale to fold
+                            @. fout = fold + df_Inj * k * dtscale
+                        end
+                    else # no injection, just linear Jacobian so use exp over phi
+                        expv!(δ,k#=*invA=#,KsL)
+                        @. fout = D * δ
+                    end
+
+                    @. fout = ifelse(fout < zero(Precision), zero(Precision),fout)
+
+                    # energy after correction  
+                    #if has_injection 
+                    #    ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k * dtscale)
+                    #    Eold = dot(E, fold .+ df_Inj * k * dtscale)
+                    #else
+                    #    ΔE = dot(E, fout) - dot(E, fold)
+                    #    Eold = dot(E, fold)
+                    #end
+                    #ηE = abs(dot(E, fout) / Eold - one(Precision))
+                    #println("Energy error after adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
+
+                    #=if ηE > 2e-4
+                        @warn "Energy error in EXPRB1 step is large $ηE, may be unstable, consider reducing time step or adjusting ηtarget"
+                    end=#
+                    
+                end
+
+                # number and energy cut
+                @. fout = ifelse(fout < method.n_cut && fout * E < method.n_cut, zero(Precision),fout)
+
+                #@. fold = ifelse(fout <= method.n_cut, zero(Precision),fout)
+                #@. fold = max(fout, zero(Precision))
+
+                #println(minimum(fold), " ", maximum(fold))
+
+                @. fold = fout
+
+            end # while not accurate
+
+            # number and energy cut
+            @. fold = ifelse(fold < method.n_cut && fold * E < method.n_cut, zero(Precision),fold)
+
+            @. fstep = fold
+
+            @inbounds method.dt_guess[off_space+1] = dt_old # update dt_guess with last plus one dt (avoid last as this could be limited by (1.0-t))
+
+        end
+
+    end
+
+    return nothing
+
+end
+
+"""
+    ExponentialRosenbrockEulerKrylovMixed(dg,g,t,dt)
+
+2nd order Exponential integration time-stepping method for the transport equation.
+
+An operator splitting method is used whereby the spatial flux terms are updated explicitly for a half-step, then the momentum distribution is updated using an exponential Rosenbrock method, and finally the spatial flux terms are updated again using a half-step.
+
+This version of the method uses a mixed CPU+GPU archetecture where binary interactions maybe evaluated on a single GPU while multiple spatial cells may have their momentum distributions updated on the CPU in parallel. Spatial updates are performed on the GPU. 
+
+"""
+function (method::ExponentialRosenbrockEulerKrylovMixedStruct)(t_start::T,t_stop::T,dt::T,Verbose::Int64) where T
+
+    DevicePrecision = method.DevicePrecision
+    HostPrecision = method.HostPrecision
+
+    @assert T == HostPrecision "Host precision and timing precision do not match"
+
+    method.step += 1
+
+    dt0::HostPrecision = method.dt0
+
+    # will we reached the next t_save?
+
+    t_next::HostPrecision = t_start + dt
+    if abs(t_next - t_stop) <= sqrt(eps(t_stop)) #eps(max(abs(t_next), abs(t_stop)))
+        dt = t_stop - t_start # make it exact to avoid round off error in time stepping
+        save = true
+    elseif t_next >= t_stop
+        @warn "t_next ($t_next) >= t_stop ($t_stop), with dt=$dt and t_start=$t_start"
+        #adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
+        #dt = t_stop - t_start
+        save = true
+    else
+        save = false
+    end
+
+    if dt < 0.0
+        error("Negative time step calculated, something went wrong with the CFL condition calculation")
+    end
+
+    # scaling of time stepping
+
+    dt_scale_d = method.DevicePrecision(dt / dt0)
+    dt_scale = method.HostPrecision(dt / dt0)
+
+    f_d = method.f 
+    fstep_d = method.fstep_d
+    #ftmp_d = method.ftmp_d
+    df_d = method.df_d
+    df_tmp_d = method.df_tmp_d
+    E_long_d = method.E_long_d
+
+    # set fstep to intial value
+
+        copyto!(fstep_d,f_d)
+
+    # half space update
+
+        mul!(df_d,method.XFlux_d,fstep_d)
+        @. df_d *= -method.invAFlux_d * dt_scale_d / 2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
+
+        # mask of df regions
+
+        if !isnothing(method.df_mask_d)
+            @. df_d *= method.df_mask_d
+        end 
+
+        @. fstep_d += df_d
+
+        @. fstep_d = ifelse(fstep_d < method.n_cut_d && fstep_d .* E_long_d < method.n_cut_d,zero(DevicePrecision),fstep_d)
+
+    # momentum update
+
+        update_momentum!(method,dt_scale;every_step=true) # this MUST updates method.fstep_d in place
+
+    # half space update
+
+        mul!(df_d,method.XFlux_d,fstep_d)
+        @. df_d *= -method.invAFlux_d * dt_scale_d / 2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
+
+        if !isnothing(method.df_mask_d)
+            @. df_d *= method.df_mask_d
+        end 
+
+        @. fstep_d += df_d
+
+        @. fstep_d = ifelse(fstep_d < method.n_cut_d && fstep_d .* E_long_d < method.n_cut_d,zero(DevicePrecision),fstep_d)
+
+    # momentum update (only if LocalMomentumUpdate)
+
+        if method.LocalMomentumUpdate
+            update_momentum!(method,dt_scale;every_step=false) # this MUST updates method.fstep_d in place
+        end
+
+    # Cr calculation
+
+    Cr = 0.0
+    sum_f = sum(f_d) # sum of previous state
+    if sum_f != zero(DevicePrecision)
+        @. df_d = fstep_d - f_d
+        @. df_tmp_d = df_d / f_d
+        @. df_tmp_d = ifelse(isnan(df_tmp_d), DevicePrecision(Inf), df_tmp_d)
+        Cr = -minimum(df_tmp_d) 
+    end
+
+    if Verbose == 1 && Cr > 1.0
+        println("\r step=$(method.step), t_start=$(round(t_start,sigdigits=16)), t_end=$(round(t_start+dt,sigdigits=16)), Cr = $(round(Cr,sigdigits=3))")
+    elseif Verbose == 2
+        println("\r step=$(method.step), t_start=$(round(t_start,sigdigits=16)), t_end=$(round(t_start+dt,sigdigits=16)), Cr = $(round(Cr,sigdigits=3))")
+    end
+    if Verbose > 0
+        flush(stdout)
+    end
+
+    # update state vector
+    @. f_d = fstep_d
+
+    # remove masked off domain regions
+
+    if !isnothing(method.f_mask_d)
+        @. f_d *= method.f_mask_d
+    end
+
+    return dt, save
+
+end
+
+function update_momentum!(method::ExponentialRosenbrockEulerKrylovMixedStruct,dt::T;every_step::Bool=true) where T
+
+    HostPrecision = method.HostPrecision
+
+    @assert T == HostPrecision "Host precision and timing precision do not match"
+
+    # build a channel of jobs to be run across workers
+    #=jobs = Channel{Tuple{Int,T}(length(method.ActiveDomain))
+    for off_space in method.ActiveDomain
+        put!(jobs, (off_space,dt))
+    end
+    close(jobs)
+
+    nworkers = method.nworkers 
+
+    @sync for worker in 1:nworkers
+        Threads.@spawn worker!(worker,jobs,method,dt)
+    end=#
+
+    WorkerPool = method.WorkerPool
+    done = Channel{Nothing}(length(method.ActiveDomain))
+    tasks_this_step::Int64 = 0
+
+    for off_space in method.ActiveDomain
+
+        #= Control when to update momenum  
+            1. if LocalMomentumUpdate == false or every_step == true, then this updates momentum inbetween half space updates for every time step.
+            2. if LocalMomentumUpdate == true and every_step == false, then this only updates momentum after 2 half space updates but halfway in terms of global steps towards momentum_step 
+            
+            e.g. for case 1:
+            step:                   1         2         3         4         ...
+            space half steps:       | 1/2 1/2 | 1/2 1/2 | 1/2 1/2 | 1/2 1/2 ...
+            momentum updates:       |    1    |    1    |    1    |    1    ...
+
+            e.g. for case 2 with momentum step = 2:
+            step:                   1         2         3         4         ...
+            space half steps:       | 1/2 1/2 | 1/2 1/2 | 1/2 1/2 | 1/2 1/2 ...
+            momentum updates:       |         2         |         2         ...
+        =#
+
+        momentum_step = method.momentum_step[off_space+1]
+
+        if method.LocalMomentumUpdate
+            if every_step && momentum_step == 1 # evalute momentum on every step if momentum_step = 1
+                dt_cell = HostPrecision(momentum_step * method.dt_min)
+                put!(WorkerPool.jobs,(off_space,dt_cell,done))
+                tasks_this_step += 1
+            elseif !every_step && momentum_step > 1 && mod(method.step+Int(momentum_step / 2),momentum_step) == 0 # or halfway to every momentum_step if momentum_step > 1
+                # i.e. if momentum_step = 64, momentum should first be evalued at step 32 for dt=64*dt and then on every 64 steps after that, i.e. 32, 96, 160 etc.
+                dt_cell = HostPrecision(momentum_step * method.dt_min)
+                put!(WorkerPool.jobs,(off_space,dt_cell,done))
+                tasks_this_step += 1
+            end
+        elseif every_step
+            put!(WorkerPool.jobs,(off_space,dt,done))
+            tasks_this_step += 1
+        end
+        
+    end
+
+    for task in WorkerPool.tasks
+    if istaskfailed(task)
+        try
+            fetch(task)
+        catch err
+            showerror(stdout, err, catch_backtrace())
+            println()
+        end
+    end
+    end
+
+    if tasks_this_step > 0 # if there are tasks to do
+        for i in 1:tasks_this_step
+
+            #println("Waiting for worker to finish off_space $i")
+            #flush(stdout)
+            take!(done) # when worker is done it will put a value in the done channel, so we can wait for all workers to finish. take waits for a value to be available in the done channel and then removes if from the channel. This is a blocking operation, so it will wait until a worker is done before continuing.
+        end
+    end
+
+    return nothing
+
+end
+
+function worker!(method::ExponentialRosenbrockEulerKrylovMixedStruct,worker::Int,jobs::Channel{Tuple{Int,T,Channel{Nothing}}}) where T
+
+    println("Worker $worker started")
+
+    wait(jobs) # wait for jobs to be available in the channel before assigning the variables below to prevent them from intialiseing when `WorkerPool` is created and before `method` is fully constructed.
+
+    HostPrecision = method.HostPrecision
+    DevicePrecision = method.DevicePrecision
+
+    @assert T == HostPrecision "Host precision and timing precision do not match"
+
+    n_momentum = method.PhaseSpace.Grids.n_momentum
+    n_space = method.PhaseSpace.Grids.n_space
+
+    J = method.J[worker]            # on CPU
+    J_d = method.J_d[worker]        # on GPU
+    Jsparse = method.Jsparse[worker]# on CPU
+    F = method.F[worker]            # on CPU
+    F_d = method.F_d[worker]        # on GPU
+    JF = method.JF[worker]          # on CPU
+
+    MBin = method.MBin
+    MBinMulStepReshape = method.MBinMulStepReshape[worker]
+    MBinMulStep = method.MBinMulStep[worker]
+
+    fold = method.fold[worker]      # on CPU
+    fold_d = method.fold_d[worker]  # on GPU
+    fout = method.fout[worker]      # on CPU
+    fout_d = method.fout_d[worker]  # on GPU
+    fscale = method.fscale[worker]  # on CPU
+
+    mB = method.mB 
+    mL = method.mL
+    KsB = method.KsB[worker]        # on CPU
+    KsL = method.KsL[worker]        # on CPU
+    ϕcacheB = method.ϕcacheB[worker]# on CPU
+    ϕcacheL = method.ϕcacheL[worker]# on CPU
+
+    ϕ = method.ϕ[worker]            # on CPU
+    δ = method.δ[worker]            # on CPU
+    δ_d = method.δ_d[worker]        # on GPU
+
+    D = method.D                    # on CPU
+    D_d = method.D_d                # on GPU
+    Dinv = method.Dinv              # on CPU
+    Dinv_d = method.Dinv_d          # on GPU
+
+    S = method.S[worker]            # on CPU 
+    Sinv = method.Sinv[worker]      # on CPU
+
+    E = method.E                    # on CPU 
+    E_d = method.E_d                # on GPU
+
+    # arnoldi settings and tolerances
+    iop = 0
+    reorthogonalize = true
+    arnoldi_tol = 1e-8
+    ηtarget = 1e-8
+    correct = true
+
+    for (off_space, dt, done) in jobs # each job is a space index to be processed
+
+        #println("Worker $worker processing off_space $off_space with dt=$dt")
+
+        idx_range = n_momentum*off_space+1:n_momentum*(off_space+1)
+
+        @inbounds HasInjection = method.HasInjection[off_space+1]
+
+        fstep_d = @view(method.fstep_d[idx_range]) # on GPU
+        df_Inj = @view(method.df_Inj[idx_range]) # on CPU
+        df_Inj_d = @view(method.df_Inj_d[idx_range]) # on GPU
+
+        if !HasInjection && sum(fstep_d) == zero(DevicePrecision) 
+            println("space: ", off_space," no change"," dt: ", dt)
+            put!(done, nothing) # signal that this job is done
+            continue
+        end
+
+        if HasInjection
+            ηEtarget = 1e5#HostPrecision(5e-4)
+        else
+            ηEtarget = 1e5#HostPrecision(1e-3)
+        end
+
+        @inbounds Vol = method.Vol[off_space+1]
+        Vol_d = DevicePrecision(Vol)
+        @inbounds invA = method.invA[off_space+1]
+        invA_d = DevicePrecision(invA)
+
+        @inbounds dt_guess = method.dt_guess[off_space+1]
+
+        @inbounds MEmiPFlux = method.MEmiPFlux[off_space+1]
+
+        if method.BinaryInteractions && off_space in method.BinaryDomain # mix of CPU and GPU
+
+            if method.J_d isa CuArray
+            @assert MEmiPFlux isa CuArray "MEmiPFlux must be a dense for binary interactions"
+            end
+
+            copyto!(fold_d,fstep_d)
+            copyto!(fold,fstep_d) # copy to CPU for Arnoldi
+
+            t = 0.0
+            dt_local = dt_guess
+            dt_old = dt_local
+
+            kE = 1.0
+            kϕ = 1.0
+            k = 1.0
+
+            while t < 1.0
+
+                dtscale = HostPrecision(dt_local / method.dt0) # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
+                dtscale_d = DevicePrecision(dtscale)
+                if dtscale < HostPrecision(1e-8) 
+                    @warn "Time step small $dt_local in cell $off_space, injection = $HasInjection, type: binary"
+                end
+
+                kold = k 
+                kϕold = kϕ
+                kEold = kE
+                k = 1.0 # time step as a ratio of dt_local to dt_local before adaptive
+
+                # EXPRB First Order Exponential Rosenbrock method with adaptive timestepping
+
+                    mul!(MBinMulStepReshape,MBin,fold_d,Vol_d,zero(DevicePrecision))
+                    # Form J
+                    @. J_d = MBinMulStep * 2
+                    @. J_d += MEmiPFlux
+                    @. MBinMulStep += MEmiPFlux
+
+                    @. J_d *= dtscale_d * invA_d
+
+                    # Form F
+                    mul!(F_d,MBinMulStep,fold_d,invA_d * dtscale_d,zero(DevicePrecision))
+
+                    # Energy error estimate using F 
+                    #ηEest = abs(dot(E,F) * dtscale) / dot(E,fold)
+                    #println("Energy error estimate: ", ηEest)
+
+                    @. F_d += df_Inj_d * dtscale_d 
+                    if norm(F_d) < DevicePrecision(1e-30) # no change in distribution or just small numerical round off
+                        break
+                    end
+
+                    # Diagonal scaling of J and F to improve conditioning for Krylov subspace approximation
+                    J_d .*= (D_d') # right mul
+                    J_d .*= (Dinv_d) # left mul
+                    F_d .*= (Dinv_d) # left mul
+
+                    copyto!(J,J_d) # copy to CPU for Arnoldi and scaling
+                    copyto!(F,F_d) # copy to CPU for Arnoldi and scaling
+
+                    tau = 1e-8
+                    mul!(JF,J,F)
+                    @. S = max(abs(F),k*abs(JF)/2)
+                    floor = tau * maximum(S)
+                    @. S = max(S, floor)
+                    @. Sinv = 1.0 / S
+
+                    J .*= S' # right mul
+                    J .*= Sinv # left mul
+                    F .*= Sinv # left mul
+
+                    arnoldi!(KsB, J, F;m=mB,reorthogonalize=reorthogonalize,remove_drift=false,tol=arnoldi_tol,iop=iop)
+
+                    V = @view(ExponentialUtilities.getV(KsB)[:,1:end-1])
+                    #H = ExponentialUtilities.getH(Ks)[1:end-1,1:end]
+
+                    if iop == 0 && norm(V' * V - I) > 1e-5 
+                        dt_local = ldexp(dt_local, -1) # reduce time step by factor of 2
+                        @warn "Krylov subspace has poor orthogonalisation $(norm(V' * V - I)), dimension $(KsB.m), max dimension $(KsB.maxiter), reducing time step to $dt_local"
+                        continue
+                    end
+
+                    # Compute φ functions of H
+                    phiv!(ϕ,k,KsB,2;cache=ϕcacheB,correct=correct,errest=false) # TODO: This allocates                  
+                    @. δ = S * D * @view(ϕ[:,2]) * k
+                    #@. δ = s * @view(ϕ[:,2]) * k
+                    @. fout = fold + δ
+                    
+                        @. fout = ifelse(fout < zero(HostPrecision), zero(HostPrecision),fout)
+
+                        # energy error
+                        #ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k*dtscale)
+                        Eold = dot(E, fold .+ df_Inj * k * dtscale)
+                        ηE = abs(dot(E, fout) / Eold - one(HostPrecision))
+                        #println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout), " inj E: ", dot(E, df_Inj * k * dtscale))
+
+                        if !isfinite(ηE) #|| ηE > 1e-2
+                            # reject step and reduce time step
+                            @warn "Energy error is Inf or NaN, may be unstable, consider reducing time step or adjusting ηtarget"
+                            dt_local = ldexp(dt_local, -1)
+                            continue
+                        end
+
+                        dt_old = dt_local
+                        order = 1.0 # energy error is order 1
 
                         kE = (ηEtarget/(ηE+eps(ηEtarget)))^(1.0/(order+1)) # k from energy error estimate 
                         kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
                         kϕ = min(kE,kϕmax) # max k is 2.0
                         errest = Inf
                         while errest > ηtarget # k from ϕv errestimate, can be more strict than energy error estimate
-                            _, errest = phiv!(ϕ,kϕ,Ks,1;cache=ϕcache,correct=true,errest=true) # TODO: This allocates
+                            _, errest = phiv!(ϕ,kϕ,KsB,2;cache=ϕcacheB,correct=correct,errest=true) # TODO: This allocates
                             #println("ϕv error estimate during: ", errest, " m: ",m)
                             if errest > ηtarget
-                                kϕ *= 0.77 * 0.5(tanh(log10(errest)-log10(ηtarget)+1)+1)
+                                kϕ *= 0.77 * 0.5(tanh(log10(errest/ηtarget)+1)+1)
                             end
                         end
                         #println("ϕv error estimate after: ", errest)
@@ -1808,8 +1468,9 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
 
 
                     if k != 1.0
-                        phiv!(ϕ,k,Ks,1;cache=ϕcache,correct=true,errest=false) # TODO: This allocates
-                        @. δ = D * @view(ϕ[:,2]) * k
+                        phiv!(ϕ,k,KsB,2;cache=ϕcacheB,correct=correct,errest=false) # TODO: This allocates
+                        @. δ = S * D * @view(ϕ[:,2]) * k
+                        #@. δ = s * @view(ϕ[:,2]) * k
                         @. fout = fold + δ
 
                         # energy after correction  
@@ -1819,8 +1480,8 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
                         #println("Energy error after adaption: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
                     end
 
-                    @. fout = ifelse(fout <= method.n_cut, zero(Precision),fout)
-
+                    # number and energy cut 
+                    @. fout = ifelse(fout < method.n_cut && fout * E < method.n_cut, zero(HostPrecision),fout)
 
                     #=if ηE > 2e-4
                         @warn "Energy error in EXPRB1 step is large $ηE, may be unstable, consider reducing time step or adjusting ηtarget"
@@ -1831,28 +1492,25 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
 
                     #println(minimum(fold), " ", maximum(fold))
 
-                    @. fold = fout
+                    copyto!(fold, fout)
+                    copyto!(fold_d, fout) # needed to update J and F on GPU
 
             end # while not accurate
 
-            @. fstep = fold
+            copyto!(fstep_d, fold_d)
 
-        else #
+            @inbounds method.dt_guess[off_space+1] = dt_old # update dt_guess with last plus one dt (avoid last as this could be limited by (1.0-t))
 
-            if isassigned(method.M_Emi, off_space+1)
-                @inbounds M_Emi = method.M_Emi[off_space+1]
-            else
-                EmiTrue = false
-            end
+        else # if no binary interaction this is done purely on CPU
 
-            fold .= fstep 
+            @assert MEmiPFlux isa SparseMatrixCSC "MEmiPFlux must be a SparseMatrixCSC for linear terms"
 
-            #if sum(fold) == Precision(0)
-            #    continue
-            #end
+            copyto!(fold,fstep_d)
+
             t = 0.0
 
-            dt_local = dt #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
+            dt_local = dt_guess #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
+            dt_old = dt_local
 
             kE = 1.0
             kϕ = 1.0
@@ -1860,7 +1518,11 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
 
             while t < 1.0
 
-                dtscale = Precision(dt_local / method.dt0) # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
+                dtscale = HostPrecision(dt_local / method.dt0) # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
+
+                if dtscale < HostPrecision(1e-8) 
+                    @warn "Time step small $dt_local in cell $off_space, injection = $HasInjection, type: linear"
+                end
 
                 kold = k 
                 kϕold = kϕ
@@ -1869,3149 +1531,184 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T) 
 
                 # EXPRB First Order Exponential Rosenbrock method with adaptive timestepping
 
-                    # Form J
-                    if EmiTrue
-                        copyto!(Jsparse,M_Emi)
-                        Jsparse *= dtscale * invA
-                    else
-                        fill!(Jsparse,zero(Precision))
-                        dropzeros!(Jsparse)
-                    end
+                # Form J
+                copyto!(Jsparse,MEmiPFlux)
+                @. Jsparse.nzval *= dtscale * invA
 
+                if HasInjection
                     # Form F
                     mul!(F,Jsparse,fold)
-                    @. F += #=A *=# df_Inj * dtscale
-                    if norm(F) == zero(Precision) # no change in distribution
+                    @. F += df_Inj * dtscale
+                    if norm(F) < HostPrecision(1e-30) # no change in distribution
                         break
                     end
+                else 
+                    # no injection, just linear Jacobian so use exp over phi
+                    @. F = fold
+                end
 
-                    Jsparse .*= D' # right mul
-                    Jsparse .*= Dinv # left mul
-                    F .*= Dinv # left mul
+                Jsparse .*= D' # right mul
+                Jsparse .*= Dinv # left mul
+                F .*= Dinv # left mul
 
+                tau = 1e-8
+                mul!(JF,Jsparse,F)
+                @. S = max(abs(F),k*abs(JF)/2)
+                floor = tau * maximum(S)
+                @. S = max(S, floor)
+                @. Sinv = 1.0 / S
 
-                    if has_injection
-                        arnoldi!(Ks,Jsparse,F;m=m,reorthogonalize=true,tol=1e-12)
-                    else # no injection, just linear Jacobian so use exp over phi
-                        mul!(fscale,Dinv,fold)
-                        arnoldi!(Ks,Jsparse,fscale;m=m,reorthogonalize=false,tol=1e-12)
-                    end
+                Jsparse .*= S' # right mul
+                Jsparse .*= Sinv # left mul
+                F .*= Sinv # left mul
+            
+                arnoldi!(KsL,Jsparse,F;m=mL,reorthogonalize=reorthogonalize,tol=arnoldi_tol,iop=iop)
 
-                    V = ExponentialUtilities.getV(Ks)[:,1:end-1]
-                    #H = ExponentialUtilities.getH(Ks)[1:end-1,1:end]
+                V = @view(ExponentialUtilities.getV(KsL)[:,1:end-1])
 
-                    norm_unscaled = norm(V' * V - I)
-                    if isnan(norm_unscaled) # no J or F means no Krylov subspace generated, so just accept step as is and move on,
-                        break
-                    end
+                norm_unscaled = norm(V' * V - I)
+                if isnan(norm_unscaled) # no J or F means no Krylov subspace generated, so just accept step as is and move on,
+                    break
+                end
 
-                    if #=cond((I - dt_local*H)) > 1f3 ||=#  norm(V' * V - I) > 1f-5 
-                        dt_local = dt_local * 0.5
-                        @warn "Krylov subspace has poor orthogonalisation $(norm(V' * V - I)), reducing time step to $dt_local"
-                        continue
-                    end
+                if iop == 0 && norm_unscaled > 1e-5 
+                    dt_local = ldexp(dt_local, -1) # reduce time step by factor of 2
+                    @warn "Krylov subspace has poor orthogonalisation $norm_unscaled), reducing time step to $dt_local"
+                    continue
+                end
 
-                    # Compute φ functions of H
-                    if has_injection 
-                        phiv!(ϕ,k,Ks,1;cache=ϕcache,correct=true,errest=false) # TODO: This allocates
-                        @. δ = D * @view(ϕ[:,2]) * k
+                # Compute φ functions of H
+                if HasInjection 
+                    if KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
+                        phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
+                        @. δ = S * D * @view(ϕ[:,2]) * k
+                        #@. δ = s * @view(ϕ[:,2]) * k
                         @. fout = fold + δ
-                    else # no injection, just linear Jacobian so use exp over phi
-                        expv!(δ,k#=*invA=#,Ks)
-                        @. fout = D * δ
+                    else
+                        @. fout = fold + df_Inj * k * dtscale
                     end
-
-
-                    # adaptive time stepping
-
-                        @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
-
-                        # energy error
-                        if has_injection
-                            ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * dtscale)
-                            Eold = dot(E, fold .+ df_Inj * dtscale)
-                        else
-                            ΔE = dot(E, fout) - dot(E, fold)
-                            Eold = dot(E, fold)
-                        end
-                        ηE = abs(dot(E, fout) / Eold - one(Precision))
-                        #println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
-
-                        if isinf(ηE)
-                            @warn "Energy error is Inf or NaN, may be unstable, consider reducing time step or adjusting ηtarget"
-                            dt_local *= convert(typeof(dt_local), 1/2)
-                            continue
-                        end
-
-                        dt_old = dt_local
-                        order = 1.0 # energy error is order 1
-
-                        ηtarget = 1e-16
-
-                        kE = (1e-4/(ηE+eps(1e-4)))^(1.0/(order+1)) # k from energy error estimate
-                        if has_injection
-                            kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
-                            kϕ = min(kE,kϕmax) # max k is 2.0
-                            errest = Inf
-                            while errest > ηtarget # k from ϕv errestimate, can be more strict than energy error estimate
-                                _, errest = phiv!(ϕ,kϕ,Ks,1;cache=ϕcache,correct=true,errest=true) # TODO: This allocates
-                                #println("ϕv error estimate during: ", errest)
-                                if errest > ηtarget
-                                    kϕ *= 0.77 * 0.5(tanh(log10(errest)-log10(ηtarget)+1)+1)
-                                end
-                            end
-                            #println("ϕv error estimate after: ", errest)
-                            k = min(kE,kϕ,2.0)
-                            #println("kE: ", kE, " kϕ: ", kϕ, " errest: ", errest)
-                        else
-                            k = min(kE,2.0)
-                        end
-                        #k = 1.0
-                        #println("dt_local: ", dt_local, " k: ", k, " new: ", dt_old*k, " old: ", dt_old)
-                        dt_local = k*dt_old
-                        #dt_local = max(dt_local, dt_old/1.01)
-                        #println(dt)
-                        if t + dt_local/dt > 1.0
-                            dt_local = (1.0 - t) * dt
-                            println("space: ", off_space," region: Linear", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t = 1.0
-                        else
-                            println("space: ", off_space," region: Linear", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t += dt_local/dt
-                        end
-                        k = dt_local / dt_old
-
-                    if k != 1.0
-                        if has_injection 
-                            phiv!(ϕ,k,Ks,1;cache=ϕcache,correct=true)
-                            mul!(δ,D,@view(ϕ[:,2]),k#=*invA=#,zero(Precision))
-                            @. fout = fold + δ
-                        else # no injection, just linear Jacobian so use exp over phi
-                            expv!(δ,k#=*invA=#,Ks)
-                            @. fout = D.diag * δ
-                        end
-
-                        # energy after correction  
-                        #if has_injection 
-                        #    ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k * dtscale)
-                        #    Eold = dot(E, fold .+ df_Inj * k * dtscale)
-                        #else
-                        #    ΔE = dot(E, fout) - dot(E, fold)
-                        #    Eold = dot(E, fold)
-                        #end
-                        #ηE = abs(dot(E, fout) / Eold - one(Precision))
-                        #println("Energy error after adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
-
-                        #=if ηE > 2e-4
-                            @warn "Energy error in EXPRB1 step is large $ηE, may be unstable, consider reducing time step or adjusting ηtarget"
-                        end=#
-                        
-                    end
-
-                    @. fout = ifelse(fout <= method.n_cut, zero(Precision),fout)
-
-                    #@. fold = ifelse(fout <= method.n_cut, zero(Precision),fout)
-                    #@. fold = max(fout, zero(Precision))
-
-                    #println(minimum(fold), " ", maximum(fold))
-
-                    @. fold = fout
-
-            end # while not accurate
-
-            @. fstep = fold
-
-        end
-
-    end
-
-    return nothing
-
-end
-
-"""
-    ExpRBKIOPS(dg,g,t,dt)
-
-2nd order Expontial integration time-stepping method for the transport equation. Using the KIOPS algorithm for the exponential action approximation. 
-
-"""
-function (method::ExpRBKIOPSStruct)(t_start,t_stop,dt,Verbose::Int64)
-
-    method.step += 1
-
-    dt0 = method.dt0
-
-    # will we reached the next t_save?
-
-    t_next = t_start + dt
-    if abs(t_next - t_stop) <= eps(t_stop) * 10 #eps(max(abs(t_next), abs(t_stop)))
-        save = true
-    elseif t_next >= t_stop
-        adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
-        dt = t_stop - t_start
-        save = true
-    else
-        save = false
-    end
-
-    if dt < 0.0
-        error("Negative time step calculated, something went wrong with the CFL condition calculation")
-    end
-
-    # scaling of time stepping
-
-    dt_scale = method.Precision(dt / dt0)
-
-    ftmp = similar(method.f)
-
-    # set fstep to intial value
-
-        @. method.fstep = method.f
-
-    # half space update
-
-        mul!(method.df,method.X_Flux,method.fstep)
-        method.df .= - method.invA_Flux * method.df .* dt_scale/2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
-
-        # mask of df regions
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-        @. method.fstep += method.df
-
-    # half momentum update
-
-        mul!(ftmp,method.invImMP,method.fstep) 
-
-        if !isnothing(method.df_mask)
-            @. method.fstep = ftmp * method.df_mask + method.fstep * (1-method.df_mask)
-        else
-            @. method.fstep = ftmp
-        end 
-
-    # binary update
-
-        update_momentum!(method,dt_scale)
-
-    # half momentum update
-
-        mul!(ftmp,method.invImMP,method.fstep) 
-
-        if !isnothing(method.df_mask)
-            @. method.fstep = ftmp * method.df_mask + method.fstep * (1-method.df_mask)
-        else
-            @. method.fstep = ftmp
-        end
-
-    # half space update
-
-        mul!(method.df,method.X_Flux,method.fstep)
-        method.df .= - method.invA_Flux * method.df .* dt_scale/2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-        @. method.fstep += method.df
-    
-    # removing negative values
-
-        @. method.fstep = ifelse(method.fstep<=method.n_cut,zero(eltype(method.fstep)),method.fstep)
-
-
-    Cr = 0.0
-    sum_f = sum(method.f)
-    if sum_f != 0.0
-
-        #@. method.df_tmp = ifelse(method.f + method.df < method.n_cut, zero(eltype(method.df)), method.df)
-        #@. method.df_tmp = method.df_tmp / method.f
-        @. method.df = method.fstep-method.f
-        @. method.df_tmp = method.df / method.f
-        @. method.df_tmp = ifelse(isnan(method.df_tmp), Inf, method.df_tmp)
-        Cr = -minimum(method.df_tmp) 
-
-    end
-
-    if Verbose == 1 && Cr > 1.0
-        println("step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)) system may be unstable")
-    elseif Verbose == 2
-        println("\r step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3))")
-    elseif Verbose == 3
-        println("step=$(method.step), Cr = $(round(Cr,sigdigits=3)),Cr_Bin = $(round(Cr_Bin,sigdigits=3)), Cr_Emi = $(round(Cr_Emi,sigdigits=3)), Cr_Flux = $(round(Cr_Flux,sigdigits=3)), t=$t_start, t_save =$t_stop, dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-    end
-    if Verbose > 0
-        flush(stdout)
-    end
-
-    method.f .= method.fstep
-
-    # remove masked off domain regions
-
-    if !isnothing(method.f_mask)
-        @. method.f *= method.f_mask
-    end
-
-    return dt,save
-
-end
-
-function update_momentum!(method::ExpRBKIOPSStruct,dt::T) where T
-
-    Precision = method.Precision
-    
-    n_momentum = method.PhaseSpace.Grids.n_momentum
-    #n_space = method.PhaseSpace.Grids.n_space
-    momentum_species_offset = method.PhaseSpace.Grids.momentum_species_offset
-    name_list = method.PhaseSpace.name_list
-    num_species = length(name_list)
-    
-    fold = method.fold
-    fout = method.fout
-    J = method.J
-    F = method.F
-    g = method.g
-    fscale = method.fscale #::Vector{Precision} = zeros(Precision,n_momentum)
-    onevec = copy(F)
-    fill!(onevec,one(Precision))
-    D = method.D #Diagonal(ones(Precision,n_momentum)) # 1/E
-    Dinv = method.Dinv #Diagonal(ones(Precision,n_momentum)) # E
-    E = method.E
-
-    δ = method.δ #::Vector{Precision} = zeros(Precision,n_momentum)
-
-    EmiTrue::Bool = true
-
-    KIOPS_workspace = method.KIOPS_workspace
-    mmax = KIOPS_workspace.mmax
-    mmin = KIOPS_workspace.mmin
-
-    for off_space in method.ActiveDomain
-
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-
-        fstep = @view(method.fstep[start_idx:end_idx])
-        df_Inj = @view(method.df_Inj[start_idx:end_idx])
-
-        has_injection = sum(df_Inj) > zero(Precision)
-
-        if !has_injection && sum(fstep) == zero(Precision) 
-            continue
-        end
-
-        @inbounds vol = method.Vol[off_space+1]
-        @inbounds invA = method.invA[off_space+1]
-        @inbounds dt_guess = method.dt_guess[off_space+1]
-
-        if method.Binary_Interactions && off_space in method.Bin_Domain
-
-            if isassigned(method.M_Emi, off_space+1)
-                EmiTrue = true
-                @inbounds M_Emi = method.M_Emi[off_space+1]
-            else
-                EmiTrue = false
-            end
-
-            fold .= fstep 
-
-            #if sum(fold) == Precision(0)
-            #    continue
-            #end
-            t = 0.0
-
-            dt_local = dt_guess # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
-            # TODO: have each cell its own dt initial guess that can then be updated each completed timestep.
-            dt_next = dt_local 
-
-            kE = 1.0
-            kϕ = 1.0
-            k = 1.0
-
-            while t < 1.0
-
-                #dt_local = dt_next
-
-                dtscale = Precision(dt_local / method.dt0) # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
-
-                kold = k 
-                kϕold = kϕ
-                kEold = kE
-                k = 1.0 # time step as a ratio of dt_local to dt_local before adaptive
-                dt_old = dt_local
-
-                # EXPRB First Order Exponential Rosenbrock method with adaptive timestepping
-
-                    mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fold,vol,zero(Precision))
-                    # Form J
-                    @. J = Precision(2) * method.M_Bin_Mul_Step
-                    if EmiTrue
-                        @. J += M_Emi
-                        @. method.M_Bin_Mul_Step += M_Emi
-                    end
-
-                    println("max M_Emi: $(maximum(M_Emi)), max M_Bin: $(maximum(method.M_Bin_Mul_Step)), off_space: $off_space, dt_local: $dt_local, dtscale: $dtscale, vol: $vol, invA: $invA")
-
-                    J .*= dtscale * invA
-                    # Form F
-                    mul!(F,method.M_Bin_Mul_Step,fold)
-                    F *= invA
-
-                    # Energy error estimate from F
-                    ηEest = abs(dot(E,F)) * dtscale / dot(E,fold)
-                    println("Energy error estimate from F: ", ηEest)
-
-                    @. F += #=A *=# df_Inj #* dtldt0
-                    #res = sum(abs, F)
-                    #display(F)
-                    if all(iszero, F) # no change in distribution
-                        break
-                    end
-                    lmul!(dtscale,F)
-
-                    
-                    # get residuals 
-                    mul!(g,J,fold)
-                    println("norm g: $(norm(g)), norm J: $(norm(J))")
-                    LinearAlgebra.axpby!(Precision(1),F,Precision(-1),g)
-
-
-                    # Diagonal scaling of J and g to improve conditioning for Krylov subspace approximation
-                    J .*= (D)' # right mul
-                    J .*= (Dinv) # left mul
-                    F .*= (Dinv) # left mul
-                    g .*= (Dinv) # left mul
-
-                    # form U
-                    fscale .= (Dinv) .* fold
-                    # KIOPS 
-
-                        tau = one(Precision)
-                        #_, stats = kiops_roe!(KIOPS_workspace,tau,J,fscale,g;tol=1e-7)
-                        _, stats = kiops_roe_noview!(KIOPS_workspace,tau,J,fscale,F;tol=1e-16)
-                        #_, stats = kiops_roe_panel!(KIOPS_workspace,tau,J,fscale,g;tol=1e-7)
-                        #_, stats = kiops_roe_panel_new!(KIOPS_workspace,tau,J,fscale,F;tol=1e-7)
-                        
-                        if stats.m_final >= mmax+1
-                            # reject step and reduce time step
-                            println("KIOPS subspace dimension is large $(stats.m_final), reducing time step by 0.5")
-                            dt_local = ldexp(dt_local, -1)
-                            continue
-                        end
-
-                        println("KIOPS stats: ", stats)
-
-                        println("sum w: ", sum(D .* KIOPS_workspace.w), " norm w: ", norm(D .* KIOPS_workspace.w), " max w: ", maximum(D .* KIOPS_workspace.w), " min w: ", minimum(D .* KIOPS_workspace.w), "dtscale:", dtscale)
-
-                        fout .= fold .+ (D) .* KIOPS_workspace.w
-
-                        @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
-
-                    # direct matrix exponential for testing
-                        #=Atilde = KIOPS_workspace.Atilde
-                        # form augmented matrix Atilde = [A u_phi; 0 0] for Rosenbrock-Euler
-                        @views copyto!(Atilde[1:n_momentum, 1:n_momentum], J)
-                        @views copyto!(Atilde[1:n_momentum, end], g)
-                        expm_kiops_pade!(KIOPS_workspace.F, Atilde, KIOPS_workspace)
-                        mul!(fout,@view(KIOPS_workspace.F[1:n_momentum, 1:n_momentum]),fscale)
-                        fout .+= @view(KIOPS_workspace.F[1:n_momentum,end])
-                        fout .= (D) .* fout # right mul
-                        @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)=#
-
-                    # time step adaption based on energy error 
-                        # energy error
+                else # no injection, just linear Jacobian so use exp over phi
+                    #expv!(δ,k,KsL) # TODO: add cache for expv to avoid repeated allocations, maybe replace with phiv! with dimension 0 to just return ϕ0=exp
+                    #@. fout = D * δ
+                    phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
+                    @. fout = S * D * @view(ϕ[:,1])
+                    #@. fout = s * @view(ϕ[:,1])
+                end
+
+                # adaptive time stepping
+
+                    @. fout = ifelse(fout < zero(HostPrecision), zero(HostPrecision),fout)
+
+                    # energy error
+                    if HasInjection
                         ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * dtscale)
-                        Eold = dot(E, fold .+ df_Inj * k * dtscale)
-                        ηE = abs(dot(E, fout) / Eold - one(Precision))
-                        println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout), " inj E: ", dot(E, df_Inj * dtscale))
-                        
-                        if isnan(ηE) || ηE > 1e-4
-                            # reject step and reduce time step
-                            println("Rejecting first step due to large energy error: ", ηE, " reducing time step by 0.5")
-                            dt_local = ldexp(dt_local, -1)
-                            continue
-                        end
-
-                        if t + dt_local/dt > 1.0
-                            dt_local = (1.0 - t) * dt
-                            println("space: ", off_space," region: Binary", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t = 1.0
-                        else
-                            println("space: ", off_space," region: Binary", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t += dt_local/dt
-                        end
-                        k = dt_local / dt_old
-
-                    @. fout = ifelse(fout <= method.n_cut, zero(Precision),fout)
-
-                    @. fold = fout
-
-                    if ηE < 1e-5 #= (ηE < 5e-5 && stats.m_final <= mmax / 2) || stats.m_final == 10=#
-                        #println("KIOPS good $(stats.m_final), increasing time step by 2")
-                        dt_next = ldexp(dt_old, 1)
-                        dt_local = ldexp(dt_local, 1)
+                        Eold = dot(E, fold .+ df_Inj * dtscale)
                     else
-                        dt_next = dt_old
+                        ΔE = dot(E, fout) - dot(E, fold)
+                        Eold = dot(E, fold)
                     end
+                    ηE = abs(dot(E, fout) / Eold - one(HostPrecision))
+                    #println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
 
-            end # while not accurate
-
-            @. fstep = fold
-
-            @inbounds method.dt_guess[off_space+1] = dt_next
-
-        else #
-
-            if isassigned(method.M_Emi, off_space+1)
-                @inbounds M_Emi = method.M_Emi[off_space+1]
-            else
-                EmiTrue = false
-            end
-
-            fold .= fstep 
-
-            #if sum(fold) == Precision(0)
-            #    continue
-            #end
-            t = 0.0
-
-            dt_local = dt_guess #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffnes
-            dt_next = dt_local
-
-            kE = 1.0
-            kϕ = 1.0
-            k = 1.0
-
-            while t < 1.0
-
-                dtscale = Precision(dt_local / method.dt0) # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
-
-                kold = k 
-                kϕold = kϕ
-                kEold = kE
-                k = 1.0 # time step as a ratio of dt_local to dt_local before adaptive
-                dt_old = dt_local
-
-                # EXPRB First Order Exponential Rosenbrock method with adaptive timestepping
-
-                    # Form J
-                    if EmiTrue
-                        copyto!(Jsparse,M_Emi)
-                        Jsparse *= dtscale * invA
-                    else
-                        fill!(Jsparse,zero(Precision))
-                        dropzeros!(Jsparse)
-                    end
-
-                    # Form F
-                    mul!(F,Jsparse,fold)
-                    @. F += #=A *=# df_Inj * dtscale
-                    if all(iszero, F) # no change in distribution
-                        break
-                    end
-
-                    # get residuals 
-                    mul!(g,J,fold)
-                    LinearAlgebra.axpby!(Precision(1),F,Precision(-1),g)
-
-                    Jsparse .*= D' # right mul
-                    Jsparse .*= Dinv # left mul
-                    g .*= Dinv # left mul
-
-                    # form U
-                    fscale .= (Dinv) .* fold
-
-                    tau = one(Precision)
-                    #_, stats = kiops_roe!(KIOPS_workspace,tau,J,fscale,g;tol=1e-7)
-                    #_, stats = kiops_roe_noview!(KIOPS_workspace,tau,J,fscale,g;tol=1e-7)
-                    #_, stats = kiops_roe_panel!(KIOPS_workspace,tau,J,fscale,g;tol=1e-7)
-                    _, stats = kiops_roe_panel_new!(KIOPS_workspace,tau,J,fscale,g;tol=1e-7)
-
-                    if stats.m_final >= 17 #mmax+1
-                        # reject step and reduce time step
-                        println("KIOPS subspace dimension is large $(stats.m_final), reducing time step by 0.5")
+                    if !isfinite(ηE)
+                        @warn "Energy error is Inf or NaN, may be unstable, consider reducing time step or adjusting ηEtarget"
                         dt_local = ldexp(dt_local, -1)
                         continue
                     end
 
-                    println("KIOPS stats: ", stats)
+                    dt_old = dt_local
+                    order = 1.0 # energy error is order 1
 
-                    fout .= (D) .* KIOPS_workspace.w
-
-                    # adaptive time stepping
-
-                        @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
-
-                        # energy error
-                        ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * dtscale)
-                        Eold = dot(E, fold .+ df_Inj * k * dtscale)
-                        ηE = abs(dot(E, fout) / Eold - one(Precision))
-                        println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout), " inj E: ", dot(E, df_Inj * dtscale))
-                        
-                        if isnan(ηE) || ηE > 1e-4
-                            # reject step and reduce time step
-                            println("Rejecting first step due to large energy error: ", ηE, " reducing time step by 0.5, $kE")
-                            dt_local = ldexp(dt_local, -1)
-                            continue
+                    kE = (ηEtarget/(ηE+eps(ηEtarget)))^(1.0/(order+1)) # k from energy error estimate
+                    if HasInjection && KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
+                        kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
+                        kϕ = min(kE,kϕmax) # max k is 2.0
+                        errest = Inf
+                        while errest > ηtarget # k from ϕv errestimate, can be more strict than energy error estimate
+                            _, errest = phiv!(ϕ,kϕ,KsL,2;cache=ϕcacheL,correct=correct,errest=true) # TODO: This allocates
+                            #println("ϕv error estimate during: ", errest)
+                            if errest > ηtarget
+                                kϕ *= 0.77 * 0.5(tanh(log10(errest/ηtarget)+1)+1)
+                            end
                         end
-
-                       if t + dt_local/dt > 1.0
-                            dt_local = (1.0 - t) * dt
-                            println("space: ", off_space," region: Binary", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t = 1.0
-                        else
-                            println("space: ", off_space," region: Binary", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t += dt_local/dt
-                        end
-                        k = dt_local / dt_old
-
-                    @. fout = ifelse(fout <= method.n_cut, zero(Precision),fout)
-
-                    #@. fold = ifelse(fout <= method.n_cut, zero(Precision),fout)
-                    #@. fold = max(fout, zero(Precision))
-
-                    #println(minimum(fold), " ", maximum(fold))
-
-                    @. fold = fout
-
-                    if ηE < 1e-5 #= (ηE < 5e-5 && stats.m_final <= mmax / 2) || stats.m_final == 10=#
-                        #println("KIOPS good $(stats.m_final), increasing time step by 2")
-                        dt_next = ldexp(dt_old, 1)
-                    else
-                        dt_next = dt_old
-                    end
-
-            end # while not accurate
-
-            @. fstep = fold
-
-            @inbounds method.dt_guess[off_space+1] = dt_next
-
-        end
-
-    end
-
-    return nothing
-
-end
-
-function (method::ExponentialRosenbrockEulerLejaStruct)(t_start,t_stop,dt,Verbose::Int64)
-
-    method.step += 1
-
-    dt0 = method.dt0
-
-    # will we reached the next t_save?
-
-    t_next = t_start + dt
-    if abs(t_next - t_stop) <= eps(t_stop) * 10 #eps(max(abs(t_next), abs(t_stop)))
-        save = true
-    elseif t_next >= t_stop
-        adaptive_factor *= (t_stop - t_start) / dt # adjust adaptive factor for final time step to ensure we end exactly at t_stop 
-        dt = t_stop - t_start
-        save = true
-    else
-        save = false
-    end
-
-    if dt < 0.0
-        error("Negative time step calculated, something went wrong with the CFL condition calculation")
-    end
-
-    # scaling of time stepping
-
-    dt_scale = method.Precision(dt / dt0)
-
-    ftmp = zeros(eltype(method.f),length(method.f))
-
-    # set fstep to intial value
-
-        @. method.fstep = method.f
-
-    # half space update
-
-        mul!(method.df,method.X_Flux,method.fstep)
-        method.df .= - method.invA_Flux * method.df .* dt_scale/2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
-
-        # mask of df regions
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-        @. method.fstep += method.df
-
-    # half momentum update
-
-        mul!(ftmp,method.invImMP,method.fstep) 
-
-        if !isnothing(method.df_mask)
-            @. method.fstep = ftmp * method.df_mask + method.fstep * (1-method.df_mask)
-        else
-            @. method.fstep = ftmp
-        end 
-
-    # binary update
-
-        update_momentum!(method,dt_scale)
-
-    # half momentum update
-
-        mul!(ftmp,method.invImMP,method.fstep) 
-
-        if !isnothing(method.df_mask)
-            @. method.fstep = ftmp * method.df_mask + method.fstep * (1-method.df_mask)
-        else
-            @. method.fstep = ftmp
-        end
-
-    # half space update
-
-        mul!(method.df,method.X_Flux,method.fstep)
-        method.df .= - method.invA_Flux * method.df .* dt_scale/2  # minus sign as flux terms are on RHS of transport equation, also resets df_Space
-
-        if !isnothing(method.df_mask)
-            @. method.df *= method.df_mask
-        end 
-
-        @. method.fstep += method.df
-    
-    # removing negative values
-
-        @. method.fstep = ifelse(method.fstep<=method.n_cut,zero(eltype(method.fstep)),method.fstep)
-
-
-    Cr = 0.0
-    sum_f = sum(method.f)
-    if sum_f != 0.0
-
-        #@. method.df_tmp = ifelse(method.f + method.df < method.n_cut, zero(eltype(method.df)), method.df)
-        #@. method.df_tmp = method.df_tmp / method.f
-        @. method.df = method.fstep-method.f
-        @. method.df_tmp = method.df / method.f
-        @. method.df_tmp = ifelse(isnan(method.df_tmp), Inf, method.df_tmp)
-        test = findmin(method.df_tmp)
-        println("loc: ", test[2], " Minimum df_tmp: ", test[1], " min df: ", method.df[test[2]], " min f: ", method.f[test[2]], " min df_tmp old: ", (@. ifelse(isnan(method.df / method.f), Inf, method.df / method.f))[test[2]])
-        Cr = -minimum(method.df_tmp) 
-
-    end
-
-    if Verbose == 1 && Cr > 1.0
-        println("step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3)), dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3)) system may be unstable")
-    elseif Verbose == 2
-        println("\r step=$(method.step), t=$(round(t_start,sigdigits=4)), Cr = $(round(Cr,sigdigits=3))")
-    elseif Verbose == 3
-        println("step=$(method.step), Cr = $(round(Cr,sigdigits=3)),Cr_Bin = $(round(Cr_Bin,sigdigits=3)), Cr_Emi = $(round(Cr_Emi,sigdigits=3)), Cr_Flux = $(round(Cr_Flux,sigdigits=3)), t=$t_start, t_save =$t_stop, dt_attempted=$(round(dt_old,sigdigits=3)), dt_adapted = $(round(dt,sigdigits=3))")
-    end
-    if Verbose > 0
-        flush(stdout)
-    end
-
-    method.f .= method.fstep
-
-    # remove masked off domain regions
-
-    if !isnothing(method.f_mask)
-        @. method.f *= method.f_mask
-    end
-
-    return dt,save
-
-end
-
-function update_momentum!(method::ExponentialRosenbrockEulerLejaStruct,dt::T) where T
-
-    Precision = method.Precision
-    
-    n_momentum = method.PhaseSpace.Grids.n_momentum
-    #n_space = method.PhaseSpace.Grids.n_space
-    momentum_species_offset = method.PhaseSpace.Grids.momentum_species_offset
-    name_list = method.PhaseSpace.name_list
-    num_species = length(name_list)
-    
-    fold = method.fold
-    fout = method.fout
-    Estate::Vector{Precision} = zeros(Precision,n_momentum)
-    J = method.J
-    #Jtmp = copy(J)
-    F = method.F
-    fscale = method.fscale #::Vector{Precision} = zeros(Precision,n_momentum)
-    J64 = zeros(Float64,n_momentum,n_momentum)
-    F64 = zeros(Float64,n_momentum)
-    #Ftmp = copy(F)
-    ϕ = method.ϕ #zeros(Precision,n_momentum,2)  
-    D = method.D #Diagonal(ones(Precision,n_momentum)) # 1/E
-    Dinv = method.Dinv #Diagonal(ones(Precision,n_momentum)) # E
-    E = method.E
-
-    #D.diag .= one(Precision)
-    #Dinv.diag .= one(Precision)
-
-    δ = method.δ #::Vector{Precision} = zeros(Precision,n_momentum)
-
-    m = method.m # dimension of Krylov subspace for exponential action approximation, can adjust based on problem size and desired accuracy
-
-    maxdeg = method.m # maximum degree of polynomial interpolation for exponential action approximation, can adjust based on problem size and desired accuracy
-    Leja_nodes = method.Leja_nodes # precomputed Leja nodes for polynomial interpolation, can adjust based on problem size and desired accuracy
-
-    Ks = method.Ks
-    ϕcache = method.ϕcache
-
-    Ks64 = KrylovSubspace{Float64}(n_momentum, m)
-
-    for off_space in method.ActiveDomain
-
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-
-        fstep = @view(method.fstep[start_idx:end_idx])
-        df_Inj = @view(method.df_Inj[start_idx:end_idx])
-
-        has_injection = sum(df_Inj) > zero(Precision)
-
-        if !has_injection && sum(fstep) == zero(Precision) 
-            continue
-        end
-
-        @inbounds vol = method.Vol[off_space+1]
-        invA_Flux = @view(method.invA_Flux[start_idx:end_idx,start_idx:end_idx])
-        A_Flux = @view(method.A_Flux[start_idx:end_idx,start_idx:end_idx])
-        invA = invA_Flux[1,1] # assumes the diagonal is just constant, should be true for a single spacial cell
-        A = A_Flux[1,1]
-
-        if method.Binary_Interactions && off_space in method.Bin_Domain
-
-            if isassigned(method.M_Emi, off_space+1)
-                EmiTrue = true
-                @inbounds M_Emi = method.M_Emi[off_space+1]
-            else
-                EmiTrue = false
-            end
-
-            fold .= fstep 
-
-            #if sum(fold) == Precision(0)
-            #    continue
-            #end
-            t = 0.0
-
-            dt_local = dt #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
-
-            kE = 1.0
-            kϕ = 1.0
-            k = 1.0
-
-            while t < 1.0
-
-                dtscale = dt_local / method.dt0 # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
-
-                kold = k 
-                kϕold = kϕ
-                kEold = kE
-                k = 1.0 # time step as a ratio of dt_local to dt_local before adaptive
-
-                # EXPRB First Order Exponential Rosenbrock method with adaptive timestepping
-
-                    mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fold,vol,zero(Precision))
-                    # Form J
-                    @. J = Precision(2) * method.M_Bin_Mul_Step 
-                    @. J += M_Emi
-                    lmul!(dtscale,J)
-                    @. J *= invA # as we are evolving Af
-                    # Form F
-                    @. method.M_Bin_Mul_Step += M_Emi
-                    mul!(F,method.M_Bin_Mul_Step,fold)
-                    @. F *= invA
-
-                    # Energy error estimate from F
-                    ηEest = abs(dot(E,F)) * dtscale / dot(E,fold)
-                    println("Energy error estimate from F: ", ηEest)
-
-                    @. F += df_Inj 
-                    if norm(F) == zero(Precision) # no change in distribution
-                        break
-                    end
-                    lmul!(dtscale,F)
-
-                    # Diagonal scaling of J and F to improve conditioning for Krylov subspace approximation
-                    rmul!(J,D)
-                    lmul!(Dinv,J)
-                    lmul!(Dinv,F)
-
-                    ϕ1Av, info = phi1_leja_dense(J,F,Leja_nodes;dt = k,gamma = 1.5,maxdeg = maxdeg,tol = 1e-6,use_directional_mu = true,use_dense_mu2 = false)
-
-                    println("ϕ1Av info: ", info)
-
-                    # Compute φ functions of H
-                    #phiv!(ϕ,k,Ks64,1;cache=ϕcache,correct=true,errest=false) # TODO: This allocates
-                    mul!(δ,D,ϕ1Av,k#=*invA=#,zero(Precision))
-                    #@time δ .= invA_Flux * δ # TODO: this allocates
-                    @. fout = fold + δ
-                    
-                        @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
-
-                        # energy error
-                        ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k*dtscale)
-                        Eold = dot(E, fold .+ df_Inj * k * dtscale)
-                        ηE = abs(dot(E, fout) / Eold - one(Precision))
-                        println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout), " inj E: ", dot(E, df_Inj * k * dtscale))
-
-                        if !isfinite(ηE)
-                            println("ηE: $ηE, sum(δ): $(sum(δ))")
-                            @warn "Energy error is Inf or NaN, may be unstable, consider reducing time step or adjusting ηtarget"
-                            dt_local *= convert(typeof(dt_local), 1/64)
-                            continue
-                        end
-
-                        if info.err_est > 1e-6 || ηE > 1e-5
-                            @warn "ϕ1Av error estimate $(info.err_est) is large, may be unstable, consider reducing time step or adjusting ηtarget"
-                            dt_local = ldexp(dt_local, -1)
-                            continue
-                        elseif info.err_est < 1e-7 && ηE < 1e-6
-                            @warn "ϕ1Av error estimate $(info.err_est) is small, may be inefficient, consider increasing #time step or adjusting ηtarget"
-                            dt_local = ldexp(dt_local, 1)
-                            continue
-                        end
-
-                        dt_old = dt_local
-                        order = 1.0 # energy error is order 1
-
-                        ηtarget = 1e-16
-
-                        #kE = (1e-4/(ηE+eps(1e-4)))^(1.0/(order+1)) # k from energy error estimate 
-                        #kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
-                        #kϕ = min(kE,kϕmax) # max k is 2.0
-                        #errest = Inf
-                        #while errest > ηtarget # k from ϕv errestimate, can be more strict than energy error estimate
-                        #    _, errest = phiv!(ϕ,kϕ,Ks64,1;cache=ϕcache,correct=true,errest=true) # TODO: This allocates
-                        #    println("ϕv error estimate during: ", errest)
-                        #    if errest > ηtarget
-                        #        kϕ *= 0.77 * 0.5(tanh(log10(errest)-log10(ηtarget)+1)+1)
-                        #    end
-                        #end
                         #println("ϕv error estimate after: ", errest)
-                        #k = min(kE,2.0)
+                        k = min(kE,kϕ,2.0)
                         #println("kE: ", kE, " kϕ: ", kϕ, " errest: ", errest)
+                    else
+                        k = min(kE,2.0)
+                    end
+                    #k = 1.0
+                    #println("dt_local: ", dt_local, " k: ", k, " new: ", dt_old*k, " old: ", dt_old)
+                    dt_local = k*dt_old
+                    #dt_local = max(dt_local, dt_old/1.01)
+                    #println(dt)
+                    if t + dt_local/dt > 1.0
+                        dt_local = (1.0 - t) * dt
+                        println("space: ", off_space," region: Linear", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
+                        t = 1.0
+                    else
+                        println("space: ", off_space," region: Linear", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
+                        t += dt_local/dt
+                    end
+                    k = dt_local / dt_old
 
-                        #k = 1.0
-                        #println("dt_local: ", dt_local, " k: ", k, " new: ", dt_old*k, " old: ", dt_old)
-                        dt_local = k*dt_old
-                        #dt_local = max(dt_local, dt_old/1.01)
-                        #println(dt)
-                        if t + dt_local/dt > 1.0
-                            dt_local = (1.0 - t) * dt
-                            println("space: ", off_space," region: Binary", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t = 1.0
+                if k != 1.0
+                    if HasInjection 
+                        if KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
+                            phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
+                            @. δ = S * D * @view(ϕ[:,2]) * k
+                            #@. δ = s * @view(ϕ[:,2]) * k
+                            @. fout = fold + δ
                         else
-                            println("space: ", off_space," region: Binary", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t += dt_local/dt
+                            @. fout = fold + df_Inj * k * dtscale
                         end
-                        k = dt_local / dt_old
+                    else # no injection, just linear Jacobian so use exp over phi
+                        #expv!(δ,k,KsL)
+                        #@. fout = D * δ
 
+                        phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
+                        @. fout = S * D * @view(ϕ[:,1])
+                        #@. fout = s * @view(ϕ[:,1])
+                    end
 
-                    #=if k != 1.0
-
-                        println("here")
-
-                        ϕ1Av, info = phi1_leja_dense(J,F,Leja_nodes;dt = k,gamma = 1.5,maxdeg = maxdeg,tol = 1e-6,use_directional_mu = false,use_dense_mu2 = false)
-                        mul!(δ,D,ϕ1Av,k#=*invA=#,zero(Precision))
-
-                        #phiv!(ϕ,k,Ks64,1;cache=ϕcache,correct=true,errest=false) # TODO: This allocates
-                        #mul!(δ,D,@view(ϕ[:,2]),k#=*invA=#,zero(Precision))
-                        @. fout = fold + δ
-
-                        # energy after correction  
-                        ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k * dtscale)
-                        Eold = dot(E, fold .+ df_Inj * k * dtscale)
-                        ηE = abs(dot(E, fout) / Eold - one(Precision))
-                        println("Energy error after adaption: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
-                    end=#
-
-                    @. fout = ifelse(fout <= method.n_cut, zero(Precision),fout)
-
+                    # energy after correction  
+                    #if has_injection 
+                    #    ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k * dtscale)
+                    #    Eold = dot(E, fold .+ df_Inj * k * dtscale)
+                    #else
+                    #    ΔE = dot(E, fout) - dot(E, fold)
+                    #    Eold = dot(E, fold)
+                    #end
+                    #ηE = abs(dot(E, fout) / Eold - one(Precision))
+                    #println("Energy error after adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
 
                     #=if ηE > 2e-4
                         @warn "Energy error in EXPRB1 step is large $ηE, may be unstable, consider reducing time step or adjusting ηtarget"
                     end=#
-
-                    #@. fold = ifelse(fout <= method.n_cut, zero(Precision),fout)
-                    #@. fold = max(fout, zero(Precision))
-
-                    #println(minimum(fold), " ", maximum(fold))
-
-                    @. fold = fout
-
-            end # while not accurate
-
-            @. fstep = fold
-
-        else #
-
-            fold .= fstep 
-
-            #if sum(fold) == Precision(0)
-            #    continue
-            #end
-            t = 0.0
-
-            dt_local = dt #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
-
-            kE = 1.0
-            kϕ = 1.0
-            k = 1.0
-
-            while t < 1.0
-
-                dtscale = dt_local / method.dt0 # scale for Jacobian as `vol` is calculated using `dt0` then the time step dt is just k as k*dt_local
-
-                kold = k 
-                kϕold = kϕ
-                kEold = kE
-                k = 1.0 # time step as a ratio of dt_local to dt_local before adaptive
-
-                # EXPRB First Order Exponential Rosenbrock method with adaptive timestepping
-
-                    # Form J
-                    @. J = M_Emi
-                    lmul!(dtscale*invA,J) # scale as evolving Af
-                    # Form F
-                    mul!(F,M_Emi,fold)
-                    @. F *= invA 
-                    @. F += df_Inj 
-                    lmul!(dtscale,F)
-                    if norm(F) == zero(Precision) # no change in distribution
-                        break
-                    end
-
-                    rmul!(J,D)
-                    lmul!(Dinv,J)
-                    lmul!(Dinv,F)
-
-                    @. J64 = Float64(J)
-
-                    if has_injection 
-                        @. F64 = Float64(F)
-                        arnoldi!(Ks64,J64,F64;m=m,reorthogonalize=true)
-                        #arnoldi!(Ks,J,F;m=m,reorthogonalize=true)
-                    else # no injection, just linear Jacobian so use exp over phi
-                        f64 = Float64.(Dinv * fold)
-                        arnoldi!(Ks64,J64,f64;m=m,reorthogonalize=true)
-                        #mul!(fscale,Dinv,fold)
-                        #arnoldi!(Ks,J,fscale;m=m,reorthogonalize=true)
-                    end
-
-                    #V = ExponentialUtilities.getV(Ks)[:,1:end-1]
-                    #H = ExponentialUtilities.getH(Ks)[1:end-1,1:end]
-                    
-                    V = ExponentialUtilities.getV(Ks64)[:,1:end-1]
-                    H = ExponentialUtilities.getH(Ks64)[1:end-1,1:end]
-
-                    norm_unscaled = norm(V' * V - I)
-                    if isnan(norm_unscaled) # no J or F means no Krylov subspace generated, so just accept step as is and move on,
-                        break
-                    end
-
-                    if #=cond((I - dt_local*H)) > 1f3 ||=#  norm(V' * V - I) > 1f-5 
-                        dt_local = dt_local * 0.5
-                        @warn "Krylov subspace has poor orthogonalisation $(norm(V' * V - I)), reducing time step to $dt_local"
-                        continue
-                    end
-
-                    # Compute φ functions of H
-                    if has_injection 
-                        phiv!(ϕ,k,Ks64,1;cache=ϕcache,correct=true,errest=false) # TODO: This allocates
-                        mul!(δ,D,@view(ϕ[:,2]),k#=*invA=#,zero(Precision))
-                        @. fout = fold + δ
-                    else # no injection, just linear Jacobian so use exp over phi
-                        expv!(δ,k#=*invA=#,Ks64)
-                        @. fout = D.diag * δ
-                    end
-
-
-                    # adaptive time stepping
-
-                        @. fout = ifelse(fout <= zero(Precision), zero(Precision),fout)
-
-                        # energy error
-                        if has_injection
-                            ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * dtscale)
-                            Eold = dot(E, fold .+ df_Inj * dtscale)
-                        else
-                            ΔE = dot(E, fout) - dot(E, fold)
-                            Eold = dot(E, fold)
-                        end
-                        ηE = abs(dot(E, fout) / Eold - one(Precision))
-                        #println("Energy error before adaptive: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
-
-                        if isinf(ηE)
-                            @warn "Energy error is Inf or NaN, may be unstable, consider reducing time step or adjusting ηtarget"
-                            dt_local *= convert(typeof(dt_local), 1/64)
-                            continue
-                        end
-
-                        dt_old = dt_local
-                        order = 1.0 # energy error is order 1
-
-                        ηtarget = 1e-5
-
-                        kE = (1e-4/(ηE+eps(1e-4)))^(1.0/(order+1)) # k from energy error estimate
-                        if has_injection
-                            kϕmax = kϕold < 1.0 ? 1.0 + kϕold : 2.0
-                            kϕ = min(kE,kϕmax) # max k is 2.0
-                            errest = Inf
-                            while errest > ηtarget # k from ϕv errestimate, can be more strict than energy error estimate
-                                _, errest = phiv!(ϕ,kϕ,Ks64,1;cache=ϕcache,correct=true,errest=true) # TODO: This allocates
-                                println("ϕv error estimate during: ", errest)
-                                if errest > ηtarget
-                                    kϕ *= 0.77 * 0.5(tanh(log10(errest)-log10(ηtarget)+1)+1)
-                                end
-                            end
-                            println("ϕv error estimate after: ", errest)
-                            k = min(kE,kϕ,2.0)
-                            println("kE: ", kE, " kϕ: ", kϕ, " errest: ", errest)
-                        else
-                            k = min(kE,2.0)
-                        end
-                        #k = 1.0
-                        #println("dt_local: ", dt_local, " k: ", k, " new: ", dt_old*k, " old: ", dt_old)
-                        dt_local = k*dt_old
-                        #dt_local = max(dt_local, dt_old/1.01)
-                        #println(dt)
-                        if t + dt_local/dt > 1.0
-                            dt_local = (1.0 - t) * dt
-                            println("space: ", off_space," region: Linear", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t = 1.0
-                        else
-                            println("space: ", off_space," region: Linear", " t: ", t, " dt: ", dt, " dt_local: ", dt_local)
-                            t += dt_local/dt
-                        end
-                        k = dt_local / dt_old
-
-                    if k != 1.0
-                        if has_injection 
-                            phiv!(ϕ,k,Ks64,1;cache=ϕcache,correct=true)
-                            mul!(δ,D,@view(ϕ[:,2]),k#=*invA=#,zero(Precision))
-                            @. fout = fold + δ
-                        else # no injection, just linear Jacobian so use exp over phi
-                            expv!(δ,k#=*invA=#,Ks64)
-                            @. fout = D.diag * δ
-                        end
-
-                        # energy after correction  
-                        #=if has_injection 
-                            ΔE = dot(E, fout) - dot(E, fold .+ df_Inj * k * dtscale)
-                            Eold = dot(E, fold .+ df_Inj * k * dtscale)
-                        else
-                            ΔE = dot(E, fout) - dot(E, fold)
-                            Eold = dot(E, fold)
-                        end
-                        ηE = abs(dot(E, fout) / Eold - one(Precision))=#
-                        #println("Energy error: ", ηE, " ΔE: ", ΔE, " Eold: ", Eold, " Enew: ", dot(method.E, fout))
-
-                        #=if ηE > 2e-4
-                            @warn "Energy error in EXPRB1 step is large $ηE, may be unstable, consider reducing time step or adjusting ηtarget"
-                        end=#
-                        
-                    end
-
-                    @. fout = ifelse(fout <= method.n_cut, zero(Precision),fout)
-
-                    #@. fold = ifelse(fout <= method.n_cut, zero(Precision),fout)
-                    #@. fold = max(fout, zero(Precision))
-
-                    #println(minimum(fold), " ", maximum(fold))
-
-                    @. fold = fout
-
-            end # while not accurate
-
-            @. fstep = fold
-
-        end
-
-    end
-
-    return nothing
-
-end
-
-
-# ----------------------------
-# Scalar phi_1(z) = (exp(z)-1)/z
-# ----------------------------
-function phi1_scalar(z::Real)
-    if abs(z) < 1e-8
-        # Taylor expansion near zero
-        return 1 + z/2 + z^2/6 + z^3/24 + z^4/120 + z^5/720
-    else
-        return expm1(z) / z
-    end
-end
-
-# ----------------------------
-# Approximate tau_min from A diagonal
-#
-# If A has decay rates on the diagonal, e.g. a_ii ≈ -1/tau_i,
-# then the largest-magnitude negative diagonal entry gives
-#
-# tau_min ≈ 1 / max_i(-a_ii)
-# ----------------------------
-function estimate_tau_min_from_diag(A)
-    neg_rates = [-A[i,i] for i in axes(A,1) if A[i,i] < 0]
-
-    if isempty(neg_rates)
-        error("No negative diagonal entries found; cannot estimate tau_min this way.")
-    end
-
-    fastest_rate = maximum(neg_rates)
-    return 1 / fastest_rate
-end
-
-# ----------------------------
-# Cheap growth estimate from current vector v
-#
-# mu_v = v'Av / v'v
-#
-# This is not an upper bound for mu_2, but is a cheap
-# direction-dependent growth estimate.
-# ----------------------------
-function estimate_mu_from_v(A, v)
-    Av = A * v
-    return dot(v, Av) / dot(v, v)
-end
-
-# ----------------------------
-# Safer but more expensive dense estimate:
-#
-# mu_2 = lambda_max((A + A')/2)
-#
-# Since A is dense, this may be acceptable for moderate size.
-# ----------------------------
-function estimate_mu2_dense(A)
-    H = Symmetric((A + A') / 2)
-    return eigmax(H)
-end
-
-# ----------------------------
-# Simple approximate Leja nodes on [-2,2]
-#
-# For production use, you should use a proper precomputed Leja sequence.
-# This greedy construction is acceptable for experimentation.
-# ----------------------------
-function leja_nodes_interval(n::Int; a=-2.0, b=2.0, grid_size=20_000)
-    grid = collect(range(a, b, length=grid_size))
-    nodes = Vector{Float64}(undef, n)
-
-    # Start at right endpoint; common for real Leja sequences
-    nodes[1] = b
-
-    logprod = zeros(Float64, grid_size)
-
-    for k in 2:n
-        # Update log product: log prod_j |x - xi_j|
-        @inbounds for i in eachindex(grid)
-            logprod[i] += log(abs(grid[i] - nodes[k-1]) + eps())
-        end
-
-        idx = argmax(logprod)
-        nodes[k] = grid[idx]
-    end
-
-    return nodes
-end
-
-# ----------------------------
-# Newton divided differences
-#
-# Input:
-#   z[j] = interpolation nodes in physical z-plane
-#   f[j] = phi1(z[j])
-#
-# Output:
-#   c[j] = Newton coefficients
-# ----------------------------
-function divided_differences(z, f)
-    c = copy(f)
-    n = length(z)
-
-    for j in 2:n
-        for i in n:-1:j
-            c[i] = (c[i] - c[i-1]) / (z[i] - z[i-j+1])
-        end
-    end
-
-    return c
-end
-
-
-
-@inline function arnoldi_orthogonalize!(
-    y,
-    V,
-    H,
-    j::Integer,
-    lo::Integer,
-    hi::Integer,
-    U,
-)
-    @inbounds for i in lo:hi
-        α = ExponentialUtilities.coeff(U, dot(@view(V[:, i]), y))
-        H[i, j] += α
-        axpy!(-α, @view(V[:, i]), y)
-    end
-    return nothing
-end
-
-function arnoldi_step!(
-    j::Integer, iop::Integer, A::AT,
-    V::AbstractMatrix{T}, H::AbstractMatrix{U},
-    n::Int = -1, p::Int = -1;
-    reorthogonalize::Bool = false,remove_drift::Bool = false
-) where {AT, T, U}
-
-    x, y = @view(V[:, j]), @view(V[:, j + 1])
-    ExponentialUtilities.applyA!(y, A, x, V, j, n, p)
-
-    lo = max(1, j - iop + 1)
-
-    # First orthogonalization pass
-    arnoldi_orthogonalize!(y, V, H, j, lo, j, U)
-
-    # Second pass (full reorthogonalization over the same window)
-    if reorthogonalize
-        arnoldi_orthogonalize!(y, V, H, j, lo, j, U)
-    end
-
-    # remove energy drift from orthogonalisation
-    #drift_before = abs(sum(y)) / (sqrt(length(y))*norm(y))
-    if remove_drift
-        α = sum(y) / length(y)
-        y .-= α
-    end
-
-    #drift_after = abs(sum(y)) / (sqrt(length(y))*norm(y))
-    #println("drift after = $drift_after, drift before = $drift_before, j = $j")
-
-    β = H[j + 1, j] = norm(y)
-    if !iszero(β)
-        @. y /= β
-    end
-    return β
-end
-
-"""
-    firststep!(Ks, V, H, b) -> nothing
-
-Compute the first step of Arnoldi or Lanczos iteration.
-"""
-function firststep!(Ks::KrylovSubspace, V, H, b)
-    return @inbounds begin
-        fill!(H, zero(eltype(H)))
-        Ks.beta = norm(b)
-        if !iszero(Ks.beta)
-            @. V[:, 1] = b / Ks.beta
-        end
-        #println("beta = $(Ks.beta), sum(b) = $(sum(b)), norm(b) = $(norm(b))")
-    end
-end
-
-function arnoldi!(
-    Ks::KrylovSubspace{T1, U}, A::AT, b;
-    tol::Real = 1.0e-7,
-    m::Int = min(Ks.maxiter, size(A, 1)),
-    ishermitian::Bool = LinearAlgebra.ishermitian(A isa Tuple ? first(A) : A),
-    opnorm = nothing,
-    iop::Int = 0,
-    reorthogonalize::Bool = false,
-    remove_drift::Bool = false,
-    init::Int = 0,
-    t::Number = NaN,
-    mu::Number = NaN,
-    l::Int = -1,
-) where {T1 <: Number, U <: Number, AT}
-
-    Ks.wasbreakdown = false
-
-    ishermitian && return lanczos!(Ks, A, b; tol = tol, m = m, init = init, t = t, mu = mu, l = l)
-
-    m > Ks.maxiter ? resize!(Ks, m) : Ks.m = m
-
-    @inbounds V, H = ExponentialUtilities.getV(Ks), ExponentialUtilities.getH(Ks)
-
-    b′, b_aug, n, p = ExponentialUtilities.checkdims(A, b, V)
-    if iszero(init)
-        isaugmented = AT <: Tuple
-        isaugmented ? ExponentialUtilities.firststep!(Ks::KrylovSubspace, V, H, b′, b_aug, t, mu, l) : firststep!(Ks::KrylovSubspace, V, H, b)
-        init = 1
-    end
-
-    iszero(Ks.beta) && return Ks
-    iszero(iop) && (iop = m)
-
-    for j in init:m
-        beta = arnoldi_step!(j, iop, A, V, H, n, p; reorthogonalize = reorthogonalize,remove_drift=remove_drift)
-        if beta < tol
-            Ks.m = j
-            Ks.wasbreakdown = true
-            break
-        end
-    end
-
-    return Ks
-end
-
-"""
-    phiv!(w,t,Ks,k[;cache,correct,errest]) -> w[,errest]
-
-Non-allocating version of 'phiv' that uses precomputed Krylov subspace `Ks`.
-"""
-function phiv!(
-        w::AbstractMatrix, t::Number, Ks::KrylovSubspace{T, U}, k::Integer;
-        cache = nothing, correct = false,
-        errest = false
-    ) where {T <: Number, U <: Number}
-    m, beta, V, H = Ks.m, Ks.beta, ExponentialUtilities.getV(Ks), ExponentialUtilities.getH(Ks)
-    @assert size(w, 1) == size(V, 1) "Dimension mismatch"
-    @assert size(w, 2) == k + 1 "Dimension mismatch"
-    if isnothing(cache)
-        cache = PhivCache(w, m, k)
-    elseif !isa(cache, PhivCache)
-        throw(ArgumentError("Cache must be a PhivCache"))
-    end
-    e, Hcopy, C1, C2 = ExponentialUtilities.get_caches(cache, m, k)
-    lmul!(t, copyto!(Hcopy, @view(H[1:m, :])))
-    fill!(e, zero(T))
-    ExponentialUtilities.allowed_setindex!(e, one(T), 1) # e is the [1,0,...,0] basis vector
-    phiv_dense!(C2, Hcopy, e, k; cache = C1) # C2 = [ϕ0(H)e ϕ1(H)e ... ϕk(H)e]
-    
-    aC2 = ExponentialUtilities.Adapt.adapt(ExponentialUtilities.parameterless_type(w), C2)
-    lmul!(beta, mul!(w, @view(V[:, 1:m]), aC2)) # f(A) ≈ norm(b) * V * f(H)e
-    if correct
-        # Use the last Arnoldi vector for correction with little additional cost
-        # correct_p = beta * h_{m+1,m} * (em^T phi_p+1(H) e1) * v_m+1
-        betah = beta * H[end, end] * t
-        vlast = @view(V[:, end])
-        @inbounds for i in 1:k
-            axpy!(betah * C2[end, i + 1], vlast, @view(w[:, i]))
-        end
-    end
-    if errest
-        err = abs(beta * H[end, end] * t * C2[end, end])
-        return w, err
-    else
-        return w
-    end
-end
-
-"""
-    phiv_dense!(w,A,v,k[;cache]) -> w
-
-Non-allocating version of `phiv_dense`.
-"""
-function phiv_dense!(
-        w::AbstractMatrix{T}, A::AbstractMatrix{T},
-        v::AbstractVector{T}, k::Integer;
-        cache = nothing,
-        expmethod = ExpMethodHigham2005Base()
-    ) where {T <: Number}
-    @assert size(w, 1) == size(A, 1) == size(A, 2) == length(v) "Dimension mismatch"
-    @assert size(w, 2) == k + 1 "Dimension mismatch"
-    m = length(v)
-    # Construct the extended matrix
-    if isnothing(cache)
-        cache = fill(zero(T), m + k, m + k)
-    else
-        @assert size(cache) == (m + k, m + k) "Dimension mismatch"
-        fill!(cache, zero(T))
-    end
-    cache[1:m, 1:m] = A
-    cache[1:m, m + 1] = v
-    for i in (m + 1):(m + k - 1)
-        cache[i, i + 1] = one(T)
-    end
-    P = exponential!(cache, expmethod)
-
-    #display(P)
-
-    # Extract results
-    @views mul!(w[:, 1], P[1:m, 1:m], v)
-    @inbounds for i in 1:k
-        @inbounds for j in 1:m
-            w[j, i + 1] = P[j, m + i]
-        end
-    end
-    return w
-end
-
-"""
-    threshold_Jrows!(J; rtol=1e-14)
-
-Removes weak coupling in the rows of the jacobian matrix J, i.e. elements of the equation for each state variable that are small compared to the largest element of that equation.
-"""
-function threshold_Jrows!(J; rtol=1e-14)
-    m, n = size(J)
-
-    for i in 1:m
-        rowmax = maximum(abs, @view J[i,:])
-
-        if rowmax == 0
-            continue
-        end
-
-        thresh = rtol * rowmax
-
-        for j in 1:n
-            if i!=j && sign(J[i,j]) == 1 && abs(J[i,j]) < thresh # doesn't remove diagonal entries 
-                J[i,j] = zero(eltype(J))
-            end
-        end
-    end
-
-    return nothing
-end
-
-
-"""
-    threshold_Jcols!(J; rtol=1e-14)
-
-Removes weak coupling in the columns of the jacobian matrix J, i.e. elements of the equation for each state variable that are small compared to the largest element of that equation.
-"""
-function threshold_Jcols!(J; rtol=1e-14)
-
-    m, n = size(J)
-
-    for j in 1:n
-
-        colmax = maximum(abs, @view J[:,j])
-
-        if colmax == 0
-            continue
-        end
-
-        thresh = rtol * colmax
-
-        for i in 1:m
-            if i != j && sign(J[i,j]) == 1 && abs(J[i,j]) < thresh # postive and small
-                J[i,j] = zero(eltype(J))
-            end
-        end
-    end
-
-    return J
-end
-
-"""
-    threshold_F!(F; rtol=1e-14)
-
-Removes weak transition rates in F, i.e. terms df_i/dt = F_i that are small and by small I mean f^{t+1}=f^{t}+ΔtF so if ΔtF < eps(f^{t})*rtol.
-"""
-function threshold_F!(F,f,dt; rtol=1e-2)
-    
-    @. F = ifelse(dt*abs(F) < f*rtol, zero(eltype(F)), F)
-    #@. F = ifelse(abs(F) < rtol, zero(eltype(F)), F)
-
-    return nothing
-end
-
-"""
-    balance_similarity(J; maxiter=50, tol=1e-3)
-
-Compute a diagonal scaling D such that
-
-    Js = D \\ J * D
-
-has approximately balanced row and column 2-norms.
-
-Returns (D, Js).
-"""
-function balance_similarity(J; maxiter=50, tol=1e-3)
-
-    n = size(J,1)
-    @assert size(J,2) == n
-
-    d = ones(eltype(J), n)
-
-    Js = copy(J)
-
-    for k = 1:maxiter
-
-        maxerr = 0.0
-
-        for i = 1:n
-
-            r = norm(view(Js, i, :))
-            c = norm(view(Js, :, i))
-
-            if r == 0 || c == 0
-                continue
-            end
-
-            ratio = c / r
-
-            ratio = clamp(ratio, 1e-16, 1e16) # prevent extreme scaling
-
-            # desired scaling
-            s = sqrt(ratio)
-
-            d[i] *= s
-            d[i] = clamp(d[i], 1e-8, 1e8) # prevent extreme scaling
-
-            # similarity update
-            Js[:,i] .*= s
-            Js[i,:] ./= s
-
-            maxerr = max(maxerr, abs(log(ratio)))
-        end
-
-        maxerr < tol && break
-    end
-
-    return Diagonal(d), Js
-end
-
-function update_Big_Bin!(method::ExplicitSteppingMethod,f::AbstractVector)
-    
-    n_momentum=size(method.M_Bin,2)
-
-    for off_space in method.Bin_Domain
-
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-
-        fView = @view(f[start_idx:end_idx])
-
-        df_BinView = @view method.df_Bin[start_idx:end_idx]
-        mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fView) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-        @inbounds vol = method.Vol[off_space+1]
-        mul!(df_BinView,method.M_Bin_Mul_Step,fView,vol,zero(eltype(method.df_Bin)))
-
-    end
-
-    return nothing
-
-end
-
-function update_Big_Bin!(method::BackwardEulerStruct,dt_scale::T) where T
-    
-    n_momentum=size(method.M_Bin,2)
-    
-    f_iter = zeros(T,n_momentum)
-    f_guess = zeros(T,n_momentum)
-    f_tmp = zeros(T,n_momentum)
-    df_tmp = zeros(T,n_momentum)
-    J = method.J
-    F = method.F
-
-    tol = T(1e-6)
-    maxiter = 10
-    damping = false
-
-    for off_space in method.Bin_Domain
-
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-
-        f = @view(method.f[start_idx:end_idx])
-        fstep = @view(method.fstep[start_idx:end_idx])
-        @inbounds vol = method.Vol[off_space+1] * dt_scale
-        invA_Flux = @view(method.invA_Flux[start_idx:end_idx,start_idx:end_idx])
-        
-        f_guess .= f
-
-        for λ in [T(1e-12), T(1e-10), T(1e-8), T(1e-6), T(1e-4), T(1e-2), T(1.0)]
-
-            f_iter .= f_guess
-
-            # Newton iteration
-            for it in 1:maxiter
-
-                println("Newton iteration: $it, λ: $λ")
-
-                build_residual_jacobian!(method, f_iter, f, invA_Flux, λ * vol)
-
-                if norm(F, Inf) < tol
-                    f_guess .= f_iter
-                    break
-                end
-
-                println("Residual norm: $(norm(F, Inf))")
-
-                println("cond J: $(cond(J))")
-
-                δ = J \ F
-
-                δ .= δ.* (abs.(δ) .> 0.0) # remove small values
-                
-                display(reshape(δ, 37,24))
-                display(reshape(δ ./ f_iter, 37,24))
-
-                f_iter .-= δ
-
-                f_iter .= f_iter .* (f_iter .> 0.0) # enforce positivity
-
-                # Simple backtracking line search on residual norm
-                #=α = one(T)
-                Fn = norm(F, 2)
-
-                while α > T(1e-12)
-                    trial = f_guess .+ α .* δ
-                    build_residual_jacobian!(method, trial, f, invA_Flux, vol)
-
-                    if norm(F, 2) <= (one(T) - T(1e-4) * α) * Fn
-                        f_iter .= trial
-                        break
-                    end
-
-                    α *= T(0.5)
-                end
-
-                if α <= T(1e-12)
-                    error("Newton line search failed to reduce the residual.")
-                end=#
-
-            end
-
-            #error("Newton did not converge in $maxiter iterations.")
-
-            f_guess .= f_iter
-
-        end
-
-        fstep .= f_iter
-
-    end
-
-    return nothing
-
-end
-
-function build_residual_jacobian!(method::BackwardEulerStruct, f_iter, f, invA_Flux, vol)
-
-    J = method.J
-    F = method.F
-
-    I_matrix = Diagonal(ones(method.Precision, length(F)))
-
-    mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,f_iter,vol,zero(eltype(f_iter))) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-    mul!(J,invA_Flux,method.M_Bin_Mul_Step,-2.0,0.0)
-
-    @. J += I_matrix
-
-    mul!(F,method.M_Bin_Mul_Step,f_iter)
-
-    tmp = f_iter .- f .- (invA_Flux * F) 
-
-    F .= tmp
-
-end
-
-function update_Big_Bin!(method::ImplicitSteppingMethod,f::AbstractVector,Q::AbstractSparseMatrix)
-    
-    n_momentum=size(method.M_Bin,2)
-
-    for off_space in method.Bin_Domain
-
-        #println("Updating Bin for space index: ", off_space)
-        
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-
-        fView = @view(f[start_idx:end_idx])
-        #println("Bin 1")
-
-        @inbounds vol = method.Vol[off_space+1]
-        mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fView,vol,zero(eltype(fView))) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-        #println("Bin 2")
-        @. @view(Q[start_idx:end_idx,start_idx:end_idx]) += method.M_Bin_Mul_Step
-
-    end
-
-    return nothing
-
-end
-
-function updateMomentumPatankarEuler!(method::SymplecticMPEStruct,f::AbstractVector{T},dt_scale::T) where T
-
-    Spacetime = method.PhaseSpace.Spacetime
-    x_num = Spacetime.x_num
-    y_num = Spacetime.y_num
-    z_num = Spacetime.z_num
-    n_space = x_num*y_num*z_num
-    
-    n_momentum=size(method.Q,2)
-
-    I_matrix = Diagonal(ones(method.Precision, n_momentum))
-    Dl = Diagonal(ones(Float64, n_momentum))
-    Dr = Diagonal(ones(Float64, n_momentum))
-    Qs = zeros(Float64, size(method.Q))
-    Qtmp = zeros(Float64, size(method.Q))
-    Qflux = zeros(Float64, size(method.Q))
-    Qbin = zeros(Float64, size(method.Q))
-    fstep = zeros(Float64, n_momentum)
-    df_Inj = zeros(Float64, n_momentum)
-    ftmp = zeros(Float64, n_momentum)
-    fs = zeros(Float64,size(fstep))
-    sigma = Diagonal(zeros(Float64, n_momentum))
-    fdivsigma = Diagonal(zeros(Float64, n_momentum))
-    ftildedivsigma = Diagonal(zeros(Float64, n_momentum))
-    tmpdiag = Diagonal(zeros(Float64, n_momentum))
-    onesvec = ones(Float64, n_momentum)
-    source = Diagonal(zeros(Float64, n_momentum))
-
-    for off_space in 0:n_space-1 
-
-        fill!(method.Q,zero(method.Precision)) # reset Q
-        fill!(tmpdiag.diag,zero(eltype(tmpdiag.diag))) # reset tmpdiag
-        fill!(Qtmp,zero(eltype(Qtmp))) # reset Qtmp
-        fill!(Qflux,zero(eltype(Qflux))) # reset Qflux
-
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-        println("off space: $off_space, start idx: $start_idx, end idx: $end_idx")
-
-        P_Flux_View = @view(method.P_Flux[start_idx:end_idx,start_idx:end_idx])
-        invA_Flux_View = @view(method.invA_Flux[start_idx:end_idx,start_idx:end_idx])
-        if method.Emission_Interactions
-            M_Emi_View = @view(method.M_Emi[start_idx:end_idx,start_idx:end_idx])
-        end
-        df_Inj .= @view(method.df_Inj[start_idx:end_idx])
-        fstep .= @view(f[start_idx:end_idx]) 
-        @. fdivsigma.diag = ifelse(fstep > 0.0, 1.0,0.0)
-        #fstep .+= (df_Inj + invA_Flux_View * M_Emi_View * fstep) * dt_scale
-        #fstep[fstep .< 1e16eps(0.0)] .= 0.0 # remove negative values for stability, also sets small values to zero which allows for more sparsity and faster solves in the Patankar update
-        @. sigma.diag = max(fstep,eps(Float64))
-        @. ftildedivsigma.diag = ifelse(fstep > 0.0, 1.0,0.0) #fstep ./ sigma.diag # this is just fstep but with a cutoff to avoid division by zero, also allows for more sparsity and faster solves in the Patankar update
-        fill!(Qbin,zero(eltype(Qbin))) # reset Qbin NEEDED otherwise binary interactions from previous off_space will carry over and contaminate current off_space update
-        @. sigma.diag = ifelse(fstep > 0.0, fstep,eps(Float64))
-        Qflux .= P_Flux_View
-
-        # first do advection update as binary interaction can be be large in comparision.
-
-        #=    mul!(tmpdiag.diag,transpose(Qflux),onesvec)
-            tmpdiag.diag .= tmpdiag.diag .* ftildedivsigma.diag
-            Qtmp .= invA_Flux_View * (Qflux * ftildedivsigma - tmpdiag) * dt_scale
-
-            #Qtmp .-= invA_Flux_View * M_Emi_View * ftildedivsigma * dt_scale # minus as M_Emi is on LHS of transport equation and Q is on RHS
-
-            #mul!(source.diag, M_Emi_View, fstep)
-            #@. source.diag /= sigma.diag
-            #Qbin .-= invA_Flux_View * source * dt_scale # minus as M_Bin is on LHS of transport equation and Q is on RHS
-
-            #cutoff_offdiagonal_to_diag_relative!(Qbin, 1e-6)
-
-            Qtmp .+= I_matrix # add identity for Patankar update 
-
-            ftmp .= fstep
-
-            QLU = lu(Qtmp)
-            ldiv!(QLU,ftmp)
-
-            fstep .= ftmp
-            =#
-            # TODO: if dt too big this leads to poor energy conservation due to excess gain of photons and fast cooling of electrons 
-
-        # now do binary interaction update
-        
-        if method.Binary_Interactions && off_space in method.Bin_Domain
-
-            @. ftildedivsigma.diag = ifelse(fstep > 0.0, 1.0,0.0)
-        
-            @inbounds vol = method.Vol[off_space+1]
-
-            #mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fView,vol,zero(method.Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-            # loss
-            #mul!(ftmp,method.Lij,fstep,vol,zero(method.Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-            #tmpdiag.diag .= ftmp .* ftildedivsigma.diag
-            #Qbin .-= tmpdiag # minus as M_Bin is on LHS of transport equation and Q is on RHS
-            mul!(method.M_Bin_Mul_Step_reshape,method.Gijk,fstep,vol,zero(method.Precision)) 
-            mul!(tmpdiag.diag,transpose(method.M_Bin_Mul_Step),onesvec)
-            tmpdiag.diag .= tmpdiag.diag .* ftildedivsigma.diag
-
-            Qbin .= tmpdiag # minus as M_Bin is on LHS of transport equation and Q is on RHS
-
-            # gain 
-            #mul!(method.M_Bin_Mul_Step_reshape,method.Gijk,fstep,vol,zero(method.Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-            Qbin .-= method.M_Bin_Mul_Step * ftildedivsigma # minus as M_Bin is on LHS of transport equation and Q is on RHS
-
-
-            cutoff_offdiagonal_to_diag_relative!(Qbin, 1e-6)
-
-            colsum = sum(Qbin,dims=1)
-            rowsum = sum(Qbin,dims=2)
-            println("Qbin - max col sum: ", findmax(colsum), " max row sum: ", findmax(rowsum), " min col sum: ", findmin(colsum), " min row sum: ", findmin(rowsum))
-
-            Qtmp .= invA_Flux_View * (Qbin) * dt_scale
-
-            Qtmp .+= I_matrix # add identity for Patankar update
-
-            norm_equilibration_matrices!(Dl,Dr,Qtmp; iters=0)
-            Qs .= Dl * Qtmp * Dr
-
-            ftmp .= fstep
-
-            fs .= Dl * ftmp
-
-            QLU = lu(Qs)
-            ldiv!(QLU,fs)
-
-            s = svdvals(Qs)
-            println("σmax = $(maximum(s)), σmin = $(minimum(s)), cond = $(maximum(s)/minimum(s))")
-
-            ftmp .= Dr * fs
-
-            #fstep .= patankar_energy_fix!(method,ftmp,fstep)
-
-            #fstep .= patankar_energy_fix_quadratic!(method,ftmp,fstep)
-
-            #fstep .= patankar_energy_fix_linear!(method,ftmp,fstep)
-
-            fstep .= patankar_energy_fix_linear_filtered!(method,ftmp,fstep)
-
-            #fstep .= ftmp
-
-            println("off space: $off_space, Cr_momentum = $(-minimum(@. ifelse(fstep<=0.0, Inf,(Dr * fs - fstep) / fstep)))")
-            
-        end
-
-       #= if method.Emission_Interactions
-            mul!(source.diag, M_Emi_View, fstep)
-            @. source.diag /= sigma.diag # divide by fstep for source term to be in correct units for Patankar update, also sets source to zero where fstep is zero which allows for more sparsity and faster solves in the Patankar update
-            println("max source diag: ", findmax(source.diag), " min source diag: ", findmin(source.diag), " sum source diag: ", sum(source.diag))
-        else
-            fill!(source.diag, zero(eltype(source.diag)))
-        end=#
- 
-
-
-
-        #=println("dt scale: $dt_scale")
-        Qtmp .+= invA_Flux_View * (Qbin) * dt_scale
-        colsum = sum(Qtmp,dims=1)
-        rowsum = sum(Qtmp,dims=2)
-        println("Qtmp - max col sum: ", findmax(colsum), " max row sum: ", findmax(rowsum), " min col sum: ", findmin(colsum), " min row sum: ", findmin(rowsum))
-        display(Qtmp[115:125,120]')
-
-        colsum = sum(Qtmp,dims=1)
-        rowsum = sum(Qtmp,dims=2)
-        println("Qtmp - max col sum: ", findmax(colsum), " max row sum: ", findmax(rowsum), " min col sum: ", findmin(colsum), " min row sum: ", findmin(rowsum))
-        display(Qtmp[115:125,120]')
-
-        cutoff_offdiagonal_to_diag_relative!(Qtmp, 1e-6)
-        display(Qtmp[115:125,120]')
-
-        println("sum diag: ", sum(diag(Qtmp)), " sum off diag: ", sum(Qtmp) - sum(diag(Qtmp)))
-        display(sparse(Qtmp))
-
-        #fill!(Qtmp,zero(eltype(Qtmp))) # reset Qtmp
-        Qtmp .+= I_matrix # add identity for Patankar update
-
-        kwo = cond(Qtmp)
-        println("off space: $off_space, condition without equilibration: $kwo")
-
-        norm_equilibration_matrices!(Dl,Dr,Qtmp; iters=3)
-        Qs .= Dl * Qtmp * Dr
-
-        kwo = cond(Qs)
-        println("off space: $off_space, condition with equilibration: $kwo")
-
-        #=if kwo > sqrt(1/eps(eltype(Qtmp)))
-            k = kwo
-            step = zero(eltype(method.Precision))
-            fstep .= fstep
-            dstep = one(eltype(method.Precision))
-            a = one(eltype(method.Precision))
-            while step < one(eltype(method.Precision))
-                k = method.Precision(Inf)
-                while k > sqrt(1/eps(eltype(Qtmp)))
-
-                    s = svdvals(Qtmp)
-                    println("σmax = $(maximum(s)), σmin = $(minimum(s)), cond = $(maximum(s)/minimum(s))")
-
-                    if method.Binary_Interactions && off_space in method.Bin_Domain   
-            
-                        @inbounds vol = method.Vol[off_space+1]
-
-                        mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fstep,vol,zero(method.Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-                        @. Qbin = -method.M_Bin_Mul_Step # minus as M_Bin is on LHS of transport equation and Q is on RHS
-
-                        Qtmp .= invA_Flux_View * (Qbin + Qflux) * dt_scale * a + I_matrix # add identity for Patankar update
-                
-                    else
-
-                        Qtmp .= invA_Flux_View * Qflux * dt_scale * a + I_matrix # add identity for Patankar update
-
-                    end
-
-                    norm_equilibration_matrices!(Dl,Dr,Qtmp; iters=3)
-                    Qs .= Dl * Qtmp * Dr
-
-                    k = cond(Qs)
-
-                    println("off space: $off_space, cond without: $kwo, condition with right and left: $k, a = $a, step = $step, dstep = $dstep")
-
-                    if k > sqrt(1/eps(eltype(Qtmp)))
-                        a *= method.Precision(1/2)
-                        dstep *= method.Precision(1/2)
-                    end
                     
                 end
 
-                if method.Emission_Interactions
-                    ftmp .= fstep + df_Inj .* dt_scale * a + invA_Flux_View * M_Emi_View * fstep .* dt_scale * a # add M_Emi contribution to ftmp for Patankar update
-                else
-                    ftmp .= fstep + df_Inj .* dt_scale * a
-                end
+                @. fout = ifelse(fout < method.n_cut && fout * E < method.n_cut, zero(HostPrecision),fout)
 
-                s = svdvals(Qs)
-                println("σmax = $(maximum(s)), σmin = $(minimum(s)), cond = $(maximum(s)/minimum(s))")
+                #@. fold = ifelse(fout <= method.n_cut, zero(Precision),fout)
+                #@. fold = max(fout, zero(Precision))
 
-                fs .= Dl * ftmp
-                    println("debug ftmp: sum=", sum(ftmp), " max=", maximum(ftmp), " sum(Dl*ftmp)=", sum(Dl * ftmp))
+                #println(minimum(fold), " ", maximum(fold))
 
-                QLU = lu(Qs)
-                ldiv!(QLU,fs)
-                fstep .= Dr * fs
-                # diagnostics: check mass conservation and residual for this block
-                mass_before = sum(@view(f[start_idx:end_idx]))
-                mass_after = sum(fstep)
-                res = norm(Qs * fs - Dl * ftmp) / max(one(eltype(fs)), norm(Dl * ftmp))
-                println("off_space=$off_space mass_before=", mass_before, " mass_after=", mass_after, " Δ=", mass_after-mass_before, " res=", res)
-                @. sigma.diag = ifelse(fstep != 0.0, 1.0,0.0)
+                @. fold = fout
 
-                #gmres!(method.GMRESWorkspace,Qs,fs;rtol = 1f-8,atol = 0f0)
-                #fstep .= Dr * method.GMRESWorkspace.x
+            end # while not accurate
 
-                step += dstep
+            copyto!(fstep_d, fold)
 
-            end
+            @inbounds method.dt_guess[off_space+1] = dt_old # update dt_guess with last plus one dt (avoid last as this could be limited by (1.0-t))
 
-        else=#
+        end
 
-            if method.Emission_Interactions
-                ftmp .= fstep #+ df_Inj .* dt_scale + invA_Flux_View * (M_Emi_View * fstep) .* dt_scale # add M_Emi contribution to ftmp for Patankar update
-                #println("min ftmp: ", findmin(ftmp), " max ftmp: ", findmax(ftmp), " sum ftmp: ", sum(ftmp))
-                #ftmp[ftmp .< 1e16eps(0.0)] .= 0.0
-            else
-                ftmp .= fstep #+ df_Inj .* dt_scale
-            end
-
-            #norm_equilibration_matrices!(Dl,Dr,Qtmp; iters=0)
-            #Qs .= Dl * Qtmp * Dr
-
-            #k = cond(Qs)
-
-            #println("off space: $off_space, cond without: $kwo, condition with right and left: $k")
-
-
-             
-            fs .= Dl * ftmp
-
-            QLU = lu(Qs)
-            ldiv!(QLU,fs)
-            println("off space: $off_space, Cr_momentum = $(-minimum(@. ifelse(fstep<=0.0, Inf,(Dr * fs - fstep) / fstep)))")
-
-            #QLU = lu(Qtmp)
-            #ldiv!(QLU,ftmp)
-
-            fstep .= Dr * fs
-            #fstep .= ftmp
-
-            #gmres!(method.GMRESWorkspace,Qtmp,ftmp;rtol = 1f-10,atol = 0f0)
-            #fstep .= method.GMRESWorkspace.x
-
-        #end
-        =#
-
-        @view(method.f_step[start_idx:end_idx]) .= fstep
+        put!(done, nothing) # signal that this job is done
 
     end
 
     return nothing
 
-end
-
-function updateMomentumPatankarEulerSymmetric!(method::SymplecticSymmetricMPEStruct,f::AbstractVector{T},dt_scale::T) where T
-
-    Spacetime = method.PhaseSpace.Spacetime
-    x_num = Spacetime.x_num
-    y_num = Spacetime.y_num
-    z_num = Spacetime.z_num
-    n_space = x_num*y_num*z_num
-    
-    n_momentum=size(method.Q,2)
-
-    I_matrix = Diagonal(ones(method.Precision, n_momentum))
-    Dl = Diagonal(ones(Float64, n_momentum))
-    Dr = Diagonal(ones(Float64, n_momentum))
-    Qs = zeros(Float64, size(method.Q))
-    Qtmp = zeros(Float64, size(method.Q))
-    Qflux = zeros(Float64, size(method.Q))
-    Qbin = zeros(Float64, size(method.Q))
-    fstep = zeros(Float64, n_momentum)
-    df_Inj = zeros(Float64, n_momentum)
-    ftmp = zeros(Float64, n_momentum)
-    fs = zeros(Float64,size(fstep))
-    sigma = Diagonal(zeros(Float64, n_momentum))
-    fdivsigma = Diagonal(zeros(Float64, n_momentum))
-    ftildedivsigma = Diagonal(zeros(Float64, n_momentum))
-    tmpdiag = Diagonal(zeros(Float64, n_momentum))
-    onesvec = ones(Float64, n_momentum)
-    source = Diagonal(zeros(Float64, n_momentum))
-
-    for off_space in 0:n_space-1 
-
-        fill!(method.Q,zero(method.Precision)) # reset Q
-        fill!(tmpdiag.diag,zero(eltype(tmpdiag.diag))) # reset tmpdiag
-        fill!(Qtmp,zero(eltype(Qtmp))) # reset Qtmp
-        fill!(Qflux,zero(eltype(Qflux))) # reset Qflux
-
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-        println("off space: $off_space, start idx: $start_idx, end idx: $end_idx")
-
-        P_Flux_View = @view(method.P_Flux[start_idx:end_idx,start_idx:end_idx])
-        invA_Flux_View = @view(method.invA_Flux[start_idx:end_idx,start_idx:end_idx])
-        if method.Emission_Interactions
-            M_Emi_View = @view(method.M_Emi[start_idx:end_idx,start_idx:end_idx])
-        end
-        df_Inj .= @view(method.df_Inj[start_idx:end_idx])
-        fstep .= @view(f[start_idx:end_idx]) 
-        @. fdivsigma.diag = ifelse(fstep > 0.0, 1.0,0.0)
-        #fstep .+= (df_Inj + invA_Flux_View * M_Emi_View * fstep) * dt_scale
-        #fstep[fstep .< 1e16eps(0.0)] .= 0.0 # remove negative values for stability, also sets small values to zero which allows for more sparsity and faster solves in the Patankar update
-        @. sigma.diag = max(fstep,eps(Float64))
-        @. ftildedivsigma.diag = ifelse(fstep > 0.0, 1.0,0.0) #fstep ./ sigma.diag # this is just fstep but with a cutoff to avoid division by zero, also allows for more sparsity and faster solves in the Patankar update
-        fill!(Qbin,zero(eltype(Qbin))) # reset Qbin NEEDED otherwise binary interactions from previous off_space will carry over and contaminate current off_space update
-        @. sigma.diag = ifelse(fstep > 0.0, fstep,eps(Float64))
-        Qflux .= P_Flux_View
-
-        # first do advection update as binary interaction can be be large in comparision.
-
-            #=mul!(tmpdiag.diag,transpose(Qflux),onesvec)
-            tmpdiag.diag .= tmpdiag.diag .* ftildedivsigma.diag
-            Qtmp .= invA_Flux_View * (Qflux * ftildedivsigma - tmpdiag) * dt_scale
-
-            #Qtmp .-= invA_Flux_View * M_Emi_View * ftildedivsigma * dt_scale # minus as M_Emi is on LHS of transport equation and Q is on RHS
-
-            #mul!(source.diag, M_Emi_View, fstep)
-            #@. source.diag /= sigma.diag
-            #Qbin .-= invA_Flux_View * source * dt_scale # minus as M_Bin is on LHS of transport equation and Q is on RHS
-
-            #cutoff_offdiagonal_to_diag_relative!(Qbin, 1e-6)
-
-            Qtmp .+= I_matrix # add identity for Patankar update 
-
-            ftmp .= fstep
-
-            QLU = lu(Qtmp)
-            ldiv!(QLU,ftmp)
-
-            fstep .= ftmp=#
-            
-            # TODO: if dt too big this leads to poor energy conservation due to excess gain of photons and fast cooling of electrons 
-
-        # now do binary interaction update
-        
-        if method.Binary_Interactions && off_space in method.Bin_Domain
-
-            fstepE = fstep #.* method.E
-
-            @. ftildedivsigma.diag = ifelse(fstepE > 0.0, 1.0,0.0)
-            @. sigma.diag = ifelse(fstepE > 0.0, 1/fstepE,1/eps(Float64))
-        
-            @inbounds vol = method.Vol[off_space+1]
-
-            #mul!(method.M_Bin_Mul_Step_reshape,method.M_Bin,fView,vol,zero(method.Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-            # loss ij
-                fill!(Qbin,zero(eltype(Qbin))) # reset Qbin for loss calculation
-
-                mul!(method.M_Bin_Mul_Step_reshape,method.Lijk,fstepE,vol,zero(method.Precision))
-                mul!(tmpdiag.diag,method.M_Bin_Mul_Step,fstepE) 
-
-                println(isdiag(method.M_Bin_Mul_Step))
-
-                Qbin .-= tmpdiag * sigma #./2 #* sigma #=+ method.M_Bin_Mul_Step * ftildedivsigma)/2=# # minus as M_Bin is on LHS of transport equation and Q is on RHS
-
-                #mul!(method.M_Bin_Mul_Step_reshape,method.Lijk,fstepE,vol,zero(method.Precision))
-                #mul!(tmpdiag.diag,method.M_Bin_Mul_Step,fstepE) 
-
-                #Qbin .-= sigma * tmpdiag ./2 #* sigma #=+ method.M_Bin_Mul_Step * ftildedivsigma)/2=# # minus as M_Bin is on LHS of transport equation and Q is on RHS
-
-                # gain 
-                mul!(method.M_Bin_Mul_Step_reshape,method.Gijk,fstepE,vol,zero(method.Precision)) # temp is linked to M_Bin_Mul_Step so it gets edited while maintaining is 2D shape
-
-                Qbin .-= (method.M_Bin_Mul_Step * ftildedivsigma) #./2 #+ ftildedivsigma * method.M_Bin_Mul_Step) / 2 # minus as M_Bin is on LHS of transport equation and Q is on RHS
-
-                #mul!(method.M_Bin_Mul_Step_reshape,method.Gijk,ftildedivsigma.diag,vol,zero(method.Precision))
-                #Qbin .-= (method.M_Bin_Mul_Step * diagm(fstepE)) ./2
-                # together
-                #mul!(method.M_Bin_Mul_Step_reshape,method.Aijk,fstepE,vol,zero(method.Precision))
-                #Qbin .= method.M_Bin_Mul_Step
-                #Qbin .= -Qbin * ftildedivsigma 
-
-                #cutoff_offdiagonal_to_diag_relative!(Qbin, 1e0)
-
-                #mul!(tmpdiag.diag,transpose(Qflux),onesvec)
-                #tmpdiag.diag .= tmpdiag.diag .* ftildedivsigma.diag
-                #Qbin .+=  (Qflux * ftildedivsigma - tmpdiag)
-
-                display(sparse(Qbin))
-
-                println("has_positive_offdiag(Qbin): $(has_positive_offdiag(Qbin))")
-
-                Qtmp .= invA_Flux_View * (Qbin) * dt_scale
-
-                colsum = sum(Qtmp,dims=1)
-                rowsum = sum(Qtmp,dims=2)
-                println("Qbin - max col sum: ", findmax(colsum), " max row sum: ", findmax(rowsum), " min col sum: ", findmin(colsum), " min row sum: ", findmin(rowsum))
-                println("Qbin - max: ", findmax(Qtmp[:,findmax(colsum)[2][2]]), " min: ", findmin(Qtmp[:,findmax(colsum)[2][2]]))
-                #display(reshape(Qtmp[:,findmax(colsum)[2][2]],37,24))
-                display(reshape(Qtmp[:,150],37,24))
-                println("sum: $(sum(Qtmp[:,150])), Esum: $(sum(method.E .* Qtmp[:,150]))")
-
-                println("sumQf ", sum(Qtmp * fstep), " sumEQf ", sum(method.E .*(Qtmp * fstep)), " maxQf ", maximum(Qtmp * fstep), " minQf ", minimum(Qtmp * fstep))
-                println("sumQf ele ", sum(Qtmp[1:288,:] * fstep), " sumEQf ele ", sum(method.E[1:288] .*(Qtmp[1:288,:] * fstep)), "sumQf pho ", sum(Qtmp[289:end,:] * fstep), "  sumEQf pho ", sum(method.E[289:end] .*(Qtmp[289:end,:] * fstep)))
-
-                println("max timescale: ", maximum(replace!(abs.(max.(fstep,eps(Float64)) ./ (Qtmp * fstep)),NaN=>0.0,0.0=>Inf)), " min timescale: ", minimum(replace(abs.(fstep ./ (Qtmp * fstep)),NaN=>Inf,0.0=>Inf)))
-
-                Qtmp .+= I_matrix # add identity for Patankar update
-
-                norm_equilibration_matrices!(Dl,Dr,Qtmp; iters=0)
-                Qs .= Dl * Qtmp * Dr
-
-                println("max 1TQ ", maximum(transpose(onesvec) * Qtmp - transpose(onesvec)), " min 1TQ ", minimum(transpose(onesvec) * Qtmp - transpose(onesvec)))
-                println("max ETQ ", maximum(transpose(method.E) * Qtmp - transpose(method.E))," min ETQ ", minimum(transpose(method.E) * Qtmp - transpose(method.E)))
-
-                println("has_positive_offdiag(Qs): $(has_positive_offdiag(Qs))")
-
-                ftmp .= fstepE
-
-                fs .= Dl * ftmp
-
-                QLU = lu(Qs)
-                ldiv!(QLU,fs)
-
-                s = svdvals(Qs)
-                println("σmax = $(maximum(s)), σmin = $(minimum(s)), cond = $(maximum(s)/minimum(s))")
-                println("cond = $(cond(Qs))")
-
-                ftmp .= (Dr * fs) #./ method.E
-
-            println("num before $(sum(fstep)), num after $(sum(ftmp)), Δ = $(sum(ftmp)-sum(fstep))")
-            println("eng before $(sum(method.E .* fstep)), eng after $(sum(method.E .* ftmp)), Δ = $(sum(method.E .* ftmp) - sum(method.E .* fstep))")
-
-            fstep .= ftmp
-
-            println("any negative fstep: ", any(fstep .< 0.0))
-            println("sum of negative fstep: ", sum((fstep .< 0.0) .* fstep))
-            println("sum of positive fstep: ", sum((fstep .> 0.0) .* fstep))
-
-            println("off space: $off_space, Cr_momentum = $(-minimum(@. ifelse(fstep<=0.0, Inf,(Dr * fs - fstep) / fstep)))")
-            
-        end
-
-
-        @view(method.f_step[start_idx:end_idx]) .= fstep
-
-    end
-
-    return nothing
-
-end
-
-has_positive_offdiag(M) = any((i != j && M[i, j] > 0) for i in axes(M, 1), j in axes(M, 2))
-
-function patankar_energy_fix!(method::SymplecticMPEStruct,fstep::AbstractVector{T},fprev::AbstractVector{T}) where T
-
-    E = method.E
-    df = similar(fstep)
-    fill!(df,zero(eltype(df)))
-    ftmp = copy(fstep)
-
-    w = zeros(eltype(df), length(df))
-    df_active = zeros(eltype(df), length(df))
-    df_inactive = zeros(eltype(df), length(df))
-
-    active = trues(length(fstep))
-    nonpositive = true
-
-    while nonpositive
-
-        fill!(w, zero(eltype(w)))
-        fill!(df_active, zero(eltype(df_active)))
-        fill!(df_inactive, zero(eltype(df_inactive)))
-
-    # fixed inactive correction
-    df_inactive .= -ftmp .* (.!active)
-
-    # remaining defects caused by clipping
-    ΔM = sum(ftmp[.!active])
-
-    ΔE = sum(E .* fprev) - sum(E .* (ftmp .+ df_inactive))
-
-    # weights on active set
-    eta = E
-    w[active] .= ftmp[active] #.* eta
-
-    S0 = sum(w)
-    Ebar = sum(E .* w) / S0
-
-    Ẽ = E .- Ebar
-
-    S2 = sum((Ẽ.^2) .* w)
-
-    λ = -2ΔM / S0
-    μ = -2*(ΔE - Ebar*ΔM) / S2
-    # active correction ONLY
-    df_active[active] .= -0.5 .* w[active] .* (λ .+ μ .* Ẽ[active])
-
-    # total correction
-    df = df_inactive + df_active
-
-    println(sum(df_active))
-    println("mass defect = ", ΔM)
-    println("energy defect = ", ΔE)
-    println("constraint mass = ", sum(df_active))
-    println("constraint energy = ", sum(E .* df_active))
-    println("minimum corrected state = ", minimum(ftmp .+ df))
-
-    ucorr = ftmp .+ df
-
-    new_active = ucorr .> 1e-10
-
-    active .&= new_active
-
-    nonpositive = any(ucorr .< 0.0)
-
-    println("sum(df_inactive) = ", sum(df_inactive))
-    println("sum(df_active)   = ", sum(df_active))
-    println("total correction = ", sum(df))
-
-    end
-
-    println("mass defect = ", sum(ftmp .+ df) - sum(fprev))
-    println("energy defect = ", sum(E .* (ftmp .+ df)) - sum(E .* fprev))
-
-
-    return ftmp .+ df
-
-end
-
-function patankar_energy_fix_linear!(
-    method,
-    fstep::AbstractVector{T},
-    fprev::AbstractVector{T};
-    tol = 1e-14,
-    maxiter = 50,) where T
-
-    E = method.E
-
-    #
-    # Uncorrected Patankar state
-    #
-    ftmp = copy(fstep)
-
-    N = length(ftmp)
-
-    #
-    # Corrections
-    #
-    df          = zeros(T, N)
-    df_active   = zeros(T, N)
-    df_inactive = zeros(T, N)
-
-    #
-    # Active-set mask
-    #
-    active = ftmp .> tol
-
-    #
-    # Weights
-    #
-    w = zeros(T, N)
-
-    for iter in 1:maxiter
-
-        old_active = copy(active)
-
-        fill!(df,          zero(T))
-        fill!(df_active,   zero(T))
-        fill!(df_inactive, zero(T))
-        fill!(w,           zero(T))
-
-        #
-        # Inactive states are clipped to zero
-        #
-        df_inactive .= -ftmp .* (.!active)
-
-        #
-        # Remaining conservation defects
-        #
-        ΔM =
-            sum(fprev) -
-            sum(ftmp .+ df_inactive)
-
-        ΔE =
-            sum(E .* fprev) -
-            sum(E .* (ftmp .+ df_inactive))
-
-        #
-        # Active weights
-        #
-        w[active] .= ftmp[active]
-
-        #
-        # Weighted energy centroid
-        #
-        W0 = sum(w)
-
-        if W0 <= tol
-            error("No active states remain in energy correction.")
-        end
-
-        Ebar = sum(E .* w) / W0
-
-        #
-        # Centered energies for conditioning
-        #
-        Ẽ = E .- Ebar
-
-        #
-        # Weighted moments
-        #
-        S0 = sum(w)
-        S2 = sum((Ẽ.^2) .* w)
-
-        #
-        # Solve:
-        #
-        # δu_i = w_i (a + b Ẽ_i)
-        #
-        # Constraints:
-        #
-        # Σ δu_i      = ΔM
-        # Σ E_i δu_i = ΔE
-        #
-        # Because Ẽ is centered:
-        #
-        # Σ w_i Ẽ_i = 0
-        #
-        # giving a diagonalized system.
-        #
-
-        a = ΔM / S0
-
-        #
-        # Energy defect relative to centroid
-        #
-        ΔẼ = ΔE - Ebar * ΔM
-
-        b = ΔẼ / S2
-
-        #
-        # Active correction
-        #
-        df_active .=
-            w .* (a .+ b .* Ẽ)
-
-        #
-        # Total correction
-        #
-        df .= df_inactive .+ df_active
-
-        #
-        # Corrected state
-        #
-        ucorr = ftmp .+ df
-
-        #
-        # Update active set
-        #
-        active .&= (ucorr .> 0.0)
-
-        #
-        # Convergence test
-        #
-        if all(active .== old_active)
-            break
-        end
-
-        if iter == maxiter
-            @warn "Linear active-set energy projection reached maxiter."
-        end
-    end
-
-    fcorrected = ftmp .+ df
-
-    #
-    # Diagnostics
-    #
-    println("Final mass defect   = ",
-        sum(fcorrected) - sum(fprev))
-
-    println("Final energy defect = ",
-        sum(E .* fcorrected) - sum(E .* fprev))
-
-    println("Minimum state       = ",
-        minimum(fcorrected))
-
-    return fcorrected
-end
-
-function patankar_energy_fix_linear_filtered!(
-    method,
-    fstep::AbstractVector{T},
-    fprev::AbstractVector{T};
-    tol = 1e-14,
-    maxiter = 50,
-    energy_window_orders = 4,) where T
-
-    E = method.E
-
-    #
-    # Uncorrected Patankar state
-    #
-    ftmp = copy(fstep)
-
-    N = length(ftmp)
-
-    #
-    # Correction vectors
-    #
-    df          = zeros(T, N)
-    df_active   = zeros(T, N)
-    df_inactive = zeros(T, N)
-
-    #
-    # Working arrays
-    #
-    w      = zeros(T, N)
-    filter = zeros(T, N)
-
-    #
-    # Permanent inactive mask
-    #
-    inactive = falses(N)
-
-    #
-    # Initial positivity check
-    #
-    inactive .|= (ftmp .<= tol)
-
-    for iter in 1:maxiter
-
-        fill!(df,          zero(T))
-        fill!(df_active,   zero(T))
-        fill!(df_inactive, zero(T))
-        fill!(w,           zero(T))
-        fill!(filter,      zero(T))
-
-        #
-        # Active set is complement of inactive set
-        #
-        active = .!inactive
-
-        #
-        # Permanently clipped states
-        #
-        df_inactive .= -ftmp .* inactive
-
-        #
-        # Remaining defects AFTER clipping
-        #
-        ΔM =
-            sum(fprev) -
-            sum(ftmp .+ df_inactive)
-
-        ΔE =
-            sum(E .* fprev) -
-            sum(E .* (ftmp .+ df_inactive))
-
-        #
-        # Determine occupied energy range
-        #
-        occupied =
-            (ftmp .+ df_inactive) .> tol
-
-        if !any(occupied)
-            error("No occupied states remain.")
-        end
-
-        Emax_occ = maximum(E[occupied])
-
-        #
-        # Smooth logarithmic filter
-        #
-        for i in eachindex(E)
-
-            if E[i] <= 0 || Emax_occ <= 0
-                filter[i] = zero(T)
-            else
-
-                x =
-                    log10(E[i] / Emax_occ) +
-                    energy_window_orders
-
-                filter[i] =
-                    clamp(x, zero(T), one(T))
-            end
-        end
-
-        #
-        # Active correction weights
-        #
-        w[active] .=
-            ftmp[active] .* filter[active]
-
-        #
-        # Prevent singular systems
-        #
-        S0 = sum(w)
-
-        if S0 <= tol
-            error("Correction weights vanished.")
-        end
-
-        #
-        # Center energies
-        #
-        Ebar = sum(E .* w) / S0
-
-        Ẽ = E .- Ebar
-
-        #
-        # Weighted variance
-        #
-        S2 = sum((Ẽ.^2) .* w)
-
-        if S2 <= tol
-            error("Energy variance too small.")
-        end
-
-        #
-        # Linear correction:
-        #
-        # δu_i = w_i (a + b Ẽ_i)
-        #
-        a = ΔM / S0
-
-        ΔẼ = ΔE - Ebar * ΔM
-
-        b = ΔẼ / S2
-
-        #
-        # Active correction
-        #
-        df_active .=
-            w .* (a .+ b .* Ẽ)
-
-        #
-        # Total correction
-        #
-        df .= df_inactive .+ df_active
-
-        #
-        # Corrected state
-        #
-        ucorr = ftmp .+ df
-
-        #
-        # Detect NEW negative states
-        #
-        newly_inactive =
-            (ucorr .<= tol) .& (.!inactive)
-
-        #
-        # Diagnostics
-        #
-        println("iter = ", iter)
-
-        println("ΔM target         = ", ΔM)
-        println("ΔE target         = ", ΔE)
-
-        println("constraint mass   = ", sum(df))
-        println("constraint energy = ", sum(E .* df))
-
-        println("minimum corrected = ", minimum(ucorr))
-
-        #
-        # Converged?
-        #
-        if !any(newly_inactive)
-            break
-        end
-
-        #
-        # Permanently accumulate clipped states
-        #
-        inactive .|= newly_inactive
-
-        if iter == maxiter
-            @warn "Energy projection reached maxiter."
-        end
-    end
-
-    #
-    # Final corrected state
-    #
-    fcorrected = ftmp .+ df
-
-    #
-    # Final diagnostics
-    #
-    println("Final mass defect   = ",
-        sum(fcorrected) - sum(fprev))
-
-    println("Final energy defect = ",
-        sum(E .* fcorrected) - sum(E .* fprev))
-
-    println("Minimum state       = ",
-        minimum(fcorrected))
-
-    return fcorrected
-end
-
-function patankar_energy_fix_quadratic!(
-    method,
-    fstep::AbstractVector{T},
-    fprev::AbstractVector{T};
-    tol = 1e-14,
-    maxiter = 50,) where T
-
-    E = method.E
-
-    # unconstrained Patankar result
-    ftmp = copy(fstep)
-
-    N = length(fstep)
-
-    # correction vectors
-    df          = zeros(T, N)
-    df_active   = zeros(T, N)
-    df_inactive = zeros(T, N)
-
-    # active set
-    active = ftmp .> tol
-
-    # weights
-    w = zeros(T, N)
-
-    for iter in 1:maxiter
-
-        old_active = copy(active)
-
-        fill!(df,          zero(T))
-        fill!(df_active,   zero(T))
-        fill!(df_inactive, zero(T))
-        fill!(w,           zero(T))
-
-        #
-        # Inactive states are clipped to zero
-        #
-        df_inactive .= -ftmp .* (.!active)
-
-        #
-        # Remaining conservation defects
-        #
-        ΔM =
-            sum(fprev) -
-            sum(ftmp .+ df_inactive)
-
-        ΔE =
-            sum(E .* fprev) -
-            sum(E .* (ftmp .+ df_inactive))
-
-        #
-        # Active-set weights
-        #
-        w[active] .= ftmp[active]
-
-        #
-        # Center energies for conditioning
-        #
-        W0 = sum(w)
-
-        if W0 <= tol
-            error("No active states remain in correction.")
-        end
-
-        Ebar = sum(E .* w) / W0
-
-        Ẽ = E .- Ebar
-
-        #
-        # Build weighted moments
-        #
-        M0 = sum(w)
-        M1 = sum(Ẽ .* w)
-        M2 = sum((Ẽ.^2) .* w)
-        M3 = sum((Ẽ.^3) .* w)
-        M4 = sum((Ẽ.^4) .* w)
-
-        #
-        # We seek:
-        #
-        # δu_i = w_i (a + b Ẽ_i + c Ẽ_i^2)
-        #
-        # subject to:
-        #
-        # Σ δu_i = ΔM
-        # Σ Ẽ_i δu_i = ΔẼ
-        #
-        # and minimizing weighted norm.
-        #
-        # This gives the normal equations:
-        #
-        # [M0 M1 M2] [a]   [ΔM ]
-        # [M1 M2 M3] [b] = [ΔẼ]
-        # [M2 M3 M4] [c]   [0   ]
-        #
-        # Last row enforces minimum-norm quadratic correction.
-        #
-
-        ΔẼ = ΔE - Ebar * ΔM
-
-        A = [
-            M0 M1 M2
-            M1 M2 M3
-            M2 M3 M4
-        ]
-
-        rhs = T[ΔM, ΔẼ, 0]
-
-        coeffs = A \ rhs
-
-        a, b, c = coeffs
-
-        #
-        # Active correction
-        #
-        df_active .=
-            w .* (a .+ b .* Ẽ .+ c .* (Ẽ.^2))
-
-        #
-        # Total correction
-        #
-        df .= df_inactive .+ df_active
-
-        ucorr = ftmp .+ df
-
-        #
-        # Update active set
-        #
-        active .&= (ucorr .> 0.0)
-
-        #
-        # Converged?
-        #
-        if all(active .== old_active)
-            break
-        end
-
-        if iter == maxiter
-            @warn "Active-set projection reached maxiter."
-        end
-    end
-
-    #
-    # Final corrected state
-    #
-    fcorrected = ftmp .+ df
-
-    #
-    # Diagnostics
-    #
-    println("Final mass defect   = ",
-        sum(fcorrected) - sum(fprev))
-
-    println("Final energy defect = ",
-        sum(E .* fcorrected) - sum(E .* fprev))
-
-    println("Minimum state       = ",
-        minimum(fcorrected))
-
-    return fcorrected
-end
-
-function pow2_equilibration_matrices(A::AbstractMatrix{T}; iters=3) where {T<:AbstractFloat}
-    n, m = size(A)
-
-    dl = ones(T, n)
-    dr = ones(T, m)
-
-    As = copy(A)
-
-    for k in 1:iters
-        # Left scaling: rows
-        for i in 1:n
-            s = maximum(abs, @view As[i, :])
-            if s > zero(T)
-                α = T(2.0)^(-round(Int, log2(s)))
-                As[i, :] .*= α
-                dl[i] *= α
-            end
-        end
-
-        # Right scaling: columns
-        for j in 1:m
-            s = maximum(abs, @view As[:, j])
-            if s > zero(T)
-                α = T(2.0)^(-round(Int, log2(s)))
-                As[:, j] .*= α
-                dr[j] *= α
-            end
-        end
-    end
-
-    return Diagonal(dl), Diagonal(dr)
-end
-
-function pow2_equilibration_matrices!(Dl::Diagonal{T,Vector{T}}, Dr::Diagonal{T,Vector{T}}, A::AbstractMatrix{T}; iters=3) where {T<:AbstractFloat}
-
-    n, m = size(A)
-
-    Dl.diag .= ones(T)
-    Dr.diag .= ones(T)
-
-    As = copy(A)
-
-    for k in 1:iters
-        # Left scaling: rows
-        for i in 1:n
-            s = maximum(abs, @view As[i, :])
-            if s > zero(T)
-                α = T(2.0)^(-round(Int, log2(s)))
-                As[i, :] .*= α
-                Dl.diag[i] *= α
-            end
-        end
-
-        # Right scaling: columns
-        for j in 1:m
-            s = maximum(abs, @view As[:, j])
-            if s > zero(T)
-                α = T(2.0)^(-round(Int, log2(s)))
-                As[:, j] .*= α
-                Dr.diag[j] *= α
-            end
-        end
-    end
-
-    return nothing
-end
-
-function norm_equilibration_matrices(A::AbstractMatrix{T}; iters=5) where {T<:AbstractFloat}
-    n, m = size(A)
-
-    dl = ones(T, n)
-    dr = ones(T, m)
-
-    As = copy(A)
-
-    for k in 1:iters
-        # Row norm scaling
-        for i in 1:n
-            s = norm(@view As[i, :])
-            if s > zero(T)
-                α = one(T) / T(s)
-                As[i, :] .*= α
-                dl[i] *= α
-            end
-        end
-
-        # Column norm scaling
-        for j in 1:m
-            s = norm(@view As[:, j])
-            if s > zero(T)
-                α = one(T) / T(s)
-                As[:, j] .*= α
-                dr[j] *= α
-            end
-        end
-    end
-
-    return Diagonal(dl), Diagonal(dr)
-end
-
-function norm_equilibration_matrices!(Dl::Diagonal{T,Vector{T}}, Dr::Diagonal{T,Vector{T}}, A::AbstractMatrix{T}; iters=5) where {T<:AbstractFloat}
-    n, m = size(A)
-
-    Dl.diag .= ones(T)
-    Dr.diag .= ones(T)
-    As = copy(A)
-
-    for k in 1:iters
-        # Row norm scaling
-        for i in 1:n
-            s = norm(@view As[i, :])
-            if s > zero(T)
-                α = one(T) / T(s)
-                As[i, :] .*= α
-                Dl.diag[i] *= α
-            end
-        end
-
-        # Column norm scaling
-        for j in 1:m
-            s = norm(@view As[:, j])
-            if s > zero(T)
-                α = one(T) / T(s)
-                As[:, j] .*= α
-                Dr.diag[j] *= α
-            end
-        end
-    end
-
-    return nothing
-
-end
-
-function cutoff_offdiagonal_to_diag_relative!(A, scale)
-    n, m = size(A)
-    @assert n == m "A must be square"
-
-    for j in 1:n
-        colmax = maximum(A[i, j] for i in 1:n)
-        cutoff = scale *eps(colmax)
-
-        for i in 1:n
-            if i != j && abs(A[i, j]) < cutoff
-                removed = A[i, j]
-                A[i, j] = zero(eltype(A))
-                A[j, j] -= removed  # Add the value to diagonal
-            end
-        end
-    end
-
-    return nothing
-end
-
-function update_Big_Emi!(method::AbstractSteppingMethod)
-
-    @assert size(method.M_Emi) == (length(f),length(f)) "M_Emi is not the correct size"
-
-    PhaseSpace = method.PhaseSpace
-    Spacetime = PhaseSpace.Spacetime
-    Momentum = PhaseSpace.Momentum
-
-    x_num = Spacetime.x_num
-    y_num = Spacetime.y_num
-    z_num = Spacetime.z_num
-    px_num_list = Momentum.px_num_list
-    py_num_list = Momentum.py_num_list
-    pz_num_list = Momentum.pz_num_list
-
-    n_space = x_num+y_num+z_num
-    n_momentum = sum(sum(px_num_list.*py_num_list.*pz_num_list))
-
-    Vol = method.Vol
-
-    for x in 1:x_num, y in 1:y_num, z in 1:z_num
-
-        off_space = (x-1)*y_num*z_num+(y-1)*z_num+z-1
-
-        start_idx = n_momentum*off_space+1
-        end_idx = n_momentum*(off_space+1)
-
-        fView = @view(method.f[start_idx:end_idx])
-        df_EmiView = @view method.df_Emi[start_idx:end_idx]
-
-        M_EmiView = @view method.M_Emi[start_idx:end_idx,start_idx:end_idx] # TODO: make M_Emi block diagonal to save memory 
-
-        mul!(df_EmiView,M_EmiView,fView)
-
-        # multiply by volume element
-        df_EmiView .*= Vol[off_space+1]
-
-    end
-
-    #=
-    TODO: Update Implicit
-    # assign jacobian elements
-    if method.Implicit
-        @. method.Jac += method.M_Emi
-    end=#
-
-    return nothing
-
-end
-
-# to be removed in julia 1.13#
-
-function generic_lufact!(A::AbstractMatrix{T}, pivot::Union{RowMaximum,NoPivot,RowNonZero} = lupivottype(T), ipiv::AbstractVector{LinearAlgebra.BlasInt} = Vector{LinearAlgebra.BlasInt}(undef,min(size(A)...));check::Bool = true, allowsingular::Bool = false) where {T}
-    
-    check && LAPACK.chkfinite(A)
-    # Extract values
-    m, n = size(A)
-    minmn = min(m,n)
-
-    # Initialize variables
-    info = 0
-    @inbounds begin
-        for k = 1:minmn
-            # find index max
-            kp = k
-            if pivot === RowMaximum() && k < m
-                amax = abs(A[k, k])
-                for i = k+1:m
-                    absi = abs(A[i,k])
-                    if absi > amax
-                        kp = i
-                        amax = absi
-                    end
-                end
-            elseif pivot === RowNonZero()
-                for i = k:m
-                    if !iszero(A[i,k])
-                        kp = i
-                        break
-                    end
-                end
-            end
-            ipiv[k] = kp
-            if !iszero(A[kp,k])
-                if k != kp
-                    # Interchange
-                    for i = 1:n
-                        tmp = A[k,i]
-                        A[k,i] = A[kp,i]
-                        A[kp,i] = tmp
-                    end
-                end
-                # Scale first column
-                Akkinv = inv(A[k,k])
-                for i = k+1:m
-                    A[i,k] *= Akkinv
-                end
-            elseif info == 0
-                info = k
-            end
-            # Update the rest
-            for j = k+1:n
-                for i = k+1:m
-                    A[i,j] -= A[i,k]*A[k,j]
-                end
-            end
-        end
-    end
-    if pivot === NoPivot()
-        # Use a negative value to distinguish a failed factorization (zero in pivot
-        # position during unpivoted LU) from a valid but rank-deficient factorization
-        info = -info
-    end
-    check && LinearAlgebra._check_lu_success(info, allowsingular)
-    return LU{T,typeof(A),typeof(ipiv)}(A, ipiv, convert(LinearAlgebra.BlasInt, info))
-end
-
-function lu!(F::LU{<:Any,<:AbstractMatrix}, A; check::Bool = true, allowsingular::Bool = false)
-    copyto!(F.factors, Float64.(A))
-    return generic_lufact!(F.factors, LinearAlgebra.lupivottype(eltype(A)), F.ipiv; check, allowsingular)
 end

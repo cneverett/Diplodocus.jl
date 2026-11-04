@@ -173,3 +173,111 @@ function phi1_leja_dense(A,v,Leja_nodes;dt,tau_min = nothing,mu_est = nothing,ga
         warning = "maximum degree reached before tolerance",
     )
 end
+
+
+# ----------------------------
+# Scalar phi_1(z) = (exp(z)-1)/z
+# ----------------------------
+function phi1_scalar(z::Real)
+    if abs(z) < 1e-8
+        # Taylor expansion near zero
+        return 1 + z/2 + z^2/6 + z^3/24 + z^4/120 + z^5/720
+    else
+        return expm1(z) / z
+    end
+end
+
+# ----------------------------
+# Approximate tau_min from A diagonal
+#
+# If A has decay rates on the diagonal, e.g. a_ii ≈ -1/tau_i,
+# then the largest-magnitude negative diagonal entry gives
+#
+# tau_min ≈ 1 / max_i(-a_ii)
+# ----------------------------
+function estimate_tau_min_from_diag(A)
+    neg_rates = [-A[i,i] for i in axes(A,1) if A[i,i] < 0]
+
+    if isempty(neg_rates)
+        error("No negative diagonal entries found; cannot estimate tau_min this way.")
+    end
+
+    fastest_rate = maximum(neg_rates)
+    return 1 / fastest_rate
+end
+
+# ----------------------------
+# Cheap growth estimate from current vector v
+#
+# mu_v = v'Av / v'v
+#
+# This is not an upper bound for mu_2, but is a cheap
+# direction-dependent growth estimate.
+# ----------------------------
+function estimate_mu_from_v(A, v)
+    Av = A * v
+    return dot(v, Av) / dot(v, v)
+end
+
+# ----------------------------
+# Safer but more expensive dense estimate:
+#
+# mu_2 = lambda_max((A + A')/2)
+#
+# Since A is dense, this may be acceptable for moderate size.
+# ----------------------------
+function estimate_mu2_dense(A)
+    H = Symmetric((A + A') / 2)
+    return eigmax(H)
+end
+
+# ----------------------------
+# Simple approximate Leja nodes on [-2,2]
+#
+# For production use, you should use a proper precomputed Leja sequence.
+# This greedy construction is acceptable for experimentation.
+# ----------------------------
+function leja_nodes_interval(n::Int; a=-2.0, b=2.0, grid_size=20_000)
+    grid = collect(range(a, b, length=grid_size))
+    nodes = Vector{Float64}(undef, n)
+
+    # Start at right endpoint; common for real Leja sequences
+    nodes[1] = b
+
+    logprod = zeros(Float64, grid_size)
+
+    for k in 2:n
+        # Update log product: log prod_j |x - xi_j|
+        @inbounds for i in eachindex(grid)
+            logprod[i] += log(abs(grid[i] - nodes[k-1]) + eps())
+        end
+
+        idx = argmax(logprod)
+        nodes[k] = grid[idx]
+    end
+
+    return nodes
+end
+
+# ----------------------------
+# Newton divided differences
+#
+# Input:
+#   z[j] = interpolation nodes in physical z-plane
+#   f[j] = phi1(z[j])
+#
+# Output:
+#   c[j] = Newton coefficients
+# ----------------------------
+function divided_differences(z, f)
+    c = copy(f)
+    n = length(z)
+
+    for j in 2:n
+        for i in n:-1:j
+            c[i] = (c[i] - c[i-1]) / (z[i] - z[i-j+1])
+        end
+    end
+
+    return c
+end

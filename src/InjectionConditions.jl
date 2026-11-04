@@ -175,7 +175,7 @@ function InjectionBlackBody!(Injection::Vector{F},PhaseSpace::PhaseSpaceStruct,s
     # Scale by rate (rate scaled by dt0 to convert to per time step)
     @. Injection += rate_Inj * tmp
 
-    println("sum injection: ",sum(rate_Inj * tmp))
+    println("sum injection: ",sum(rate_Inj .* tmp))
 
     return nothing
 end
@@ -212,7 +212,7 @@ end
 
 Modifies the injection state vector `Injection` with a kappa distribution with exponential cut-off generated using `InitialKappaExpDecay!` scaled by the rate of injection `rate_Inj`. Such that particles with that distribution and number density `num_Init` are injected at a rate of `rate_Inj`.
 """
-function InjectionKappaExpDecay!(Injection::Vector{F},PhaseSpace::PhaseSpaceStruct,species::String,κ::Float64,T::Float64,pmax::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0,num_Inj::AbstractFloat=1.0,rate_Inj::Union{Float64,Vector{Float64}}=1.0,x_idx=nothing,y_idx=nothing,z_idx=nothing,off_space_idx=nothing,method="hcubature",samples=32) where F<:AbstractFloat
+function InjectionKappaExpDecay!(Injection::Vector{F},PhaseSpace::PhaseSpaceStruct,species::String,κ::Float64,T::Float64,pmax::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0,num_Inj::AbstractFloat=1.0,rate_Inj::Union{Float64,Vector{Float64}}=1.0,x_idx=nothing,y_idx=nothing,z_idx=nothing,off_space_idx=nothing,method="hcubature",samples=32,p_cut::Float64=1e2*pmax) where F<:AbstractFloat
     
     if rate_Inj isa Vector{Float64}
         @assert length(rate_Inj) == length(Injection) "rate_Inj and Injection must have the same length if rate_Inj is a vector"
@@ -222,7 +222,7 @@ function InjectionKappaExpDecay!(Injection::Vector{F},PhaseSpace::PhaseSpaceStru
     tmp = zeros(eltype(Injection), length(Injection))
 
     # Add initial conditions to temporary vector
-    InitialKappaExpDecay!(tmp,PhaseSpace,species,κ,T,pmax;umin=umin,umax=umax,hmin=hmin,hmax=hmax,num_Init=num_Inj,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx,off_space_idx=off_space_idx,method="hcubature",samples=32)
+    InitialKappaExpDecay!(tmp,PhaseSpace,species,κ,T,pmax;umin=umin,umax=umax,hmin=hmin,hmax=hmax,num_Init=num_Inj,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx,off_space_idx=off_space_idx,method="hcubature",samples=32,p_cut=p_cut)
 
     #tr = PhaseSpace.Grids.tr
     #dt0 = tr[2] - tr[1]
