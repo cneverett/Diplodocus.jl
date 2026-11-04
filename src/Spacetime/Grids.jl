@@ -1,15 +1,41 @@
 abstract type AbstractSpacetimeGrid end
 
+"""
+    UniformGrid(up,low,num)
+
+Creates a uniformly spaced grid from `low` to `up` with `num` divisions.
+
+    | a | a | a | a | a | 
+    low                  up
+    a = (up - low)/num
+
+"""
 struct UniformGrid <: AbstractSpacetimeGrid
     up::Float64
     low::Float64
     num::Int64
 end
+
+""" 
+    Log10Grid(up,low,num)
+
+Creates a log10 spaced grid from `10^low` to `10^up` with `num` divisions.
+    
+    | 1 | 10 | 100 | 1000 | 10000 | 
+    10^low                        10^up
+
+"""
 struct Log10Grid <: AbstractSpacetimeGrid
     up::Float64
     low::Float64
     num::Int64
 end
+
+"""
+    StretchGrid(low,up,sub,num)
+
+Creates a stretched grid that starts at `low` and passes through `up` with `sub` grid points between `low` and `up`, the total number of grid cells is `num`. If `num` = `sub+2` then the grid ends at `up`, otherwise the grid continues beyond `up`. The spacing between grid points is determined by a geometric progressions with `ratio = 2^(1/(sub+1))`
+"""
 struct StretchGrid <: AbstractSpacetimeGrid
     low::Float64
     up::Float64 
