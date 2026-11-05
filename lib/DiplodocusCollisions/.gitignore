@@ -1,0 +1,19 @@
+/Manifest.toml
+/test/Manifest.toml
+
+/Data/
+
+/src/FunctionTestingGround/
+stu_domain_area.nb
+
+/docs/build/
+
+# Testing version of this file, not stored in \src\Common\
+/Run_Integration_Test.jl
+/Run_Integration_Test_Sync.jl
+
+/Testing_Ground/
+
+*.zarr
+
+
