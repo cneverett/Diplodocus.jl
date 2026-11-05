@@ -178,3 +178,14 @@ mjx-container > svg {
   display: inline-block;
 }
 
+/**
+ * Inverted colours for light and dark mode .svg images
+ * -------------------------------------------------------------------------- */
+
+:root.dark img[src$=".svg"] {
+   filter: invert(0);
+}
+
+:root:not(.dark) img[src$=".svg"] {
+   filter: invert(1)
+}
