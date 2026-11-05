@@ -1,4 +1,5 @@
 /Manifest.toml
+/test/Manifest.toml
 
 /Data/
 
@@ -12,5 +13,7 @@ stu_domain_area.nb
 /Run_Integration_Test_Sync.jl
 
 /Testing_Ground/
+
+*.zarr
 
 

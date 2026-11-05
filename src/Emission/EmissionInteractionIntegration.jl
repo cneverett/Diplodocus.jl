@@ -3,7 +3,7 @@
 
 Function to run the Monte Carlo integration of the S array in a serial environment. 
 """
-function EmissionInteractionIntegration(Setup::Tuple{Tuple{String,String,String,String,Float64,Float64,Float64,Float64,Float64,Float64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Vector{Float64}},Tuple{Int64,Int64,Int64,Int64},StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64},Int64},Int64,Int64,Int64,String,String})
+function EmissionInteractionIntegration(Setup::Tuple{Tuple{String,String,String,String,Float64,Float64,Float64,Float64,Float64,Float64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64},Tuple{Int64,Int64,Int64,Int64},StepRangeLen{Float64,Base.TwicePrecision{Float64},Base.TwicePrecision{Float64},Int64},Int64,Int64,Int64,String,String})
 
     # ======= Load User Parameters ======= #
 
@@ -45,44 +45,16 @@ function EmissionInteractionIntegration(Setup::Tuple{Tuple{String,String,String,
         
         filePath = joinpath(fileLocation,fileName)
 
-        (OldGainTallyK2_All,OldGainTallyK3_All,OldLossTallyK1_All,OldGainTallyN2_All,OldGainTallyN3_All,OldLossTallyN1_All,OldGainMatrix2_All,OldGainMatrix3_All,OldLossMatrix1_All) = OldMonteCarloArraysEmission(Parameters,filePath)
+        (OldGainTallyK2,OldGainTallyK3,OldLossTallyK1,OldGainTallyN2,OldGainTallyN3,OldLossTallyN1,OldGainMatrix2,OldGainMatrix3,OldLossMatrix1) = OldMonteCarloArraysEmission(Parameters,filePath)
 
-        (GainTotal2_All,GainTotal3_All,LossTotal1_All,GainTallyN2_All,GainTallyK2_All,GainTallyN3_All,GainTallyK3_All,LossTallyN1_All,LossTallyK1_All,GainMatrix2_All,GainMatrix3_All,LossMatrix1_All) = MonteCarloArraysEmission(Parameters)
+        (GainTotal2,GainTotal3,LossTotal1,GainTallyN2,GainTallyK2,GainTallyN3,GainTallyK3,LossTallyN1,LossTallyK1,GainMatrix2,GainMatrix3,LossMatrix1) = MonteCarloArraysEmission(Parameters)
 
     # ================================= #
 
     # ===== Run MonteCarlo Integration ==== #
 
         println("Running Monte Carlo Integration")
-
-        for (ee,Ext_val) in enumerate(Ext)
-            println("")
-            println("Ext Value = $Ext_val  ($(ee) out of $(length(Ext)))")
-            println("")
-
-            OldGainTallyK2 = view(OldGainTallyK2_All,:,:,:,:,:,:,ee)
-            OldGainTallyK3 = view(OldGainTallyK3_All,:,:,:,:,:,:,ee)
-            OldLossTallyK1 = view(OldLossTallyK1_All,:,:,:,ee)
-            OldGainTallyN2 = view(OldGainTallyN2_All,:,:,:,:,:,:,ee)
-            OldGainTallyN3 = view(OldGainTallyN3_All,:,:,:,:,:,:,ee)
-            OldLossTallyN1 = view(OldLossTallyN1_All,:,:,:,ee)
-            OldGainMatrix2 = view(OldGainMatrix2_All,:,:,:,:,:,:,ee)
-            OldGainMatrix3 = view(OldGainMatrix3_All,:,:,:,:,:,:,ee)
-            OldLossMatrix1 = view(OldLossMatrix1_All,:,:,:,ee)
-
-            GainTallyK2 = view(GainTallyK2_All,:,:,:,:,:,:,ee)
-            GainTallyK3 = view(GainTallyK3_All,:,:,:,:,:,:,ee)
-            LossTallyK1 = view(LossTallyK1_All,:,:,:,ee)
-            GainTallyN2 = view(GainTallyN2_All,:,:,:,:,:,:,ee)
-            GainTallyN3 = view(GainTallyN3_All,:,:,:,:,:,:,ee)
-            LossTallyN1 = view(LossTallyN1_All,:,:,:,ee)
-            GainMatrix2 = view(GainMatrix2_All,:,:,:,:,:,:,ee)
-            GainMatrix3 = view(GainMatrix3_All,:,:,:,:,:,:,ee)
-            LossMatrix1 = view(LossMatrix1_All,:,:,:,ee)
-
-            LossTotal1 = view(LossTotal1_All,:,:,:,ee)
-            GainTotal2 = view(GainTotal2_All,:,:,:,:,:,:,ee)
-            GainTotal3 = view(GainTotal3_All,:,:,:,:,:,:,ee)
+        println("Ext Value = $Ext")
 
         for (ii,scale_val) in enumerate(scale)
 
@@ -112,16 +84,15 @@ function EmissionInteractionIntegration(Setup::Tuple{Tuple{String,String,String,
             fill!(GainTallyK2,UInt32(0))
             fill!(GainTallyK3,UInt32(0))
 
-            #workers  = [EmissionMonteCarloAxi_MultiThread!(SAtotal,SAtally,ArrayOfLocks,Parameters,numT,numSiterPerThread,nThreads,prog,thread) for thread in 1:nThreads]
             if numThreads == 1
                 numProgress = numLoss*index_range[end]*u1_num*h1_num
                 prog = Progress(numProgress)
-                EmissionMonteCarlo_Debug!(GainTotal2,GainTallyN2,GainTallyK2,GainTotal3,GainTallyN3,GainTallyK3,LossTotal1,LossTallyN1,LossTallyK1,ArrayOfLocks,EmissionKernel,Parameters,numLoss,numGain,indices[1:end],scale_val,Ext_val,prog,1)
+                EmissionMonteCarlo_Debug!(GainTotal2,GainTallyN2,GainTallyK2,GainTotal3,GainTallyN3,GainTallyK3,LossTotal1,LossTallyN1,LossTallyK1,ArrayOfLocks,EmissionKernel,Parameters,numLoss,numGain,indices[1:end],scale_val,prog,1)
                 finish!(prog)
             else 
                 numProgress = numLoss*index_range[1+1]*u1_num*h1_num
                 prog = Progress(numProgress)
-                workers  = [EmissionMonteCarlo!(GainTotal2,GainTallyN2,GainTallyK2,GainTotal3,GainTallyN3,GainTallyK3,LossTotal1,LossTallyN1,LossTallyK1,ArrayOfLocks,EmissionKernel,Parameters,numLoss,numGain,indices[index_range[thread]+1:index_range[thread+1]],scale_val,Ext_val,prog,thread) for thread in 1:(length(index_range)-1)]
+                workers  = [EmissionMonteCarlo!(GainTotal2,GainTallyN2,GainTallyK2,GainTotal3,GainTallyN3,GainTallyK3,LossTotal1,LossTallyN1,LossTallyK1,ArrayOfLocks,EmissionKernel,Parameters,numLoss,numGain,indices[index_range[thread]+1:index_range[thread+1]],scale_val,prog,thread) for thread in 1:(length(index_range)-1)]
                 wait.(workers) # Allow all workers to finish#
                 finish!(prog)
             end
@@ -131,13 +102,14 @@ function EmissionInteractionIntegration(Setup::Tuple{Tuple{String,String,String,
 
     # ===== Update Gain and Loss Matrices === #
 
-            # Apply symmetries 
-            GainLossSymmetryEmission!(GainTotal2,GainTotal3,GainTallyN2,GainTallyK2,GainTallyN3,GainTallyK3,LossTotal1,LossTallyN1,LossTallyK1)
-
             # Calculate Gain and Loss matrix
             GainMatrix2 = GainTotal2 ./ GainTallyN2
             GainMatrix3 = GainTotal3 ./ GainTallyN3
             LossMatrix1 = LossTotal1 ./ LossTallyN1
+
+            replace!(GainMatrix2,NaN=>0e0)
+            replace!(GainMatrix3,NaN=>0e0)
+            replace!(LossMatrix1,NaN=>0e0)
 
             println("")
             println("Applying Momentum Space Factors")
@@ -157,38 +129,32 @@ function EmissionInteractionIntegration(Setup::Tuple{Tuple{String,String,String,
             WeightedAverageLossEmission!(LossMatrix1,OldLossMatrix1,LossTallyN1,OldLossTallyN1)
 
         end # scale loop
-        
-        end # Ext loop
+
+        println("Applying Symmetries to Gain and Loss Matrices")
+
+        # Apply symmetries 
+        GainLossPolarSymmetryEmission!(OldGainMatrix2,OldGainMatrix3,OldLossMatrix1,OldGainTallyN2,OldGainTallyN3,OldLossTallyN1)
+        GainLossAzimuthalSymmetryEmission!(OldGainMatrix2,OldGainMatrix3,OldLossMatrix1,OldGainTallyN2,OldGainTallyN3,OldLossTallyN1)
 
     # ===================================== #
 
     # ========== Save Arrays ============== #
-            
-#=         f = jldopen(filePath,"w") # creates file and overwrites previous file if one existed
-        write(f,"STotal",SAtotal)
-        write(f,"STally",SAtally)
-        write(f,"SMatrix",SMatrix)
-        #write(f,"pMax",pMax)
-        #write(f,"tMinMax",tMinMax)
-        write(f,"SConverge",SConverge)
-        write(f,"Parameters",Parameters)
-        close(f) =#
 
         println("")
         println("Saving Arrays")
 
         jldopen(filePath,"w";compress=true) do f # creates file and overwrites previous file if one existed
-            write(f,"GainTallyK2",OldGainTallyK2_All)
-            write(f,"GainTallyN2",OldGainTallyN2_All)
-            write(f,"GainMatrix2",OldGainMatrix2_All)
+            write(f,"GainTallyK2",OldGainTallyK2)
+            write(f,"GainTallyN2",OldGainTallyN2)
+            write(f,"GainMatrix2",OldGainMatrix2)
 
-            write(f,"GainTallyK3",OldGainTallyK3_All)
-            write(f,"GainTallyN3",OldGainTallyN3_All)
-            write(f,"GainMatrix3",OldGainMatrix3_All)
+            write(f,"GainTallyK3",OldGainTallyK3)
+            write(f,"GainTallyN3",OldGainTallyN3)
+            write(f,"GainMatrix3",OldGainMatrix3)
             
-            write(f,"LossTallyK1",OldLossTallyK1_All)
-            write(f,"LossTallyN1",OldLossTallyN1_All)
-            write(f,"LossMatrix1",OldLossMatrix1_All)
+            write(f,"LossTallyK1",OldLossTallyK1)
+            write(f,"LossTallyN1",OldLossTallyN1)
+            write(f,"LossMatrix1",OldLossMatrix1)
 
             write(f,"Parameters",Parameters)
         end

@@ -20,7 +20,7 @@ julia> location(0e0,10e0,9,2e0,"u")
 2
 ```
 """
-function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,spacing::String)
+@inline function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,spacing::String)
     # function for generating position in array
     if spacing == "u" # uniform spacing
         loc = floor(Int64,num*(val-low_bound)/(up_bound-low_bound)) 
@@ -71,7 +71,7 @@ function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,s
     end
 end
 
-function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::UniformGrid)
+@inline function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::UniformGrid)
     # grid location for uniform grid
     # if val is on grid boundary then it is assigned to the next bin 
     # if val ≈ up_bound (the evaluation of floor can sometimes put val in bin num+1) then it is assigned to the last bin
@@ -79,7 +79,7 @@ function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,:
     return loc >= num ? num : loc+1
 end
 
-function locationUnderOver(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::LogTenGrid)
+@inline function locationUnderOver(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::LogTenGrid)
     # grid location for log10 grid with underflow and overflow
     # there are num bins within the domain bounds, therefore num+2 bins overall including underflow and overflow
     # first bin (loc==1) is underflow bin last bin (loc==num+2) is overflow bin
@@ -95,7 +95,7 @@ function locationUnderOver(low_bound::Float64,up_bound::Float64,num::Int64,val::
     return 1 <= loc <= num ? loc+1 : loc>num ? num+2 : 1 # assigns 1 for under, num+1 for over and loc for in range
 end
 
-function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::LogTenGrid)
+@inline function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::LogTenGrid)
     # grid location for log10 grid with no underflow or overflow
     # if val is on grid boundary then it is assigned to the next bin 
     # if val == up_bound then it is assigned to the last bin
@@ -104,7 +104,7 @@ function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,:
     return loc 
 end
 
-function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::BinaryGrid)
+@inline function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::BinaryGrid)
     # grid location for binary grid
     #= 
     if num is even then grid is symmetric about midpoint with with num/2 cells in each direction, e.g. for num=8
@@ -133,7 +133,7 @@ function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,:
     end
 end
 
-function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::BoostGrid)
+@inline function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::BoostGrid)
     # grid location for boosted grid
     #= e.g. for num = 7, for each additional bin the last bin (closest to up) gets divided into two.
       |    2/5    |    2/5    |    2/5    |    2/5    |  1/5  | 1/10 | 1/10 |
@@ -150,7 +150,7 @@ function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,:
     end      
 end
 
-function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::ReBoostGrid)
+@inline function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,::ReBoostGrid)
     # grid location for reverse boosted grid
     #= e.g. for num = 7, for each additional bin the first bin (closest to low) gets divided into two.
       | 1/10 | 1/10 |  1/5  |    2/5    |    2/5    |    2/5    |    2/5    |
@@ -168,7 +168,7 @@ function location(low_bound::Float64,up_bound::Float64,num::Int64,val::Float64,:
     end      
 end
 
-function Grid_String_to_Type(grid_string)
+@inline function Grid_String_to_Type(grid_string)
     if grid_string == "u"
         return UniformGrid()
     elseif grid_string == "l"

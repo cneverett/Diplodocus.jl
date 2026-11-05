@@ -105,25 +105,31 @@ Generates a file name for a binary interaction based on user provided parameters
 function BinaryFileName(Parameters::Tuple{String,String,String,String,Float64,Float64,Float64,Float64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64})
     
     (name1,name2,name3,name4,mu1,mu2,mu3,mu4,p1_low,p1_up,p1_grid,p1_num,u1_grid,u1_num,h1_grid,h1_num,p2_low,p2_up,p2_grid,p2_num,u2_grid,u2_num,h2_grid,h2_num,p3_low,p3_up,p3_grid,p3_num,u3_grid,u3_num,h3_grid,h3_num,p4_low,p4_up,p4_grid,p4_num,u4_grid,u4_num,h4_grid,h4_num) = Parameters
+
+    @inline function stringval(val::Float64)
+        if val < 0.0
+            return "m"*string(round(Int64,abs(val)))
+        else
+            return "p"*string(round(Int64,val))
+        end
+    end
     
     fileName = name1*name2*name3*name4
-    fileName *= "_"*string(p1_low)*"-"*string(p1_up)*p1_grid*string(p1_num)
-    fileName *= "_"*u1_grid*string(u1_num)
-    fileName *= "_"*h1_grid*string(h1_num)
+    fileName *= "_"*stringval(p1_low)*stringval(p1_up)*p1_grid*string(p1_num)
+    fileName *= u1_grid*string(u1_num)
+    fileName *= h1_grid*string(h1_num)
 
-    fileName *= "_"*string(p2_low)*"-"*string(p2_up)*p2_grid*string(p2_num)
-    fileName *= "_"*u2_grid*string(u2_num)
-    fileName *= "_"*h2_grid*string(h2_num)
+    fileName *= "_"*stringval(p2_low)*stringval(p2_up)*p2_grid*string(p2_num)
+    fileName *= u2_grid*string(u2_num)
+    fileName *= h2_grid*string(h2_num)
 
-    fileName *= "_"*string(p3_low)*"-"*string(p3_up)*p3_grid*string(p3_num)
-    fileName *= "_"*u3_grid*string(u3_num)
-    fileName *= "_"*h3_grid*string(h3_num)
+    fileName *= "_"*stringval(p3_low)*stringval(p3_up)*p3_grid*string(p3_num)
+    fileName *= u3_grid*string(u3_num)
+    fileName *= h3_grid*string(h3_num)
 
-    fileName *= "_"*string(p4_low)*"-"*string(p4_up)*p4_grid*string(p4_num)
-    fileName *= "_"*u4_grid*string(u4_num)
-    fileName *= "_"*h4_grid*string(h4_num)
-    
-    fileName *= ".jld2";
+    fileName *= "_"*stringval(p4_low)*stringval(p4_up)*p4_grid*string(p4_num)
+    fileName *= u4_grid*string(u4_num)
+    fileName *= h4_grid*string(h4_num)
 
     return fileName
 end
@@ -133,26 +139,32 @@ end
 
 Generates a file name for an emissive interaction based on user provided parameters
 """
-function EmissionFileName(Parameters::Tuple{String,String,String,String,Float64,Float64,Float64, Float64,Float64,Float64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Vector{Float64}})
+function EmissionFileName(Parameters::Tuple{String,String,String,String,Float64,Float64,Float64, Float64,Float64,Float64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64})
     
     (name1,name2,name3,type,mu1,mu2,mu3,z1,z2,z3,p1_low,p1_up,p1_grid,p1_num,u1_grid,u1_num,h1_grid,h1_num,p2_low,p2_up,p2_grid,p2_num,u2_grid,u2_num,h2_grid,h2_num,p3_low,p3_up,p3_grid,p3_num,u3_grid,u3_num,h3_grid,h3_num,Ext) = Parameters
+
+    @inline function stringval(val::Float64)
+        if val < 0.0
+            return "m"*string(round(Int64,abs(val)))
+        else
+            return "p"*string(round(Int64,val))
+        end
+    end
     
     fileName = type*name1*name2*name3
-    fileName *= "_"*string(p1_low)*"-"*string(p1_up)*p1_grid*string(p1_num)
-    fileName *= "_"*u1_grid*string(u1_num)
-    fileName *= "_"*h1_grid*string(h1_num)
+    fileName *= "_"*stringval(p1_low)*stringval(p1_up)*p1_grid*string(p1_num)
+    fileName *= u1_grid*string(u1_num)
+    fileName *= h1_grid*string(h1_num)
 
-    fileName *= "_"*string(p2_low)*"-"*string(p2_up)*p2_grid*string(p2_num)
-    fileName *= "_"*u2_grid*string(u2_num)
-    fileName *= "_"*h2_grid*string(h2_num)
+    fileName *= "_"*stringval(p2_low)*stringval(p2_up)*p2_grid*string(p2_num)
+    fileName *= u2_grid*string(u2_num)
+    fileName *= h2_grid*string(h2_num)
 
-    fileName *= "_"*string(p3_low)*"-"*string(p3_up)*p3_grid*string(p3_num)
-    fileName *= "_"*u3_grid*string(u3_num)
-    fileName *= "_"*h3_grid*string(h3_num)
+    fileName *= "_"*stringval(p3_low)*stringval(p3_up)*p3_grid*string(p3_num)
+    fileName *= u3_grid*string(u3_num)
+    fileName *= h3_grid*string(h3_num)
 
-    for i in eachindex(Ext)
-        fileName *= "_"*string(Ext[i])
-    end
+    fileName *= "_"*string(Ext)
     
     fileName *= ".jld2";
 
@@ -165,7 +177,7 @@ end
 
 Returns the integration `Setup` and `fileName` for an emissive integration based on user provided parameters defined in `Main`.
 """
-function UserEmissionParameters()
+function UserEmissionParameters(Ext::Float64)
 
     type::String = getfield(Main,Symbol("type"))
     name1::String = getfield(Main,Symbol("name1"))
@@ -211,11 +223,11 @@ function UserEmissionParameters()
 
     z1::Float64 = getfield(DiplodocusCollisions,Symbol("z"*name1))
     z2::Float64 = getfield(DiplodocusCollisions,Symbol("z"*name2))
-    z3::Float64 = getfield(DiplodocusCollisions,Symbol("z"*name2))
+    z3::Float64 = getfield(DiplodocusCollisions,Symbol("z"*name3))
 
     scale::StepRangeLen{Float64, Base.TwicePrecision{Float64}, Base.TwicePrecision{Float64}, Int64} = getfield(Main,Symbol("scale"))
 
-    Ext::Vector{Float64} = getfield(Main,Symbol("Ext"))
+    println("Ext = $Ext")
 
     p1loc_low::Int64 = try 
         getfield(Main,Symbol("ploc_low_"*name1))

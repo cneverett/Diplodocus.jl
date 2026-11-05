@@ -23,7 +23,7 @@ returns the differential cross section for the binary interaction of hard sphere
 - `uSmol::Float64` : ``u - uBig``
 - `uBig::Float64` : ``(m_2-m_3)^2=0``
 """
-function dsigmadt_SphSphSphSph(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig::Float64,uSmol::Float64,uBig::Float64)
+@inline function dsigmadt_SphSphSphSph(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig::Float64,uSmol::Float64,uBig::Float64)
 
     #=
         1/(s-4*muSph^2)
@@ -47,7 +47,7 @@ returns the total cross section for the binary interaction of hard spheres with 
 - `sSmol::Float64` : s - sBig
 - `sBig::Float64` : (m1+m2)^2
 """
-function sigma_SphSphSphSph(sSmol::Float64,sBig::Float64)
+@inline function sigma_SphSphSphSph(sSmol::Float64,sBig::Float64)
     
     sigma::Float64 = 1/2 # factor of 2 accounts for identical final states
     return sigma
@@ -77,7 +77,7 @@ returns the differential cross section for electron positron annihilation to two
 - `uSmol::Float64` : ``u - uBig``
 - `uBig::Float64` : ``(m2-m3)^2 = 1 ∴ u = uSmol + 1``
 """
-function dsigmadt_ElePosPhoPho(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig::Float64,uSmol::Float64,uBig::Float64)
+@inline function dsigmadt_ElePosPhoPho(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig::Float64,uSmol::Float64,uBig::Float64)
 
     # -(1/(s(s-4)))*((1/(t-1)+1/(1-s-t))^2+(1/(t-1)+1/(1-s-t))-(1/4)*((t-1)/(1-s-t)+(1-s-t)/(t-1)))
     
@@ -101,7 +101,7 @@ returns the total cross section for electron positron annihilation to two photon
 - `sSmol::Float64` : ``s - sBig``
 - `sBig::Float64` : ``(m_1+m_2)^2 = 4 ∴ s = sSmol + 4``
 """
-function sigma_ElePosPhoPho(sSmol::Float64,sBig::Float64)
+@inline function sigma_ElePosPhoPho(sSmol::Float64,sBig::Float64)
 
     #(1/(4*s^2*(s-4)))*((s^2+4*s-8)*log((sqrt(s)+sqrt(s-4))/(sqrt(s)-sqrt(s-4)))-(s+4)*sqrt(s*(s-4)))
 
@@ -137,7 +137,7 @@ returns the differential cross section for photon-photon annihilation to electro
 - `uSmol::Float64` : ``u - uBig``
 - `uBig::Float64` : ``(m_2-m_3)^2 = 1 ∴ u = uSmol + 1``
 """
-function dsigmadt_PhoPhoElePos(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig::Float64,uSmol::Float64,uBig::Float64)
+@inline function dsigmadt_PhoPhoElePos(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig::Float64,uSmol::Float64,uBig::Float64)
 
     s::Float64 = sSmol+sBig
     # s+t+u=2 
@@ -173,7 +173,7 @@ returns the total cross section for photon-photon annihilation to electron-posit
 - `sSmol::Float64` : ``s - sBig``
 - `sBig::Float64` : ``max((m_1+m_2)^2,(m_3+m_4)^2) = 4 ∴ s = sSmol + 4``
 """
-function sigma_PhoPhoElePos(sSmol::Float64,sBig::Float64)
+@inline function sigma_PhoPhoElePos(sSmol::Float64,sBig::Float64)
 
     #(3/(2*s^3))*((s^2+4*s-8)*log((sqrt(s)+sqrt(s-4))/(sqrt(s)-sqrt(s-4)))-(s+4)*sqrt(s*(s-4)))
     #s::Float64 = sSmol+sBig
@@ -183,7 +183,7 @@ function sigma_PhoPhoElePos(sSmol::Float64,sBig::Float64)
 
     val::Float64 = 0e0
     
-    if sSmol < 1e-6 # small approximation
+    if sSmol < sqrt(eps(Float64)) # small approximation
         val = 3sqrt(sSmol)/16+3sSmol^(3/2)/128-423sSmol^(5/2)/10240
     else
         val = (3/(2*s^3))*((sSmol^2+12*sSmol+24)*log((s+sSmol+2*sqrt(sSmol*s))/(sBig))-(sSmol+8)*sqrt((s)*(sSmol)))
@@ -218,7 +218,7 @@ returns the differential cross section for electron-photon scattering (Compton) 
 - `uSmol::Float64` : ``u - uBig``
 - `uBig::Float64` : ``(m_2-m_3)^2 = 1 ∴ u = uSmol + 1``
 """
-function dsigmadt_ElePhoElePho(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig::Float64,uSmol::Float64,uBig::Float64)
+@inline function dsigmadt_ElePhoElePho(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig::Float64,uSmol::Float64,uBig::Float64)
 
     # -(1/(s-1)^2)*((1/(s-1)+1/(u-1))^2+(1/(s-1)+1/(u-1))-(1/4)*((s-1)/(u-1)+(u-1)/(s-1)))
     # s+t+u = 2
@@ -231,7 +231,9 @@ function dsigmadt_ElePhoElePho(sSmol::Float64,sBig::Float64,tSmol::Float64,tBig:
 
     #(3/(sSmol)^2)*(1/2 + tSmol/(sSmol*(sSmol+tSmol)) + (tSmol/(sSmol*(sSmol+tSmol)))^2 + (1/4)*tSmol^2/(sSmol*(sSmol+tSmol)))
 
-    val = (3/(sSmol)^2)*(1/2 - tSmol/(sSmol*uSmol) + (tSmol/(sSmol*uSmol))^2 - (1/4)*tSmol^2/(sSmol*uSmol))
+    #val = (3/(sSmol)^2)*(1/2 - tSmol/(sSmol*uSmol) + (tSmol/(sSmol*uSmol))^2 - (1/4)*tSmol^2/(sSmol*uSmol))
+
+    val = (3/4) * (2/(sSmol)^2)*(2 - 4tSmol/(sSmol*uSmol) + tSmol^2*(4-sSmol*uSmol)/(sSmol*uSmol)^2)
 
     valmax = 3/4 * (2/sSmol^2 + 1/(sSmol+sBig)) # maximum value of the differential cross section to avoid float precision issues exceeding this value.
 
@@ -252,7 +254,7 @@ returns the total cross section for electron-photon (Compton) scattering. Berest
 - `sSmol::Float64` : ``s - sBig``
 - `sBig::Float64` : ``(m_1+m_2)^2 = 1 ∴ s = sSmol + 1``
 """
-function sigma_ElePhoElePho(sSmol::Float64,sBig::Float64)
+@inline function sigma_ElePhoElePho(sSmol::Float64,sBig::Float64)
 
     #(1/(4*(s-1)))*((1-4/(s-1)-8/(s-1)^2)*log(s)+1/2+8/(s-1)-1/(2*s^2))
     s = sBig+sSmol

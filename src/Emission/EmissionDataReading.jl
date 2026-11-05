@@ -19,7 +19,7 @@ function EmissionFileLoad_All(fileLocation::String,fileName::String)
     fileExist = isfile(filePath)
 
     if fileExist
-        f = jldopen(filePath,"r+");
+        f = jldopen(filePath,"r");
         Parameters = f["Parameters"]
 
         GainTally3 = f["GainTally3"];
@@ -54,7 +54,7 @@ function EmissionFileLoad_Matrix(fileLocation::String,fileName::String)
     fileExist = isfile(filePath)
 
     if fileExist
-        f = jldopen(filePath,"r+");
+        f = jldopen(filePath,"r");
         Parameters = f["Parameters"]
         GainMatrix3 = f["GainMatrix3"];
         close(f)  
@@ -85,7 +85,7 @@ function fload_Matrix_SyncISO(fileLocation::String,fileName::String)
     fileExist = isfile(filePath)
 
     if fileExist
-        f = jldopen(filePath,"r+");
+        f = jldopen(filePath,"r");
         Parameters = f["Parameters"]
         SMatrix = f["SMatrix"];
         close(f)  

@@ -1530,7 +1530,7 @@ function RotateToLab!(pv::Vector{Float64},t::Float64,h::Float64)
     # phi
     x = -sh*shv*stv+ch*(chv*ct*stv+ctv*st)
     y = ch*shv*stv+sh*(chv*ct*stv+ctv*st)
-    pv[3] = mod(atan(y,x)/pi,2)
+    pv[3] = mod2pi(atan(y,x))/pi
 
     return nothing
 
@@ -1551,7 +1551,7 @@ function RotateToLab!(p3v::Vector{Float64},p4v::Vector{Float64},t::Float64,h::Fl
     # phi3
     x = -sh*sh3*st3+ch*(ch3*ct*st3+ct3*st)
     y = ch*sh3*st3+sh*(ch3*ct*st3+ct3*st)
-    p3v[3] = mod(atan(y,x)/pi,2)
+    p3v[3] = mod2pi(atan(y,x))/pi
 
     # theta4 
     p4v[4] = acos(ct4*ct - st4*st*ch4)/pi
@@ -1559,7 +1559,7 @@ function RotateToLab!(p3v::Vector{Float64},p4v::Vector{Float64},t::Float64,h::Fl
     # phi4
     x = -sh*sh4*st4+ch*(ch4*ct*st4+ct4*st)
     y = ch*sh4*st4+sh*(ch4*ct*st4+ct4*st)
-    p4v[3] = mod(atan(y,x)/pi,2)
+    p4v[3] = mod2pi(atan(y,x))/pi
 
     return nothing
 

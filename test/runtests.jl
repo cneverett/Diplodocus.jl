@@ -1,6 +1,7 @@
-#using BinaryInteractionSpectra
 using Test
+using DiplodocusCollisions
 
-@testset "BinaryInteractionSpectra.jl" begin
+@testset "DiplodocusCollisions.jl" begin
     # Write your tests here.
+    include("Aqua.jl")
 end

@@ -50,7 +50,8 @@ function BinaryInteractionIntegration(Setup::Tuple{Tuple{String,String,String,St
 
     # =========== Load Old and Generate New Arrays ========= #
 
-        println("Loading Old and Allocating New Sampling Arrays")
+        println(stdout,"Loading Old and Allocating New Sampling Arrays")
+        flush(stdout)
 
         if isdir(fileLocation) == false
             mkpath(fileLocation)
@@ -58,197 +59,51 @@ function BinaryInteractionIntegration(Setup::Tuple{Tuple{String,String,String,St
                 
         filePath = joinpath(fileLocation,fileName)
 
-        (OldGainWeights3,OldGainWeights4,OldLossTally,OldGainMatrix3,OldGainMatrix4,OldLossMatrix1,OldLossMatrix2) = OldMonteCarloArraysBinary(Parameters,filePath)
-
-        (GainTotal3,GainTotal4,LossTotal,GainTally3,GainTally4,LossTally,GainMatrix3,GainMatrix4,LossMatrix1,LossMatrix2) = MonteCarloArraysBinary(Parameters)
+        (OldGainWeights3,OldGainWeights4,OldLossTally,OldGainMatrix3,OldGainMatrix4,OldLossMatrix,CorrectedChunkGainMatrix3,CorrectedChunkGainMatrix4,CorrectedChunkLossMatrix) = OldMonteCarloArraysBinary(Parameters,filePath)
 
     # ===================================== #
 
     # ===== Run MonteCarlo Integration ==== #
 
-        println("Running Monte Carlo Integration")
+        println(stdout,"Running Monte Carlo Integration")
+        flush(stdout)
 
-        for (ii,scale_val) in enumerate(scale)
+        indices::Vector{CartesianIndex{2}} = CartesianIndices((p1loc_low:p1loc_up,p2loc_low:p2loc_up))[1:end]
+        shuffle!(indices) # better balances workload between threads
+        length_indices::Int64 = length(indices)
 
-            println("")
-            println("scale = $scale_val, iteration = $ii out of $(length(scale))")
-            println("")
+        indices_chunks = [indices[r] for r in index_chunks(indices;n=numThreads)] # split indices into chunks for each thread
 
-            indices::Vector{CartesianIndex{2}} = CartesianIndices((p1loc_low:p1loc_up,p2loc_low:p2loc_up))[1:end]
-            shuffle!(indices) # better balances workload between threads
-            length_indices::Int64 = length(indices)
-
-            if length_indices/numThreads > 1.0
-                length_div_threads::Int64 = ceil(Int64,length_indices/numThreads)
-                index_range = Vector(0:length_div_threads:numThreads*length_div_threads)
-                index_range[end] = length_indices
-            else 
-                index_range = Vector(0:length_indices)
-            end
-
-            # reset arrays
-            fill!(GainTotal3,Float64(0))
-            fill!(LossTotal,Float64(0))
-            fill!(GainTally3,UInt32(0))
-            fill!(LossTally,UInt32(0))
-
-            fill!(GainTotal4,Float64(0))
-            fill!(GainTally4,UInt32(0))
-
-            #if numThreads == 1
-            #    # Run in serial if only one thread, easier to use for debugging
-            #    BinaryMonteCarlo_Debug!(GainTotal3,GainTotal4,LossTotal,GainTally3,GainTally4,LossTally,ArrayOfLocks,sigma,dsigmadt,Parameters,numT,numGain,scale_val,prog,1)
-            #else
-            #    workers = [BinaryMonteCarlo!(GainTotal3,GainTotal4,LossTotal,GainTally3,GainTally4,LossTally,ArrayOfLocks,sigma,dsigmadt,Parameters,numT,numGain,scale_val,prog,thread) for thread in 1:numThreads]
-            #    wait.(workers) # Allow all workers to finish
-            #end
-
-            if numThreads == 1
-                numProgress = numLoss*index_range[end]*u1_num*h1_num*u2_num*h2_num
-                prog = Progress(numProgress)
-                # Run in serial if only one thread, easier to use for debugging
-                BinaryMonteCarlo_Debug!(GainTotal3,GainTotal4,LossTotal,GainTally3,GainTally4,LossTally,ArrayOfLocks,sigma,dsigmadt,Parameters,numLoss,numGain,indices[1:end],scale_val,prog,1)
-                finish!(prog)
-            else
-                numProgress = numLoss*index_range[1+1]*u1_num*h1_num*u2_num*h2_num
-                prog = Progress(numProgress)
-                workers = [BinaryMonteCarlo!(GainTotal3,GainTotal4,LossTotal,GainTally3,GainTally4,LossTally,ArrayOfLocks,sigma,dsigmadt,Parameters,numLoss,numGain,indices[index_range[thread]+1:index_range[thread+1]],scale_val,prog,thread) for thread in 1:(length(index_range)-1)]
-                wait.(workers) # Allow all workers to finish
-                finish!(prog)
-            end
-
-            #thread =1
-
-            #BinaryMonteCarlo!(GainTotal3,GainTotal4,LossTotal,GainTally3,GainTally4,LossTally,ArrayOfLocks,sigma,dsigmadt,Parameters,numLoss,numGain,bins,scale_val,thread)
-
-    
-    # ===================================== #
-
-    # === Update Gain and Loss Matrices === #
-
-            # N values are last element of the tally array
-            GainTally3_N = @view(GainTally3[end,:,:,:,:,:,:,:,:])
-            # K value are all but last element of the tally array
-            GainTally3_K = @view(GainTally3[1:end-1,:,:,:,:,:,:,:,:])
-            if m3 != m4 
-                GainTally4_N = @view(GainTally4[end,:,:,:,:,:,:,:,:])
-                GainTally4_K = @view(GainTally4[1:end-1,:,:,:,:,:,:,:,:])
-            end
-
-            println("")
-            println("Applying Symmetries")
-
-            # Apply Symmetries to the Gain and Loss Totals and Tallies
-            GainLossSymmetryBinary!(GainTotal3,GainTotal4,GainTally3,GainTally4,LossTotal,LossTally,m1,m2,m3,m4,symmetric_grid)
-
-            println("Generating New Sampling Arrays")
-
-            # calculate the gain and loss matrices
-            if m3 == m4
-                # Only need to calculate GainMatrix3
-                for i in axes(GainTotal3,1)
-                    @view(GainMatrix3[i,:,:,:,:,:,:,:,:]) .= @view(GainTotal3[i,:,:,:,:,:,:,:,:]) ./ GainTally3_N
-                end
-                replace!(GainMatrix3,NaN=>0e0); # remove NaN caused by / 0
-                # GainMatrix4 remains zero
-            else
-                for i in axes(GainTotal3,1)
-                    @view(GainMatrix3[i,:,:,:,:,:,:,:,:]) .= @view(GainTotal3[i,:,:,:,:,:,:,:,:]) ./ GainTally3_N
-                end
-                replace!(GainMatrix3,NaN=>0e0); # remove NaN caused by /0e0
-                for i in axes(GainTotal4,1)
-                    @view(GainMatrix4[i,:,:,:,:,:,:,:,:]) .= @view(GainTotal4[i,:,:,:,:,:,:,:,:]) ./ GainTally4_N
-                end
-                replace!(GainMatrix4,NaN=>0e0); # remove NaN caused by /0e0
-            end
-            @. LossMatrix1 = LossTotal / LossTally;
-            replace!(LossMatrix1,NaN=>0e0);
-
-            println("Applying Momentum Space Factors")
-
-            # Angle / Momentum Ranges
-            u3val = bounds(u_low,u_up,u3_num,u3_grid)
-            u4val = bounds(u_low,u_up,u4_num,u4_grid)
-            h3val = bounds(h_low,h_up,h3_num,h3_grid).*pi
-            h4val = bounds(h_low,h_up,h4_num,h4_grid).*pi
-
-            # Momentum space volume elements
-            if m3 == m4
-                MomentumSpaceFactorsBinary!(GainMatrix3,u3val,h3val,Indistinguishable_12)
-            else
-                MomentumSpaceFactorsBinary!(GainMatrix3,GainMatrix4,u3val,h3val,u4val,h4val,Indistinguishable_12)
-            end
-                                        
-            println("Weighting average of New and Old Sampling Arrays")
-
-            # old arrays are modified in this process
-            if m3 == m4
-                WeightedAverageGainBinary!(GainMatrix3,OldGainMatrix3,GainTally3_K,GainTally3_N,OldGainWeights3)
-                if Indistinguishable_34 == false # particles are distinguishable 
-                    @. OldGainMatrix4 = OldGainMatrix3
-                    @. OldGainWeights4 = OldGainWeights3
-                end
-            else
-                WeightedAverageGainBinary!(GainMatrix3,OldGainMatrix3,GainTally3_K,GainTally3_N,OldGainWeights3,GainMatrix4,OldGainMatrix4,GainTally4_K,GainTally4_N,OldGainWeights4)
-            end
-            WeightedAverageLossBinary!(LossMatrix1,OldLossMatrix1,LossTally,OldLossTally)
-
-        end # scale loop 
-
-        if Indistinguishable_12 == false # particles are distinguishable
-            perm = [4,5,6,1,2,3]
-            OldLossMatrix2 .= permutedims(OldLossMatrix1,perm)
+        @time if numThreads == 1
+            numProgress = length_indices
+            prog = Progress(numProgress)
+            # Run in serial if only one thread, easier to use for debugging
+            BinaryMonteCarlo_Debug!(OldGainWeights3,OldGainWeights4,OldLossTally,OldGainMatrix3,OldGainMatrix4,OldLossMatrix,CorrectedChunkGainMatrix3,CorrectedChunkGainMatrix4,CorrectedChunkLossMatrix,sigma,dsigmadt,Parameters,numLoss,numGain,indices_chunks[1],scale,prog,1)
+            finish!(prog)
         else
-            fill!(OldLossMatrix2,Float64(0))
+            numProgress = length_indices
+            prog = Progress(numProgress)
+            workers = [BinaryMonteCarlo!(OldGainWeights3,OldGainWeights4,OldLossTally,OldGainMatrix3,OldGainMatrix4,OldLossMatrix,CorrectedChunkGainMatrix3,CorrectedChunkGainMatrix4,CorrectedChunkLossMatrix,sigma,dsigmadt,Parameters,numLoss,numGain,indices_chunks[thread],scale,prog,thread) for thread in 1:numThreads]
+            wait.(workers) # Allow all workers to finish
+            finish!(prog)
         end
 
     # ===================================== #
 
-    # =========== Garbage Collection ====== #
-
-        (GainTotal3,GainTotal4,LossTotal,GainTally3,GainTally4,LossTally,GainMatrix3,GainMatrix4,LossMatrix1,LossMatrix2) = (0,0,0,0,0,0,0,0,0,0)
-        GC.gc()
-        
-    # ===================================== #
-
     # ============= Error Estimates ======= # 
 
-        println("Calculating Error Estimates")
+        println(stdout,"Calculating Error Estimates")
+        flush(stdout)
 
-        ErrorOutput =  DoesConserve((Parameters,OldGainMatrix3,OldGainMatrix4,OldLossMatrix1,OldLossMatrix2))
-
-    # ===================================== #
-
-    # ===== Generate Corrected Arrays ===== # 
-
-        println("Calculating Noise Corrected Arrays")
-
-        CorrectedGainMatrix3, CorrectedGainMatrix4, CorrectedLossMatrix1, CorrectedLossMatrix2 =  GainCorrection3(Parameters,OldGainMatrix3,OldGainMatrix4,OldLossMatrix1,OldLossMatrix2)
+        ErrorOutput =  DoesConserve((Parameters,OldGainMatrix3,OldGainMatrix4,OldLossMatrix))
 
     # ===================================== #
 
-    # ========== Save Arrays ============== #
+    # ========== Save Error estimate and Parameters============== #
 
-        println("Saving Arrays")
-
-        jldopen(filePath,"w";compress=true) do f # creates file and overwrites previous file if one existed
-            write(f,"GainWeights3",OldGainWeights3)
-            write(f,"GainMatrix3",OldGainMatrix3)
-
-            write(f,"GainWeights4",OldGainWeights4)
-            write(f,"GainMatrix4",OldGainMatrix4)
-
-            write(f,"LossTally",OldLossTally)
-            write(f,"LossMatrix1",OldLossMatrix1)
-            write(f,"LossMatrix2",OldLossMatrix2)
-
+        jldopen(joinpath(filePath,"data.jld2"),"w") do f # creates file and overwrites previous file if one existed
             write(f,"Parameters",Parameters)
             write(f,"ErrorEstimates",ErrorOutput)
-
-            write(f,"CorrectedGainMatrix3",CorrectedGainMatrix3)
-            write(f,"CorrectedGainMatrix4",CorrectedGainMatrix4)
-            write(f,"CorrectedLossMatrix1",CorrectedLossMatrix1)
-            write(f,"CorrectedLossMatrix2",CorrectedLossMatrix2)
         end
 
     # ===================================== #

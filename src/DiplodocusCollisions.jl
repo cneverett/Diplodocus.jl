@@ -6,10 +6,14 @@ export UserBinaryParameters, UserEmissionParameters
 
     using JLD2
     using Base.Threads
-    using BenchmarkTools
     using Bessels
     using ProgressMeter
     using Random: shuffle!
+    using LinearAlgebra
+    using Statistics
+    using ChunkSplitters
+    using Zarr
+    Zarr.ZarrBlosc.Blosc.set_num_threads(1)
 
     # include Common files
         include("Common/Constants.jl")
@@ -17,11 +21,14 @@ export UserBinaryParameters, UserEmissionParameters
         include("Common/Location.jl")
         include("Common/UserParameters.jl")
         include("Common/UsefulGridValueFunctions.jl")
+        include("Common/SpectrumFilters.jl")
 
     # include Binary files
         #include("Binary/Structs.jl")
         include("Binary/Arrays.jl")
         include("Binary/Averaging.jl")
+        include("Binary/Correction.jl")
+        include("Binary/Symmetries.jl")
         include("Binary/DifferentialCrossSectionFunctions.jl")
         include("Binary/MomentumValues.jl")
         include("Binary/MandelstramChecks.jl")

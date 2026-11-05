@@ -19,7 +19,7 @@
 - Take random points (p1,p2,t1,t2) and calculate Synchrotron emissivity
 - Find position in S arrays and allocated tallies and totals accordingly.
 """
-function EmissionMonteCarlo!(GainTotal2::AbstractArray{Float64,6},GainTallyN2::AbstractArray{UInt32,6},GainTallyK2::AbstractArray{UInt32,6},GainTotal3::AbstractArray{Float64,6},GainTallyN3::AbstractArray{UInt32,6},GainTallyK3::AbstractArray{UInt32,6},LossTotal1::AbstractArray{Float64,3},LossTallyN1::AbstractArray{UInt32,3},LossTallyK1::AbstractArray{UInt32,3},ArrayOfLocks,EmissionKernel::Function,Parameters::Tuple{String,String,String,String,Float64,Float64,Float64,Float64,Float64,Float64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Vector{Float64}},numLoss::Int64,numGain::Int64,indices::Vector{CartesianIndex{2}},scale::Float64,Ext_val::Float64,prog::Progress,thread_id::Int64)
+function EmissionMonteCarlo!(GainTotal2::AbstractArray{Float64,6},GainTallyN2::AbstractArray{UInt32,6},GainTallyK2::AbstractArray{UInt32,6},GainTotal3::AbstractArray{Float64,6},GainTallyN3::AbstractArray{UInt32,6},GainTallyK3::AbstractArray{UInt32,6},LossTotal1::AbstractArray{Float64,3},LossTallyN1::AbstractArray{UInt32,3},LossTallyK1::AbstractArray{UInt32,3},ArrayOfLocks,EmissionKernel::Function,Parameters::Tuple{String,String,String,String,Float64,Float64,Float64,Float64,Float64,Float64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64,Float64,String,Int64,String,Int64,String,Int64, Float64},numLoss::Int64,numGain::Int64,indices::Vector{CartesianIndex{2}},scale::Float64,prog::Progress,thread_id::Int64)
 
     # Set Parameters
     (name1,name2,name3,type,m1,m2,m3,z1,z2,z3,p1_low,p1_up,p1_grid_st,p1_num,u1_grid_st,u1_num,h1_grid_st,h1_num,p2_low,p2_up,p2_grid_st,p2_num,u2_grid_st,u2_num,h2_grid_st,h2_num,p3_low,p3_up,p3_grid_st,p3_num,u3_grid_st,u3_num,h3_grid_st,h3_num,Ext) = Parameters
@@ -111,7 +111,7 @@ function EmissionMonteCarlo!(GainTotal2::AbstractArray{Float64,6},GainTallyN2::A
                 RPointLogMomentum!(p3v,p3_up,p3_low,p3_num,p3loc)
 
                 # calculate S value
-                Sval = EmissionKernel(p3v,p1v,m1,z1,Ext_val)
+                Sval = EmissionKernel(p3v,p1v,m1,z1,Ext)
 
                 # find S array location 
                 u3loc = location(u_low,u_up,u3_num,p3v[2],u3_grid)

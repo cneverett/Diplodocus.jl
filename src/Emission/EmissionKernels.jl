@@ -14,9 +14,11 @@ function SyncKernel(p3v::Vector{Float64},p1v::Vector{Float64},m1::Float64,z1::Fl
 
     p3::Float64 = p3v[1]
     p1::Float64 = p1v[1]
-    st1::Float64,ct1::Float64 = sincospi(p1v[4])
-    st3::Float64,ct3::Float64 = sincospi(p3v[4])
-    
+    t1::Float64 = p1v[4]
+    t3::Float64 = p3v[4]
+    st1::Float64,ct1::Float64 = sincospi(t1)
+    st3::Float64,ct3::Float64 = sincospi(t3)
+
     E1::Float64 = sqrt(p1^2 + m1^2)
 
     if st3 == 0.0
@@ -40,17 +42,25 @@ function SyncKernel(p3v::Vector{Float64},p1v::Vector{Float64},m1::Float64,z1::Fl
         
     if n > 1e3 # || n > 1e6 && 1-y < 1e-3 # large argument approximation
         # approximation for J's to second order 
-        if isapprox(y,1e0) # y too close to 1 for numerical precision so calculate z=1-y as an approximation to first order in (t1-t3)
-            z = (E1-p1)/(E1-p1*ct1*ct3)
-            e = 2*z-z^2
+        if abs(y) < sqrt(eps(Float64)) # y too close to 1 for numerical precision so calculate z=1-y and assume z is small
+            if eps(p1^2) > 0.01m1^2 # small E1-p1
+                if abs(t1-t3) < 100sqrt(eps(Float64)) # t1 ≈ t3 
+                    e = (m1^2/p1^2)/st3^2 - (m1^2/p1^2)*(t1-t3)*ct3/st3^2+(1/st3^2+(m1^2/p1^2)*(ct3^2-2)/(2st3^4))*((t1-t3)^2)
+                else
+                    e = 1.0 - (st1^2*st3^2)/(1-ct1*ct3)^2 - (m1^2/p1^2)*st1^2*st3^2/(1.0 - ct1*ct3)^3
+                end
+            else # t1 ≈ t3 
+                e = 1.0 - (p1^2*st3^4)/(E1-p1*ct3^2)^2 - 2*(t1-t3)*(E1-p1)*ct3*st3^3/(E1-p1*ct3^2)^3
+            end
         else
             e = 1-y^2
         end
         # Approximation taken from Sokolov et al. 1969
-        if sign(e) == -1
-            println("p1=$p1, E1=$E1, ct1=$ct1, ct3=$ct3")
-            println("e=$e, y=$y, n=$n")
-            error("y value is greater than 1, invalid for synchrotron emission")
+        if e <= 0.0
+            #println("p1=$p1, E1=$E1, ct1=$ct1, ct3=$ct3")
+            #println("e=$e, y=$y, n=$n")
+            #@warn "y value is greater than 1, invalid for synchrotron emission, skipping this point."
+            return 0.0
         end
         K13 = besselk(1/3,n*e^(3/2)/3)
         K23 = besselk(2/3,n*e^(3/2)/3)

@@ -124,14 +124,17 @@ function GainValue3(p3v::Vector{Float64},p1v::Vector{Float64},p2v::Vector{Float6
     st1::Float64,ct1::Float64 = sincospi(p1v[4])
     st2::Float64,ct2::Float64 = sincospi(p2v[4])
 
-    # cos(A-B) = 1.0 + b, so "a" part is 1.0, "b" part is the cos(A-B)-a
-    ch1h2a::Float64, ch1h2b::Float64 = abs(p1v[3]-p2v[3]) < 1e-8 ? (1.0, -pi^2*(p1v[3]-p2v[3])^2/2) : (1.0,cospi(p1v[3]-p2v[3])-1.0)
+    # cos(A-B) = 1.0 - b, so "a" part is 1.0, "b" part is the cos(A-B)-a
+    b::Float64 = pi^2*(p1v[3]-p2v[3])^2/2
+    ch1h2a::Float64, ch1h2b::Float64 = b < eps(Float64) ? (1.0, -b) : (1.0,cospi(p1v[3]-p2v[3])-1.0)
     ch1h2::Float64 = cospi(p1v[3]-p2v[3])
 
     p3::Float64 = p3v[1]
     st3::Float64,ct3::Float64 = sincospi(p3v[4])
-    ch3h1a::Float64, ch3h1b::Float64 = abs(p3v[3]-p1v[3]) < 1e-8 ? (1.0, -pi^2*(p3v[3]-p1v[3])^2/2) : (1.0,cospi(p3v[3]-p1v[3])-1.0)
-    ch3h2a::Float64, ch3h2b::Float64 = abs(p3v[3]-p2v[3]) < 1e-8 ? (1.0, -pi^2*(p3v[3]-p2v[3])^2/2) : (1.0,cospi(p3v[3]-p2v[3])-1.0)
+    b = pi^2*(p3v[3]-p1v[3])^2/2
+    ch3h1a::Float64, ch3h1b::Float64 = b < eps(Float64) ? (1.0, -b) : (1.0,cospi(p3v[3]-p1v[3])-1.0)
+    b = pi^2*(p3v[3]-p2v[3])^2/2
+    ch3h2a::Float64, ch3h2b::Float64 = b < eps(Float64) ? (1.0, -b) : (1.0,cospi(p3v[3]-p2v[3])-1.0)
     ch3h1::Float64 = cospi(p3v[3]-p1v[3])
     ch3h2::Float64 = cospi(p3v[3]-p2v[3])
 
@@ -152,13 +155,16 @@ function GainValue3(p3v::Vector{Float64},p1v::Vector{Float64},p2v::Vector{Float6
     Es3s::Float64 = Es3/p3
     E3::Float64 = Es3 + m3
 
-    ctheta12a::Float64, ctheta12b::Float64, ctheta12c::Float64 =  abs(p1v[4]-p2v[4]) < 1e-8 ? (1.0, -pi^2*(p1v[4]-p2v[4])^2/2, ch1h2b*st1*st2) : (1.0,cospi(p1v[4]-p2v[4])-1.0, ch1h2b*st1*st2)
+    b = pi^2*(p1v[4]-p2v[4])^2/2
+    ctheta12a::Float64, ctheta12b::Float64, ctheta12c::Float64 =  b < eps(Float64) ? (1.0, -b, ch1h2b*st1*st2) : (1.0,cospi(p1v[4]-p2v[4])-1.0, ch1h2b*st1*st2)
     ctheta12::Float64 = ct1*ct2+ch1h2*st1*st2
 
-    ctheta13a::Float64, ctheta13b::Float64, ctheta13c::Float64 = abs(p3v[4]-p1v[4]) < 1e-8 ? (1.0, -pi^2*(p3v[4]-p1v[4])^2/2, ch3h1b*st3*st1) : (1.0,cospi(p3v[4]-p1v[4])-1.0, ch3h1b*st3*st1)
+    b = pi^2*(p3v[4]-p1v[4])^2/2
+    ctheta13a::Float64, ctheta13b::Float64, ctheta13c::Float64 = b < eps(Float64) ? (1.0, -b, ch3h1b*st3*st1) : (1.0,cospi(p3v[4]-p1v[4])-1.0, ch3h1b*st3*st1)
     ctheta13::Float64 = ct3*ct1+ch3h1*st3*st1
 
-    ctheta23a::Float64, ctheta23b::Float64, ctheta23c::Float64 = abs(p3v[4]-p2v[4]) < 1e-8 ? (1.0, -pi^2*(p3v[4]-p2v[4])^2/2, ch3h2b*st3*st2) : (1.0,cospi(p3v[4]-p2v[4])-1.0, ch3h2b*st3*st2)
+    b = pi^2*(p3v[4]-p2v[4])^2/2
+    ctheta23a::Float64, ctheta23b::Float64, ctheta23c::Float64 = b < eps(Float64) ? (1.0, -b, ch3h2b*st3*st2) : (1.0,cospi(p3v[4]-p2v[4])-1.0, ch3h2b*st3*st2)
     ctheta23::Float64 = ct3*ct2+ch3h2*st3*st2
     
     # TODO: mak this more accurate for large separations of p1 and p3 consistent with the new definitions of ctheta a,b,c above
@@ -239,7 +245,7 @@ end
 
 
 """
-    GainValue4(p3v,p1v,p2v,dsigmadt,mu1,mu2,mu3,mu4)
+    GainValue4(p4v,p1v,p2v,dsigmadt,mu1,mu2,mu3,mu4)
 
 Returns `GainVal` based on initial momentum states `p1v` and `p2v` and final state `p4v` and differential cross section `dsigmadt` based on particle selection 12->34.  
 Assumes f(x,p,μ)=constant over bin
@@ -252,14 +258,17 @@ function GainValue4(p4v::Vector{Float64},p1v::Vector{Float64},p2v::Vector{Float6
     st1::Float64,ct1::Float64 = sincospi(p1v[4])
     st2::Float64,ct2::Float64 = sincospi(p2v[4])
 
-    # cos(A-B) = 1.0 + b, so "a" part is 1.0, "b" part is the cos(A-B)-a
-    ch1h2a::Float64, ch1h2b::Float64 = abs(p1v[3]-p2v[3]) < 1e-8 ? (1.0, -pi^2*(p1v[3]-p2v[3])^2/2) : (1.0,cospi(p1v[3]-p2v[3])-1.0)
+    # cos(A-B) = 1.0 - b, so "a" part is 1.0, "b" part is the cos(A-B)-a
+    b = pi^2*(p1v[3]-p2v[3])^2/2
+    ch1h2a::Float64, ch1h2b::Float64 = b < eps(Float64) ? (1.0, -b) : (1.0,cospi(p1v[3]-p2v[3])-1.0)
     ch1h2::Float64 = cospi(p1v[3]-p2v[3])
 
     p4::Float64 = p4v[1]
     st4::Float64,ct4::Float64 = sincospi(p4v[4])
-    ch4h1a::Float64, ch4h1b::Float64 = abs(p4v[3]-p1v[3]) < 1e-8 ? (1.0, -pi^2*(p4v[3]-p1v[3])^2/2) : (1.0,cospi(p4v[3]-p1v[3])-1.0)
-    ch4h2a::Float64, ch4h2b::Float64 = abs(p4v[3]-p2v[3]) < 1e-8 ? (1.0, -pi^2*(p4v[3]-p2v[3])^2/2) : (1.0,cospi(p4v[3]-p2v[3])-1.0)
+    b = pi^2*(p4v[3]-p1v[3])^2/2
+    ch4h1a::Float64, ch4h1b::Float64 = b < eps(Float64) ? (1.0, -b) : (1.0,cospi(p4v[3]-p1v[3])-1.0)
+    b = pi^2*(p4v[3]-p2v[3])^2/2
+    ch4h2a::Float64, ch4h2b::Float64 = b < eps(Float64) ? (1.0, -b) : (1.0,cospi(p4v[3]-p2v[3])-1.0)
     ch4h1::Float64 = cospi(p4v[3]-p1v[3])
     ch4h2::Float64 = cospi(p4v[3]-p2v[3])
 
@@ -280,13 +289,16 @@ function GainValue4(p4v::Vector{Float64},p1v::Vector{Float64},p2v::Vector{Float6
     Es4s::Float64 = Es4/p4
     E4::Float64 = Es4 + m4
 
-    ctheta12a::Float64, ctheta12b::Float64, ctheta12c::Float64 =  abs(p1v[4]-p2v[4]) < 1e-8 ? (1.0, -pi^2*(p1v[4]-p2v[4])^2/2, ch1h2b*st1*st2) : (1.0,cospi(p1v[4]-p2v[4])-1.0, ch1h2b*st1*st2)
+    b = pi^2*(p1v[4]-p2v[4])^2/2
+    ctheta12a::Float64, ctheta12b::Float64, ctheta12c::Float64 =  b < eps(Float64) ? (1.0, -b, ch1h2b*st1*st2) : (1.0,cospi(p1v[4]-p2v[4])-1.0, ch1h2b*st1*st2)
     ctheta12::Float64 = ct1*ct2+ch1h2*st1*st2 
 
-    ctheta14a::Float64, ctheta14b::Float64, ctheta14c::Float64 = abs(p4v[4]-p1v[4]) < 1e-8 ? (1.0, -pi^2*(p4v[4]-p1v[4])^2/2, ch4h1b*st4*st1) : (1.0,cospi(p4v[4]-p1v[4])-1.0, ch4h1b*st4*st1)
+    b = pi^2*(p4v[4]-p1v[4])^2/2
+    ctheta14a::Float64, ctheta14b::Float64, ctheta14c::Float64 = b < eps(Float64) ? (1.0, -b, ch4h1b*st4*st1) : (1.0,cospi(p4v[4]-p1v[4])-1.0, ch4h1b*st4*st1)
     ctheta14::Float64 = ct4*ct1+ch4h1*st4*st1
 
-    ctheta24a::Float64, ctheta24b::Float64, ctheta24c::Float64 = abs(p4v[4]-p2v[4]) < 1e-8 ? (1.0, -pi^2*(p4v[4]-p2v[4])^2/2, ch4h2b*st4*st2) : (1.0,cospi(p4v[4]-p2v[4])-1.0, ch4h2b*st4*st2)
+    b = pi^2*(p4v[4]-p2v[4])^2/2
+    ctheta24a::Float64, ctheta24b::Float64, ctheta24c::Float64 = b < eps(Float64) ? (1.0, -b, ch4h2b*st4*st2) : (1.0,cospi(p4v[4]-p2v[4])-1.0, ch4h2b*st4*st2)
     ctheta24::Float64 = ct4*ct2+ch4h2*st4*st2
 
     # TODO: make this more accurate for large separation of p1 p4 consistent with the new definitions of ctheta a,b,c above

@@ -10,7 +10,7 @@ Returns a `num+1` long `Vector{Float}` of grid bounds. These grid bounds can spa
     - boosted (1/2^n) spacing: `spacing = "B"` (Boosted in the forward direction)
     - reverse boosted (1/2^n) spacing: `spacing = "R"` (Boosted in the reverse direction)
 """
-function bounds(low_bound::T,up_bound::T,num::Int64,spacing::String) where T <: Union{Float32,Float64}
+@inline function bounds(low_bound::T,up_bound::T,num::Int64,spacing::String) where T <: Union{Float32,Float64}
 
     if spacing == "u" # uniform spacing
         #=
@@ -100,7 +100,7 @@ julia> bounds_p(-5e0,4e0,9)
  10000.0
 ```
 """
-function bounds_p(pl::T,pu::T,nump::Int64) where T <: Union{Float32,Float64}
+@inline function bounds_p(pl::T,pu::T,nump::Int64) where T <: Union{Float32,Float64}
     # returns a vector{T} of p grid bounds NOT in Log10 space
     return 10 .^[range(pl,pu,nump+1);]
 end
@@ -126,7 +126,7 @@ julia> bounds_t(8)
   1.0
 ```
 """
-function bounds_t(numt::Int64) 
+@inline function bounds_t(numt::Int64) 
     return [range(tl,tu,numt+1);]
 end
 
@@ -147,7 +147,7 @@ julia> deltaVector([1.0e0, 10.0e0, 100.0e0, 1000.0e0])
  900.0
 ```
 """
-function deltaVector(valr::Vector{T}) where T <: Union{Float32,Float64}
+@inline function deltaVector(valr::Vector{T}) where T <: Union{Float32,Float64}
     num = size(valr)[1]-1  # number of grid cells
     Δ = zeros(T,num)
     
@@ -175,7 +175,7 @@ julia> meanVector([1.0e0, 10.0e0, 100.0e0, 1000.0e0])
  550.0
 ```
 """
-function meanVector(valr::Vector{T}) where T <: Union{Float32,Float64}
+@inline function meanVector(valr::Vector{T}) where T <: Union{Float32,Float64}
     num = size(valr)[1]-1  # number of grid cells
     mean = zeros(T,num)
     
@@ -203,7 +203,7 @@ julia> deltaEVector([1.0e0, 10.0e0, 100.0e0, 1000.0e0], 1.0e0)
  495001.16
 ```
 """
-function deltaEVector(pr::Vector{T},mu::T) where T <: Union{Float32,Float64}
+@inline function deltaEVector(pr::Vector{T},mu::T) where T <: Union{Float32,Float64}
 
     num = size(pr)[1]-1  # number of grid cells
     E = zeros(T,num+1)
@@ -246,7 +246,7 @@ julia> deltaEkinVector([1.0e0, 10.0e0, 100.0e0, 1000.0e0], 1.0e0)
  494551.15128635924
 ```
 """
-function deltaEkinVector(pr::Vector{T},mu::T) where T <: Union{Float32,Float64}
+@inline function deltaEkinVector(pr::Vector{T},mu::T) where T <: Union{Float32,Float64}
     # inputs a (num+1) vector{Float} of p grid boundaries and the particle mu value and return a (num) vector{Float} of average energy values per grid cell
 
     num = size(pr)[1]-1  # number of grid cells

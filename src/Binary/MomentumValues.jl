@@ -54,7 +54,7 @@ function MomentumValue!(pv::Vector{Float64},ppv::Vector{Float64},p1v::Vector{Flo
     y::Float64 = 0e0
     z::Float64 = 0e0
 
-    if (x=(t1-t3)^2) < 1e-10 && (y=(h1-h3)^2) < 1e-10 # p3 close to p1, leading to ctheta13 >=1.0
+    if (x=(t1-t3)^2) < sqrt(eps(Float64)) && (y=(h1-h3)^2) < sqrt(eps(Float64)) # p3 close to p1, leading to ctheta13 >=1.0
         ch3h2 = cospi(h3-h2)
         ctheta23 = ct3*ct2 + ch3h2*st3*st2
         # ctheta13 = 1-z
@@ -64,7 +64,7 @@ function MomentumValue!(pv::Vector{Float64},ppv::Vector{Float64},p1v::Vector{Flo
         C2 = -4*(-p1*z+(p1+p2*ctheta23))*(m32-m42+m12+m22+2*E1*E2-2*p1*p2*ctheta12)
         C4 = -8*(m12+m22+2*E1*E2-(p1^2*z^2-2(p1^2+p1*p2*ctheta23)*z+2p1*p2*ctheta23-p2^2*(1-ctheta23^2)))
 
-    elseif (x=(t2-t3)^2) < 1e-10 && (y=(h2-h3)^2) < 1e-10 # p3 close to p22, leading to ctheta23 >=1.0
+    elseif (x=(t2-t3)^2) < sqrt(eps(Float64)) && (y=(h2-h3)^2) < sqrt(eps(Float64)) # p3 close to p22, leading to ctheta23 >=1.0
         ch3h1 = cospi(h3-h1)
         ctheta13 = ct3*ct1 + ch3h1*st3*st1
         # ctheta23 = 1-z
@@ -252,7 +252,7 @@ function pVector!(p4v::Vector{Float64},p3v::Vector{Float64},p1v::Vector{Float64}
     x = p1*st1*ch1+p2*st2*ch2-p3*st3*ch3 
     y = p1*st1*sh1+p2*st2*sh2-p3*st3*sh3
 
-    p4v[3] = mod(atan(y,x)/pi,2)
+    p4v[3] = mod2pi(atan(y,x))/pi
 
     return nothing
 
