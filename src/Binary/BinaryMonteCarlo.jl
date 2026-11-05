@@ -168,17 +168,6 @@ function BinaryMonteCarlo!(OldGainWeights3::ZArray,OldGainWeights4::ZArray,OldLo
         Zarr.ZarrCore.readblock!(OldChunkGainWeights4Full,OldGainWeights4,r4)
         Zarr.ZarrCore.readblock!(OldChunkLossTallyFull,OldLossTally,r)
 
-        # does not work, do not know why
-        #readblock_singlechunk!(OldChunkGainMatrix3Full,OldGainMatrix3,gain3loc)
-        #readblock_singlechunk!(OldChunkGainMatrix4Full,OldGainMatrix4,gain4loc)
-        #readblock_singlechunk!(OldChunkLossMatrixFull,OldLossMatrix,lossloc)
-        #readblock_singlechunk!(OldChunkGainWeights3Full,OldGainWeights3,gain3loc)
-        #readblock_singlechunk!(OldChunkGainWeights4Full,OldGainWeights4,gain4loc)
-        #readblock_singlechunk!(OldChunkLossTallyFull,OldLossTally,lossloc)
-
-        #println(stdout,"read data on thread $thread_id for p1loc=$p1loc, p2loc=$p2loc")
-        #flush(stdout)
-
         # reset in-memory local chunk arrays to zero 
         fill!(ChunkGainTotal3,Float32(0))
         fill!(ChunkGainTally3,UInt32(0))
@@ -406,14 +395,6 @@ function BinaryMonteCarlo!(OldGainWeights3::ZArray,OldGainWeights4::ZArray,OldLo
 
         # ===== Saving Unsymmetrised/Uncorrected Arrays ===== #
 
-            #Zarr.ZarrCore.writeblock!(OldChunkGainMatrix3Full,OldGainMatrix3,r3)
-            #Zarr.ZarrCore.writeblock!(OldChunkGainMatrix4Full,OldGainMatrix4,r4)
-            #Zarr.ZarrCore.writeblock!(OldChunkLossMatrixFull,OldLossMatrix,r)
-            #Zarr.ZarrCore.writeblock!(OldChunkGainWeights3Full,OldGainWeights3,r3)
-            #Zarr.ZarrCore.writeblock!(OldChunkGainWeights4Full,OldGainWeights4,r4)
-            #Zarr.ZarrCore.writeblock!(OldChunkLossTallyFull,OldLossTally,r)
-
-
             Zarr.write_singlechunk_fastpath!(OldGainMatrix3,OldChunkGainMatrix3Full,gain3loc)
             Zarr.write_singlechunk_fastpath!(OldGainMatrix4,OldChunkGainMatrix4Full,gain4loc)
             Zarr.write_singlechunk_fastpath!(OldLossMatrix,OldChunkLossMatrixFull,lossloc)
@@ -433,10 +414,6 @@ function BinaryMonteCarlo!(OldGainWeights3::ZArray,OldGainWeights4::ZArray,OldLo
             GainCorrectionChunk!(Parameters,OldChunkGainMatrix3,OldChunkGainMatrix4,OldChunkLossMatrix,p1loc,p2loc,GainCorrectionTmp)
 
         # ========== Save Symmetrised/Corrected Chunks to Zarr ============== #
-
-            #Zarr.ZarrCore.writeblock!(OldChunkGainMatrix3Full,CorrectedGainMatrix3,r3)
-            #Zarr.ZarrCore.writeblock!(OldChunkGainMatrix4Full,CorrectedGainMatrix4,r4)
-            #Zarr.ZarrCore.writeblock!(OldChunkLossMatrixFull,CorrectedLossMatrix,r)
 
             Zarr.write_singlechunk_fastpath!(CorrectedGainMatrix3,OldChunkGainMatrix3Full,gain3loc)
             Zarr.write_singlechunk_fastpath!(CorrectedGainMatrix4,OldChunkGainMatrix4Full,gain4loc)
