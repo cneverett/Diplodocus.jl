@@ -3,4 +3,5 @@ using Test
 
 @testset "Diplodocus.jl" begin
     # Write your tests here.
+    include("Aqua.jl")
 end

@@ -1,5 +1,6 @@
-#/Manifest.toml
-#/docs/Manifest.toml important for docs build
+/Manifest.toml
+/docs/Manifest.toml #important for docs build
+/test/Manifest.toml
 
 /docs/build/
 /docs/node_modules/
