@@ -1,22 +1,39 @@
 module DiplodocusTransport
 
-    export LoadMatrices, BigMatrices, FluxMatrices
-    export PhaseSpaceStruct, MomentumStruct, SpaceStruct, TimeStruct, OutputStruct, CharacteristicStruct, GridsStruct, ElectroMagneticFieldStruct
-    export BinaryStruct, EmiStruct, ForceType
-    export BackendType
-    export CoordinateType, Cylindrical, Spherical, Cartesian
-    export ModeType, Ani, Axi, Iso
-    export BoundaryType, Periodic, Open, Closed, Reflective
-    export CoordinateForce, SyncRadReact, GradBInvZDecay
-    export BuildBinaryMatrices, BuildEmissionMatrices, BuildFluxMatrices
-    export Initialise_Initial_Condition, Location_Species_To_StateVector, Initial_Constant!, Initial_MaxwellJuttner!, Initial_PowerLaw!, Initial_BoostedPowerLaw!, Initial_BlackBody!
-    export Initialise_Injection_Condition, Injection_Constant!, Injection_MaxwellJuttner!, Injection_PowerLaw!, Injection_BoostedPowerLaw!, Injection_BlackBody!
-    export ElectroMagneticField_Constant, ElectroMagneticField_InvZDecay
-    export CollisionDomain
-    export Solve, ForwardEulerStruct, ForwardSymplecticEulerStruct
-    export SolutionFileLoad
-    export MaxwellJuttner_Distribution, BlackBody_Distribution, Wien_Distribution
-    export CUDABackend, CPUBackend
+    # Metrics
+    export AbstractMetric, MetricComponents!, ChristoffelComponents!, Minkowski, Schwarzschild, Kerr
+    # Coordinates
+    export AbstractCoordinates, Cartesian, Cylindrical, Spherical, ModifiedSpherical, Paraboloidal
+    # Boundary Conditions
+    export AbstractBoundaryCondition, Periodic, Open, Closed, Reflective, Escape
+    # Modes
+    export AbstractMode, Iso, Axi, Ani
+    # Spacetime Grids 
+    export AbstractSpacetimeGrid, SpacetimeGrid, UniformGrid, Log10Grid, StretchGrid
+    # Tetrads
+    export AbstractTetrad, TetradComponents!, InverseTetradComponents!, RicciRotationComponents!, StationaryObserverTetrad, UniformElectromagneticFieldTetrad, ParabolicForceFreeFieldTetrad
+    # Backends
+    export AbstractBackend, CPUBackend, CUDABackend
+    # Phasespace
+    export PhaseSpaceStruct, MomentumStruct, SpacetimeStruct, TimeStruct, CharacteristicStruct, GridsStruct
+    # Forces 
+    export AbstractForce, CoordinateForce, AnalyticForce, SpaceVectorForce, SpaceScalarForce
+    export FirstOrderGuidingCentre, SyncRadReact, GradBInvZDecay, LocalLorentzForce
+    # Fluxes
+    export BuildFluxMatrices, VolFunction
+    # Collisions
+    export AbstractInteraction, BinaryInteraction, EmissiveInteraction
+    export BuildBinaryMatrices, BuildEmissionMatrices
+    # Initial and Injection Conditions
+    export InitialiseInitialCondition, InitialConstant!, InitialMaxwellJuttner!, InitialPowerLaw!, InitialBoostedPowerLaw!, InitialBlackBody!, InitialPowerLawExpDecay!, InitialKappa!, InitialKappaExpDecay!
+    export InitialiseInjectionCondition, InjectionConstant!, InjectionMaxwellJuttner!, InjectionPowerLaw!, InjectionBoostedPowerLaw!, InjectionBlackBody!, InjectionPowerLawExpDecay!, InjectionKappa!, InjectionKappaExpDecay!
+    # Solvers 
+    export Solve, AbstractSteppingMethod, ImplicitSteppingMethod, ExplicitSteppingMethod, ForwardEulerStruct, ForwardSymplecticEulerStruct, ExponentialRosenbrockEulerKrylovStruct, ExponentialRosenbrockEulerKrylovMixedStruct
+    export OutputStruct, SolutionFileLoad
+    # Utilities
+    export GlobalIndicesToStateIndex,LocationSpeciesToStateVector, CoordinateTransform!, CoordinateBasisTransform!, InclusiveDomainMask, ExclusiveDomainMask
+    # Distribution Moments 
+    export FourFlow, HydroFourVelocity, HydroThreeVelocity, ProjectionTensor, StressEnergyTensor, ScalarNumberDensity, ScalarMassDensity, ScalarEnergyDensity, ScalarPressure, ScalarTemperature
 
     using JLD2
     using DiplodocusCollisions: bounds, location, deltaVector, meanVector, deltaEVector, EmissionFileName, BinaryFileName, EmissionFileLoad_Matrix, BinaryFileLoad_Matrix, DoesConserve
@@ -26,47 +43,66 @@ module DiplodocusTransport
     using Statistics
     using SparseArrays
     using CUDA
-    using CUDA.CUSPARSE
+    using CUDA.cuSPARSE
     using MKL
     using MKLSparse
+    using HCubature
+    using StaticArrays
+    using ForwardDiff, Preferences
+    set_preferences!(ForwardDiff, "nansafe_mode" => true) # safer 
+    using ExponentialUtilities
+    using Zarr
 
     include("Constants.jl")
-    include("Types.jl")
     include("Backends.jl")
-    include("StructsAndDictionaries.jl")
-    include("PhaseSpaceFactors.jl")
-    include("MatrixResizing.jl")
+    include("NumericalIntegration.jl")
+    include("UtilityFunctions.jl")
+
+    # Phasespace
+    include("Spacetime/CoordinateStructs.jl")
+    include("Spacetime/Grids.jl")
+    include("Spacetime/Metrics.jl")
+    include("Spacetime/Christoffel.jl")
+    include("Spacetime/Tetrads.jl")
+    include("Spacetime/RicciRotation.jl")
+    include("Spacetime/CoordinateTransforms.jl")
+    include("Spacetime/CoordinateBasisTransforms.jl")
+
+    
+    #include("Types.jl")
+    include("PhaseSpaceStructs.jl")
+    include("ElectromagneticFields.jl")
+    #include("MatrixResizing.jl")
     include("DistributionFunctions.jl")
     include("DistributionMoments.jl")
     include("InitialConditions.jl")
     include("InjectionConditions.jl")
-    #include("ValuesOnTheGrid.jl")
-    include("DataReading.jl")
     include("GlobalToStateIndices.jl")
+    include("DomainMasks.jl")
 
-    # Fields
-    include("ElectroMagneticFieldFunctions.jl")
+    # Fluxes
+    include("Fluxes/FluxStructs.jl")
+    include("Fluxes/BuildFluxMatrices.jl")
+    include("Fluxes/FluxFunctionsCoordinate.jl")
+    include("Fluxes/FluxFunctionsForces.jl")
+    include("Fluxes/FluxFunctionsEmissionForces.jl") 
 
     # Collisions
-    include("Collisions/CollisionDomains.jl")
+    include("Collisions/InteractionStructs.jl")
+    include("Collisions/InteractionPhaseSpaceFactors.jl")
     include("Collisions/BuildBinaryMatrices.jl")
     include("Collisions/BuildEmissionMatrices.jl")
     include("Collisions/LoadMatrices.jl")
     include("Collisions/EmissionCorrection.jl")
 
-    # Fluxes
-    include("Fluxes/BuildFluxMatrices.jl")
-    include("Fluxes/FluxFunctionsCoordinate.jl")
-    include("Fluxes/FluxFunctionsForces.jl")
-    include("Fluxes/FluxFunctionsEmissionForces.jl")
+    # Solvers
+    include("Solvers/Arnoldi.jl")
+    include("Solvers/SteppingStructs.jl")
+    include("Solvers/SteppingMethods.jl")
+    include("Solvers/Solver.jl")
+    include("DataReading.jl")
 
-    
-
-    # Stepping 
-    include("SteppingStructs.jl")
-    include("SteppingMethods.jl")
-
-    # Solver
-    include("Solver.jl")
+    # Legacy conversion functions
+    include("LegacyConversions.jl")
 
 end

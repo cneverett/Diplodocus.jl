@@ -12,11 +12,7 @@ A struct for storing the characteristic scales (in SI units) for the simulation,
     CHAR_magnetic_field::Float64 = 1.0 # 1 Tesla
 
     # user defined scales (SI units)
-    #if isdefined(Main,Symbol("CHAR_time")) && isdefined(Main,Symbol("CHAR_length")) 
-    #    error("Both CHAR_time and CHAR_length are defined. Only one of these should be defined as the other is derived from it using CHAR_speed.")
-    #end
-
-    CHAR_length::Float64 = isdefined(Main,Symbol("CHAR_length")) ? getfield(Main,Symbol("CHAR_length")) : isdefined(Main,Symbol("CHAR_time")) ? getfield(Main,Symbol("CHAR_time")) * CHAR_speed : CONST_pcs
+    CHAR_length::Float64 = (isdefined(Main,Symbol("CHAR_length")) && isdefined(Main,Symbol("CHAR_time"))) ? error("Both CHAR_time and CHAR_length are defined. Only one of these should be defined as the other is derived from it using CHAR_speed.") : isdefined(Main,Symbol("CHAR_length")) ? getfield(Main,Symbol("CHAR_length")) : isdefined(Main,Symbol("CHAR_time")) ? getfield(Main,Symbol("CHAR_time")) * CHAR_speed : CONST_pcs
     #    catch
     #        if isdefined(Main,Symbol("CHAR_time"))
     #            getfield(Main,Symbol("CHAR_time")) * CHAR_speed
@@ -27,7 +23,7 @@ A struct for storing the characteristic scales (in SI units) for the simulation,
 
     CHAR_time::Float64 = isdefined(Main,Symbol("CHAR_time")) ? getfield(Main,Symbol("CHAR_time")) : CHAR_length / CHAR_speed 
 
-    CHAR_number_density::Float64 = isdefined(Main,Symbol("CHAR_number_density")) ? getfield(Main,Symbol("CHAR_number_density")) : 1.0e6 # 1 particle per cm^3    
+    CHAR_number_density::Float64 = isdefined(Main,Symbol("CHAR_number_density")) ? getfield(Main,Symbol("CHAR_number_density")) : 1.0 # 1 particle per m^3    
 
     # derived scales (SI units)
     CHAR_momentum::Float64 = CHAR_mass*CHAR_speed
@@ -61,33 +57,31 @@ A struct for storing the time domain of the simulation.
 end
 
 """
-    SpaceStruct()
+    SpacetimeStruct()
 
 A struct for storing the space domain of the simulation.
 """
-@kwdef struct SpaceStruct
+@kwdef struct SpacetimeStruct
 
-    space_coordinates::CoordinateType = getfield(Main,Symbol("space_coords"))
+    metric::AbstractMetric = getfield(Main,Symbol("metric"))
+    coordinates::AbstractCoordinates = getfield(Main,Symbol("coordinates"))
+    tetrad::AbstractTetrad = getfield(Main,Symbol("tetrad"))
+
     scheme::String = try 
             getfield(Main,Symbol("space_scheme"))
         catch
             "upwind"
         end
 
-    x_up::Float64   = getfield(Main,Symbol("x_up"))     
-    x_low::Float64  = getfield(Main,Symbol("x_low"))
-    x_grid::String  = getfield(Main,Symbol("x_grid"))
-    x_num::Int64    = getfield(Main,Symbol("x_num"))
+    dt0::Float64 = 1.0 # dt used for building flux terms
 
-    y_up::Float64   = getfield(Main,Symbol("y_up"))
-    y_low::Float64  = getfield(Main,Symbol("y_low"))
-    y_grid::String  = getfield(Main,Symbol("y_grid"))
-    y_num::Int64    = getfield(Main,Symbol("y_num"))
+    x_grid::AbstractSpacetimeGrid  = getfield(Main,Symbol("x_grid"))
+    y_grid::AbstractSpacetimeGrid  = getfield(Main,Symbol("y_grid"))
+    z_grid::AbstractSpacetimeGrid  = getfield(Main,Symbol("z_grid"))
 
-    z_up::Float64   = getfield(Main,Symbol("z_up")) 
-    z_low::Float64  = getfield(Main,Symbol("z_low"))
-    z_grid::String  = getfield(Main,Symbol("z_grid"))
-    z_num::Int64    = getfield(Main,Symbol("z_num"))
+    x_num::Int64 = x_grid.num
+    y_num::Int64 = y_grid.num
+    z_num::Int64 = z_grid.num
 
 end
 
@@ -98,7 +92,11 @@ A struct for storing the momentum domain of the simulation.
 """
 @kwdef struct MomentumStruct 
 
-    momentum_coordinates::CoordinateType = getfield(Main,Symbol("momentum_coords"))
+    coordinates::AbstractCoordinates = try 
+            getfield(Main,Symbol("momentum_coords"))
+        catch
+            ModifiedSpherical()
+        end
     scheme::String = try 
             getfield(Main,Symbol("momentum_scheme"))
         catch
@@ -128,6 +126,9 @@ end
 A struct for storing the grid values for each particle in the simulation.
 """
 @kwdef mutable struct GridsStruct <: Function
+
+    n_space::Int64 
+    n_momentum::Int64
 
     mass_list::Vector{Float64}
     charge_list::Vector{Float64}
@@ -165,34 +166,26 @@ A struct for storing the grid values for each particle in the simulation.
     B_field::Array{Float64,3} # magnetic field values on the x,y,z grid
     E_field::Array{Float64,3} # electric field values on the x,y,z grid
 
-    function GridsStruct(name_list,time::TimeStruct,space::SpaceStruct,momentum::MomentumStruct,characteristic::CharacteristicStruct,ElectroMagneticField::Union{ElectroMagneticFieldStruct,Nothing})
+    function GridsStruct(name_list,spacetime::SpacetimeStruct,momentum::MomentumStruct)
 
         self = new()
 
-        # time domain (only first timestep)
+        # number of grid points in space and momentum domains
 
-            self.tr = [0.0,time.dt0]
+            self.n_space = spacetime.x_num * spacetime.y_num * spacetime.z_num
+            self.n_momentum = sum(momentum.px_num_list .* momentum.py_num_list .* momentum.pz_num_list)
 
-        # space domain grids
+        # spacetime domain
 
-            x_up    = space.x_up
-            x_low   = space.x_low
-            x_grid  = space.x_grid
-            x_num   = space.x_num
+            self.tr = [0.0,spacetime.dt0] # only first set
 
-            y_up    = space.y_up
-            y_low   = space.y_low
-            y_grid  = space.y_grid
-            y_num   = space.y_num
+            x_grid  = spacetime.x_grid
+            y_grid  = spacetime.y_grid
+            z_grid  = spacetime.z_grid
 
-            z_up    = space.z_up
-            z_low   = space.z_low
-            z_grid  = space.z_grid
-            z_num   = space.z_num
-
-            self.xr = bounds(x_low,x_up,x_num,x_grid)
-            self.yr = bounds(y_low,y_up,y_num,y_grid)
-            self.zr = bounds(z_low,z_up,z_num,z_grid)
+            self.xr = SpacetimeGrid(x_grid)
+            self.yr = SpacetimeGrid(y_grid)
+            self.zr = SpacetimeGrid(z_grid)
 
             self.dx = deltaVector(self.xr)
             self.dy = deltaVector(self.yr)
@@ -266,11 +259,10 @@ A struct for storing the grid values for each particle in the simulation.
 
             end
 
-            if !isnothing(ElectroMagneticField)
+            if spacetime.tetrad isa ElectromagneticTetrad
+                println("Building electromagnetic field grids...")
                 # build electromagnetic field grids
-                parameters = ElectroMagneticField.parameters
-                ElectroMagneticFieldFunction = ElectroMagneticField.ElectroMagneticFieldFunction
-                self.B_field, self.E_field = ElectroMagneticFieldFunction(space,momentum,characteristic,self,parameters)
+                self.B_field, self.E_field = ElectromagneticFieldGrid(spacetime,spacetime.tetrad,self)
             else
                 self.B_field = zeros(Float64,0,0,0)
                 self.E_field = zeros(Float64,0,0,0)
@@ -292,86 +284,10 @@ A struct for storing the phase space of the simulation.
     # list of particle names
     name_list::Vector{String}           = getfield(Main,Symbol("name_list"))
     Characteristic::CharacteristicStruct= CharacteristicStruct()
-    Time::TimeStruct                    = TimeStruct()    
-    Space::SpaceStruct                  = SpaceStruct()
+    Spacetime::SpacetimeStruct          = SpacetimeStruct()    
     Momentum::MomentumStruct            = MomentumStruct()
 
-    ElectroMagneticField::Union{ElectroMagneticFieldStruct,Nothing} = try 
-            getfield(Main,Symbol("ElectroMagneticField"))
-        catch
-            nothing 
-        end
-
     # grids
-    Grids::GridsStruct  = GridsStruct(name_list,Time,Space,Momentum,Characteristic,ElectroMagneticField)
-
-end
-
-
-"""
-    BinaryMatricesStruct()
-
-A struct for storing the big matrices associated with binary interactions in the simulation.
-"""
-struct BinaryMatricesStruct{T<:Union{Float32,Float64}}
-    
-    M_Bin::AbstractMatrix{T}  # big matrix for binary interactions
-    Binary_list::Vector{BinaryStruct} # list of binary interactions
-    Domain::Union{Vector{Int64},Nothing} # domain of the binary interaction in the state vector
-
-end
-
-"""
-    EmissionMatricesStruct()
-
-A struct for storing the big matrices associated with emission interactions and their corresponding reaction forces if applicable in the simulation.
-"""
-struct EmissionMatricesStruct{T<:Union{Float32,Float64}}
-    
-    M_Emi::AbstractMatrix{T}  # big matrix for emission interactions
-    Emission_list::Vector{EmiStruct} # list of emission interactions
-
-end
-
-"""
-    FluxMatricesStruct()
-
-A struct for storing the flux matrices associated with the simulation.
-"""
-struct FluxMatricesStruct{T<:Union{Float32,Float64}}
-
-    Ap_Flux::Vector{T}                  # Forward Boundary time flux 
-    Am_Flux::Vector{T}                  # Backward Boundary time flux
-    
-    X_Flux::SparseMatrixCSC{T,Int64}    # sum of space fluxes 
-    P_Flux::SparseMatrixCSC{T,Int64}    # sum of momentum fluxes 
-
-    Vol::Vector{T}                      # SpaceTime volume element
-
-    B_Flux::SparseMatrixCSC{T,Int64}    # B Flux through x boundaries
-    C_Flux::SparseMatrixCSC{T,Int64}    # C Flux through y boundaries
-    D_Flux::SparseMatrixCSC{T,Int64}    # D Flux through z boundaries
-
-    I_Flux::SparseMatrixCSC{T,Int64}    # I Flux through px boundaries
-    J_Flux::SparseMatrixCSC{T,Int64}    # J Flux through py boundaries
-    K_Flux::SparseMatrixCSC{T,Int64}    # K Flux through pz boundaries
-
-end
-
-
-mutable struct OutputStruct
-    
-    f::Vector{Vector{AbstractFloat}}
-    t::Vector{Float64}
-
-    function OutputStruct(f0::Vector{T},n_save::Int64) where T<:Union{Float32,Float64}
-
-        self = new()
-        self.f = [similar(f0) for _ in 1:n_save]
-        self.t = Vector{Float64}(undef,n_save)
-
-        return self
-    
-    end
+    Grids::GridsStruct  = GridsStruct(name_list,Spacetime,Momentum)
 
 end

@@ -1,7 +1,7 @@
 """
     FourFlow(state,PhaseSpace,species)
 
-Returns the contravariant (upper indices) four-flow vector Nᵃ `Vector{Float64}` for a given particle `species` given a `state` vector. The four-flow is calculated as the first moment of the distribution function over momentum space. 
+Returns the contravariant (upper indices) four-flow vector Nᵃ `AbstractVector{T}` for a given particle `species` given a `state` vector. The four-flow is calculated as the first moment of the distribution function over momentum space. 
 
 Takes additional arguments `x_idx`, `y_idx`, and `z_idx` to specify the spatial location in the phase space to evaluate the four-flow.
 """
@@ -14,7 +14,7 @@ function FourFlow(state::AbstractVector{T},PhaseSpace::PhaseSpaceStruct,species:
         species_index = findfirst(==(species),name_list)
     end
 
-    f1D = copy(Location_Species_To_StateVector(state,PhaseSpace,species_index=species_index,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx))
+    f1D = copy(LocationSpeciesToStateVector(state,PhaseSpace,species_index=species_index,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx))
 
     m = PhaseSpace.Grids.mass_list[species_index]
     p_num = PhaseSpace.Momentum.px_num_list[species_index]
@@ -24,9 +24,9 @@ function FourFlow(state::AbstractVector{T},PhaseSpace::PhaseSpaceStruct,species:
     ur = PhaseSpace.Grids.pyr_list[species_index]
     hr = PhaseSpace.Grids.pzr_list[species_index]
 
-    f3D = Float64.(reshape(f1D,(p_num,u_num,h_num)))
+    f3D = T.(reshape(f1D,(p_num,u_num,h_num)))
 
-    Nᵃ::Vector{Float64} = zeros(Float64,4)
+    Nᵃ = zeros(T,4)
     
     for p in 1:p_num, u in 1:u_num, h in 1:h_num
 
@@ -41,15 +41,15 @@ function FourFlow(state::AbstractVector{T},PhaseSpace::PhaseSpaceStruct,species:
 
 end
 
-function HydroFourVelocity(Nᵃ::Vector{Float64})
+function HydroFourVelocity(Nᵃ::AbstractVector{T}) where T
 
-    Uᵃ = zeros(Float64,4)
+    Uᵃ = zeros(T,4)
 
-    metric = zeros(Float64,4,4)
-    metric[1,1] = -1
-    metric[2,2] = 1
-    metric[3,3] = 1
-    metric[4,4] = 1
+    metric = zeros(T,4,4)
+    metric[1,1] = T(-1)
+    metric[2,2] = T(1)
+    metric[3,3] = T(1)
+    metric[4,4] = T(1)
 
     sqrtNᵃ2 = sqrt(abs(Nᵃ'*metric*Nᵃ))
     Uᵃ .= Nᵃ/sqrtNᵃ2
@@ -58,24 +58,24 @@ function HydroFourVelocity(Nᵃ::Vector{Float64})
 
 end
 
-function HydroThreeVelocity(Uᵃ::Vector{Float64})
+function HydroThreeVelocity(Uᵃ::AbstractVector{T}) where T
 
-    Vⁱ = zeros(Float64,3)
+    Vⁱ = zeros(T,3)
 
     Vⁱ .= Uᵃ[2:4] / Uᵃ[1]
     return Vⁱ
 
 end
 
-function ProjectionTensor(nₐ::Vector{Float64})
+function ProjectionTensor(nₐ::AbstractVector{T}) where T
 
-    Δab = zeros(Float64,4,4)
+    Δab = zeros(T,4,4)
 
-    metric = zeros(Float64,4,4)
-    metric[1,1] = -1
-    metric[2,2] = 1
-    metric[3,3] = 1
-    metric[4,4] = 1
+    metric = zeros(T,4,4)
+    metric[1,1] = T(-1)
+    metric[2,2] = T(1)
+    metric[3,3] = T(1)
+    metric[4,4] = T(1)
 
     for i in 1:4, j in 1:4
         Δab[i,j] = metric[i,j] + nₐ[i]*nₐ[j]
@@ -89,7 +89,7 @@ end
 """
     StressEnergyTensor(state,PhaseSpace,species)
 
-Returns the contravariant (upper indices) stress-energy tensor Tab `Matrix{Float64}` for a given particle `species` given a `state` vector. The stress-energy is calculated as the second moment of the distribution function over momentum space.
+Returns the contravariant (upper indices) stress-energy tensor Tab for a given particle `species` given a `state` vector. The stress-energy is calculated as the second moment of the distribution function over momentum space.
 """
 function StressEnergyTensor(state::Vector{T},PhaseSpace::PhaseSpaceStruct,species::S;x_idx::Int64=1,y_idx::Int64=1,z_idx::Int64=1) where T<:AbstractFloat where S<:Union{String,Int64}
 
@@ -100,7 +100,7 @@ function StressEnergyTensor(state::Vector{T},PhaseSpace::PhaseSpaceStruct,specie
         species_index = findfirst(==(species),PhaseSpace.name_list)
     end
 
-    f1D = copy(Location_Species_To_StateVector(state,PhaseSpace,species_index=species_index,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx))
+    f1D = copy(LocationSpeciesToStateVector(state,PhaseSpace,species_index=species_index,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx))
 
     m = PhaseSpace.Grids.mass_list[species_index]
     p_num = PhaseSpace.Momentum.px_num_list[species_index]
@@ -110,9 +110,9 @@ function StressEnergyTensor(state::Vector{T},PhaseSpace::PhaseSpaceStruct,specie
     ur = PhaseSpace.Grids.pyr_list[species_index]
     hr = PhaseSpace.Grids.pzr_list[species_index]
 
-    f3D = Float64.(reshape(f1D,(p_num,u_num,h_num)))
+    f3D = T.(reshape(f1D,(p_num,u_num,h_num)))
 
-    Tᵃᵇ::Matrix{Float64} = zeros(Float64,4,4)
+    Tᵃᵇ = zeros(T,4,4)
 
     #=for i in 1:u_num
         du[i] = ur[i+1]-ur[i]
@@ -157,6 +157,7 @@ function StressEnergyTensor(state::Vector{T},PhaseSpace::PhaseSpaceStruct,specie
             Tᵃᵇ[3,4] += f3D[p,u,h] * (sqrt(1 - ur[u]^2) - ur[u]^2 * sqrt(1 - ur[u]^2) - sqrt(1 - ur[u+1]^2) + ur[u+1]^2 * sqrt(1 - ur[u+1]^2)) * (pr[p]sqrt(m^2 + pr[p]^2) - pr[p+1]sqrt(m^2 + pr[p+1]^2) + m^2 * (-asinh(pr[p]/m) + asinh(pr[p+1]/m))) * (cos(hr[h]) - cos(hr[h+1])) / (6(pr[p] - pr[p+1])*(ur[u] - ur[u+1])*(hr[h] - hr[h+1]))
 
             Tᵃᵇ[4,4] += f3D[p,u,h] * (ur[u]^2 + ur[u]ur[u+1] + ur[u+1]^2) * (pr[p]sqrt(m^2 + pr[p]^2) - pr[p+1]sqrt(m^2 + pr[p+1]^2) + m^2 * (-asinh(pr[p]/m) + asinh(pr[p+1]/m))) / (6(pr[p] - pr[p+1]))
+
         else
             
             Tᵃᵇ[1,1] += f3D[p,u,h]*(pr[p] + pr[p+1])/2
@@ -211,12 +212,12 @@ function StressEnergyTensor(state::Vector{T},PhaseSpace::PhaseSpaceStruct,specie
     return Tᵃᵇ
 end
 
-function ScalarNumberDensity(Nᵃ::Vector{Float64},Uₐ::Vector{Float64})
+function ScalarNumberDensity(Nᵃ::AbstractVector{T},Uₐ::AbstractVector{T}) where T
 
-    n::Float64 = 0.0
+    n::T = 0.0
 
     if Nᵃ[1] == 0
-        n = 0.0
+        n = T(0.0)
     else
         n = - dot(Nᵃ,Uₐ)
     end
@@ -225,7 +226,7 @@ function ScalarNumberDensity(Nᵃ::Vector{Float64},Uₐ::Vector{Float64})
 
 end
 
-function ScalarMassDensity(n::Vector{Float64},PhaseSpace::PhaseSpaceStruct,species::T) where T<:Union{String,Int64}
+function ScalarMassDensity(n::AbstractVector{T},PhaseSpace::PhaseSpaceStruct,species::S) where S<:Union{String,Int64} where T
 
     if typeof(species) == Int64
         species_index = species
@@ -235,16 +236,16 @@ function ScalarMassDensity(n::Vector{Float64},PhaseSpace::PhaseSpaceStruct,speci
     end
     m = PhaseSpace.Grids.mass_list[species_index]
 
-    ρ::Float64 = n*m
+    ρ::T = n*m
 
     return ρ
 
 end
 
-function ScalarEnergyDensity(Tᵃᵇ::Matrix{Float64},Uₐ::Vector{Float64},n::Float64;perparticle=false)
+function ScalarEnergyDensity(Tᵃᵇ::AbstractMatrix{T},Uₐ::AbstractVector{T},n::T;perparticle=false) where T
 
-    e::Float64 = 0.0
-    en::Float64 = Uₐ' * Tᵃᵇ * Uₐ
+    e::T = 0.0
+    en::T = Uₐ' * Tᵃᵇ * Uₐ
 
     if perparticle
         if n == 0.0
@@ -260,15 +261,15 @@ function ScalarEnergyDensity(Tᵃᵇ::Matrix{Float64},Uₐ::Vector{Float64},n::F
 
 end
 
-function ScalarPressure(Tᵃᵇ::Matrix{Float64},Δab::Matrix{Float64})
+function ScalarPressure(Tᵃᵇ::AbstractMatrix{T},Δab::AbstractMatrix{T}) where T
 
-    p::Float64 = 0.0
+    p::T = 0.0
 
-    metric = zeros(Float64,4,4)
-    metric[1,1] = -1
-    metric[2,2] = 1
-    metric[3,3] = 1
-    metric[4,4] = 1
+    metric = zeros(T,4,4)
+    metric[1,1] = T(-1)
+    metric[2,2] = T(1)
+    metric[3,3] = T(1)
+    metric[4,4] = T(1)
 
     #p = (1/3) * sum(Tab .* (metric * Δab * metric))
     p = (1/3) * sum(Tᵃᵇ .* Δab)
@@ -277,16 +278,17 @@ function ScalarPressure(Tᵃᵇ::Matrix{Float64},Δab::Matrix{Float64})
 
 end
 
-function ScalarTemperature(p::Float64,n::Float64)
+function ScalarTemperature(p::T,n::T) where T
 
-    T::Float64 = 0.0
+    Temp::T = 0.0
 
-    kb = 1.38f-23
-    c = 3f8
-    mEle = 9.11e-31
-    T = p/n / CONST_kb * CONST_mEle * CONST_c^2 # Kelvin
+    kb = CONST_kb
+    c = CONST_c
+    mEle = CONST_mEle
+    
+    Temp = p/n / kb * mEle * c^2 # Kelvin
 
-    return T
+    return Temp
 
 end
 

@@ -2,47 +2,33 @@
     BuildEmissionMatrices(PhaseSpace,DataDirectory;loading_check)
 
 Function that builds the emission matrices associated with emissive interactions and their corresponding reaction forces if applicable. If there are such interactions, first space is allocated for the arrays, then data is loaded into these arrays from the desired `DataDirectory` location and finally the big matrices are returned as an immutable `EmissionMatricesStruct`.
+
+For spatial indices within `Binary_Domain` (if set to `nothing` all cells are in the Binary_Domain) the emission matrices will be defined as dense matrices for compatibility with GPU `copyto!`. Otherwise they will be defined as sparse matrices.
 """
-function BuildEmissionMatrices(PhaseSpace::PhaseSpaceStruct,Emission_list::Vector{EmiStruct},DataDirectory::String;loading_check::Bool=false,Emi_corrected::Bool=true,Emi_sparse::Bool=false)
+function BuildEmissionMatrices(PhaseSpace::PhaseSpaceStruct,Emission_list::Vector{EmissiveInteraction},DataDirectory::String,BinM::BinaryMatricesStruct;Emi_corrected::Bool=true)
 
     Precision::DataType = getfield(Main,Symbol("Precision"))
 
     @assert Precision == Float32 || Precision == Float64 "Precision must be either Float32 or Float64"
 
     Momentum = PhaseSpace.Momentum
-    Space = PhaseSpace.Space
+    Spacetime = PhaseSpace.Spacetime
 
     px_num_list = Momentum.px_num_list
     py_num_list = Momentum.py_num_list
     pz_num_list = Momentum.pz_num_list
 
     n_momentum = sum(px_num_list.*py_num_list.*pz_num_list)
-    n_space = Space.x_num*Space.y_num*Space.z_num
+    n_space = Spacetime.x_num*Spacetime.y_num*Spacetime.z_num
 
     n = n_momentum*n_space
 
+    M_Emi = Vector{Union{Matrix{Precision},SparseMatrixCSC{Precision,Int32}}}(undef,n_space)
+
     size = (n)^2*sizeof(Precision)
 
-    if isempty(Emission_list)
-
-        if Emi_sparse
-            M_Emi = spzeros(Precision,0,0)
-        else
-            M_Emi = zeros(Precision,0,0)
-        end 
-    else
-        if Emi_sparse
-            M_Emi_I::Vector{Int64} = Int64[]
-            M_Emi_J::Vector{Int64} = Int64[]
-            M_Emi_V::Vector{Precision} = Precision[]
-            LoadMatrices_Emi(Emission_list,DataDirectory,PhaseSpace,Emi_corrected;M_Emi_I=M_Emi_I,M_Emi_J=M_Emi_J,M_Emi_V=M_Emi_V)
-            M_Emi = sparse(M_Emi_I,M_Emi_J,M_Emi_V,n,n)::SparseMatrixCSC{Precision,Int64}
- 
-            GC.gc()
-        else
-            M_Emi = zeros(Precision,n,n)
-            LoadMatrices_Emi(Emission_list,DataDirectory,PhaseSpace,Emi_corrected;M_Emi=M_Emi)
-        end  
+    if !isempty(Emission_list)
+        LoadMatrices_Emi!(M_Emi,Emission_list,DataDirectory,PhaseSpace,BinM;Emi_corrected=Emi_corrected)
     end
 
     size = Base.summarysize(M_Emi)
@@ -127,7 +113,7 @@ function Allocate_M_Emi(PhaseSpace::PhaseSpaceStruct,loading_check::Bool,Precisi
 
 end
 
-function Fill_M_Emi!(PhaseSpace::PhaseSpaceStruct,names::Tuple{Int64,Int64,Int64},x::Int64,y::Int64,z::Int64;GainMatrix2=nothing,GainMatrix3=nothing,LossMatrix1=nothing,mode::ModeType=Ani(),M_Emi::Union{Nothing,Matrix{F}}=nothing,M_Emi_I::Union{Nothing,Vector{Int64}}=nothing,M_Emi_J::Union{Nothing,Vector{Int64}}=nothing,M_Emi_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function Fill_M_Emi!(PhaseSpace::PhaseSpaceStruct,names::Tuple{Int64,Int64,Int64},x::Int64,y::Int64,z::Int64;GainMatrix2=nothing,GainMatrix3=nothing,LossMatrix1=nothing,mode::AbstractMode=Ani(),M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     Grids = PhaseSpace.Grids
 
@@ -149,7 +135,7 @@ function Fill_M_Emi!(PhaseSpace::PhaseSpaceStruct,names::Tuple{Int64,Int64,Int64
 end
 
 
-function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractArray{Float64,6},name2::Int64,name1::Int64,x::Int64,y::Int64,z::Int64,mode::ModeType;M_Emi::Union{Nothing,Matrix{F}}=nothing,M_Emi_I::Union{Nothing,Vector{Int64}}=nothing,M_Emi_J::Union{Nothing,Vector{Int64}}=nothing,M_Emi_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractArray{Float64,6},name2::Int64,name1::Int64,x::Int64,y::Int64,z::Int64,mode::AbstractMode;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     vol = VolFunction(PhaseSpace,1,x,y,z)
 
@@ -161,6 +147,10 @@ function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractA
     is_sparse = isnothing(M_Emi)
     
     for px1 in axes(GainMatrix,4), px2 in axes(GainMatrix,1)
+
+        #if px1 == 1 
+        #    continue # skip first bin as the occupation of this bin can become very large causing time stepping issues.
+        #end
 
         if mode isa Iso
             val = 0.0
@@ -191,19 +181,19 @@ function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractA
                     w = 1.0
                 end
 
-                a = GlobalIndices_To_StateIndex(x,y,z,px2,py2,pz2,name2,PhaseSpace)
-                b = GlobalIndices_To_StateIndex(x,y,z,px1,py1,pz1,name1,PhaseSpace)
+                a = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px2,py2,pz2,name2) # M_Emi now stored in vector of M_Emi for each location
+                b = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px1,py1,pz1,name1)
 
                 if val == 0.0
                     continue
                 end
 
                 if is_sparse
-                    push!(M_Emi_I,a)
-                    push!(M_Emi_J,b)
-                    push!(M_Emi_V,convert(F,val*w*vol))
+                    push!(M_Emi_I,Int32(a))
+                    push!(M_Emi_J,Int32(b))
+                    push!(M_Emi_V,convert(eltype(M_Emi_V),val*w*vol))
                 else
-                    M_Emi[a,b] += convert(F,val*w*vol) 
+                    M_Emi[a,b] += convert(eltype(M_Emi),val*w*vol) 
                 end
 
             end
@@ -214,7 +204,7 @@ function GainMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,GainMatrix::AbstractA
 
 end
 
-function LossMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,LossMatrix::Array{Float64,2},name1::Int64,x::Int64,y::Int64,z::Int64,mode::ModeType;M_Emi::Union{Nothing,Matrix{F}}=nothing,M_Emi_I::Union{Nothing,Vector{Int64}}=nothing,M_Emi_J::Union{Nothing,Vector{Int64}}=nothing,M_Emi_V::Union{Nothing,Vector{F}}=nothing) where F<:Union{Float32,Float64}
+function LossMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,LossMatrix::Array{Float64,2},name1::Int64,x::Int64,y::Int64,z::Int64,mode::AbstractMode;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
     vol = VolFunction(PhaseSpace,1,x,y,z)
 
@@ -224,6 +214,10 @@ function LossMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,LossMatrix::Array{Flo
     is_sparse = isnothing(M_Emi)
 
     for px1 in axes(LossMatrix,1)
+
+        if px1 == 1 
+            continue # skip first bin as the occupation of this bin can become very large causing time stepping issues.
+        end
 
         if mode isa Iso
 
@@ -266,7 +260,7 @@ function LossMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,LossMatrix::Array{Flo
 
                 end
 
-                a = GlobalIndices_To_StateIndex(x,y,z,px1,py1,pz1,name1,PhaseSpace)
+                a = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px1,py1,pz1,name1) # M_Emi now stored in vector of M_Emi for each location
                 b = a
 
                 if val == 0.0 
@@ -274,11 +268,11 @@ function LossMatrix_to_M_Emi!(PhaseSpace::PhaseSpaceStruct,LossMatrix::Array{Flo
                 end 
 
                 if is_sparse
-                    push!(M_Emi_I,a)
-                    push!(M_Emi_J,b)
-                    push!(M_Emi_V,-convert(F,val*w*vol))
+                    push!(M_Emi_I,Int32(a))
+                    push!(M_Emi_J,Int32(b))
+                    push!(M_Emi_V,-convert(eltype(M_Emi_V),val*w*vol))
                 else
-                    M_Emi[a,b] -= convert(F,val*w*vol)
+                    M_Emi[a,b] -= convert(eltype(M_Emi),val*w*vol)
                 end 
 
             end
@@ -295,15 +289,13 @@ end
 
 Generates `I_Flux` terms in the Emission matrix `M_Emi` if the emission interaction has an associated `Force`.
 """
-function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{T}}=nothing,M_Emi_I::Union{Nothing,Vector{Int64}}=nothing,M_Emi_J::Union{Nothing,Vector{Int64}}=nothing,M_Emi_V::Union{Nothing,Vector{T}}=nothing) where T<:Union{Float32,Float64}
+function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
-    Space = PhaseSpace.Space
+    Spacetime = PhaseSpace.Spacetime
     Momentum = PhaseSpace.Momentum
     Grids = PhaseSpace.Grids
-    Characteristic = PhaseSpace.Characteristic
 
-    space_coords = Space.space_coordinates
-    momentum_coords = Momentum.momentum_coordinates
+    momentum_coords = Momentum.coordinates
     scheme = Momentum.scheme
 
     BCp = momentum_coords.xp_BC
@@ -317,9 +309,9 @@ function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
     is_sparse = isnothing(M_Emi)
 
     name_list = PhaseSpace.name_list
-    x_num = Space.x_num
-    y_num = Space.y_num
-    z_num = Space.z_num
+    x_num = Spacetime.x_num
+    y_num = Spacetime.y_num
+    z_num = Spacetime.z_num
     px_num_list = Momentum.px_num_list
     py_num_list = Momentum.py_num_list
     pz_num_list = Momentum.pz_num_list
@@ -335,7 +327,7 @@ function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
 
     for px in 1:px_num, py in 1:py_num, pz in 1:pz_num
 
-        a = GlobalIndices_To_StateIndex(x,y,z,px,py,pz,name,PhaseSpace)
+        a = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px,py,pz,name) # M_Emi now stored in vector of M_Emi for each location
         b = a 
         pxp = px+1
         pxm = px-1
@@ -354,8 +346,8 @@ function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
             end
         end
 
-        bp = GlobalIndices_To_StateIndex(x,y,z,pxp,py,pz,name,PhaseSpace)
-        bm = GlobalIndices_To_StateIndex(x,y,z,pxm,py,pz,name,PhaseSpace)
+        bp = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,pxp,py,pz,name)
+        bm = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,pxm,py,pz,name)
 
         # integration sign introduced here, opposite sign compared to IFluxFunction as I_Flux is on left hand side of transport equation but M_Emi is on the right hand side.
         I_plus = -IFluxFunction(Force,PhaseSpace,name,"plus",1,x,y,z,px,py,pz)
@@ -404,44 +396,44 @@ function Fill_I_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
         # normalised fluxes
         if b != bp
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,bp)
-                push!(M_Emi_V,convert(T,(I_plus * h_plus_right) / Mom_Normp))
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(I_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(bp))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_plus * h_plus_right) / Mom_Normp))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,bp] += convert(T,(I_plus * h_plus_right) / Mom_Normp)
-                M_Emi[a,b] += convert(T,(I_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,bp] += convert(eltype(M_Emi),(I_plus * h_plus_right) / Mom_Normp)
+                M_Emi[a,b] += convert(eltype(M_Emi),(I_plus * h_plus_left) / Mom_Norm)
             end
         elseif BCp isa Open # b=bp
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(I_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(I_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(I_plus * h_plus_left) / Mom_Norm) 
             end
         end
         if b != bm
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,bm)
-                push!(M_Emi_V,convert(T,(I_minus * h_minus_left) / Mom_Normm))
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(I_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(bm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_minus * h_minus_left) / Mom_Normm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(I_minus * h_minus_right) / Mom_Norm) 
-                M_Emi[a,bm] += convert(T,(I_minus * h_minus_left) / Mom_Normm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(I_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,bm] += convert(eltype(M_Emi),(I_minus * h_minus_left) / Mom_Normm) 
             end
         elseif BCm isa Open # b=bm
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(I_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(I_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(I_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(I_minus * h_minus_right) / Mom_Norm) 
             end
         end
 
@@ -454,15 +446,13 @@ end
 
 Generates `J_Flux` term in the Emission matrix `M_Emi` if the emission interaction has an associated `Force`.
 """
-function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{T}}=nothing,M_Emi_I::Union{Nothing,Vector{Int64}}=nothing,M_Emi_J::Union{Nothing,Vector{Int64}}=nothing,M_Emi_V::Union{Nothing,Vector{T}}=nothing) where T<:Union{Float32,Float64}
+function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
-    Space = PhaseSpace.Space
+    Spacetime = PhaseSpace.Spacetime
     Momentum = PhaseSpace.Momentum
     Grids = PhaseSpace.Grids
-    Characteristic = PhaseSpace.Characteristic
 
-    space_coords = Space.space_coordinates
-    momentum_coords = Momentum.momentum_coordinates
+    momentum_coords = Momentum.coordinates
     scheme = Momentum.scheme
     offset = PhaseSpace.Grids.momentum_species_offset
 
@@ -476,9 +466,9 @@ function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
     is_sparse = isnothing(M_Emi)
 
     name_list = PhaseSpace.name_list
-    x_num = Space.x_num
-    y_num = Space.y_num
-    z_num = Space.z_num
+    x_num = Spacetime.x_num
+    y_num = Spacetime.y_num
+    z_num = Spacetime.z_num
     px_num_list = Momentum.px_num_list
     py_num_list = Momentum.py_num_list
     pz_num_list = Momentum.pz_num_list
@@ -494,7 +484,7 @@ function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
 
     for px in 1:px_num, py in 1:py_num, pz in 1:pz_num
 
-        a = GlobalIndices_To_StateIndex(x,y,z,px,py,pz,name,PhaseSpace)
+        a = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px,py,pz,name) # M_Emi now stored in vector of M_Emi for each location
         b = a 
         pyp = py+1
         pym = py-1
@@ -513,8 +503,8 @@ function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
             end
         end
 
-        bp = GlobalIndices_To_StateIndex(x,y,z,px,pyp,pz,name,PhaseSpace)
-        bm = GlobalIndices_To_StateIndex(x,y,z,px,pym,pz,name,PhaseSpace)
+        bp = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px,pyp,pz,name)
+        bm = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px,pym,pz,name)
 
         # integration sign introduced here, opposite sign compared to JFluxFunction as J_Flux is on left hand side of transport equation but M_Emi is on the right hand side.
         J_plus = -JFluxFunction(Force,PhaseSpace,name,"plus",1,x,y,z,px,py,pz)
@@ -563,44 +553,44 @@ function Fill_J_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
         # normalised fluxes
         if b != bp
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,bp)
-                push!(M_Emi_V,convert(T,(J_plus * h_plus_right) / Mom_Normp))
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(J_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(bp))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_plus * h_plus_right) / Mom_Normp))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,bp] += convert(T,(J_plus * h_plus_right) / Mom_Normp)
-                M_Emi[a,b] += convert(T,(J_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,bp] += convert(eltype(M_Emi),(J_plus * h_plus_right) / Mom_Normp)
+                M_Emi[a,b] += convert(eltype(M_Emi),(J_plus * h_plus_left) / Mom_Norm) 
             end
         elseif BCp isa Open # b=bp
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(J_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(J_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(J_plus * h_plus_left) / Mom_Norm) 
             end
         end
         if b != bm
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,bm)
-                push!(M_Emi_V,convert(T,(J_minus * h_minus_left) / Mom_Normm))
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(J_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(bm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_minus * h_minus_left) / Mom_Normm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(J_minus * h_minus_right) / Mom_Norm) 
-                M_Emi[a,bm] += convert(T,(J_minus * h_minus_left) / Mom_Normm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(J_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,bm] += convert(eltype(M_Emi),(J_minus * h_minus_left) / Mom_Normm) 
             end
         elseif BCm isa Open # b=bm
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(J_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(J_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(J_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(J_minus * h_minus_right) / Mom_Norm) 
             end
         end
 
@@ -612,15 +602,13 @@ end
 
 Generates `K_Flux` terms in the Emission matrix `M_Emi` if the emission interaction has an associated `Force`.
 """
-function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{T}}=nothing,M_Emi_I::Union{Nothing,Vector{Int64}}=nothing,M_Emi_J::Union{Nothing,Vector{Int64}}=nothing,M_Emi_V::Union{Nothing,Vector{T}}=nothing) where T<:Union{Float32,Float64}
+function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::AbstractForce,x_idx::Int64,y_idx::Int64,z_idx::Int64,species_idx::Int64;M_Emi::Union{Nothing,Matrix{Float32},Matrix{Float64}}=nothing,M_Emi_I::Union{Nothing,Vector{Int32}}=nothing,M_Emi_J::Union{Nothing,Vector{Int32}}=nothing,M_Emi_V::Union{Nothing,Vector{Float32},Vector{Float64}}=nothing)
 
-    Space = PhaseSpace.Space
+    Spacetime = PhaseSpace.Spacetime
     Momentum = PhaseSpace.Momentum
     Grids = PhaseSpace.Grids
-    Characteristic = PhaseSpace.Characteristic
 
-    space_coords = Space.space_coordinates
-    momentum_coords = Momentum.momentum_coordinates
+    momentum_coords = Momentum.coordinates
     scheme = Momentum.scheme
     offset = PhaseSpace.Grids.momentum_species_offset
 
@@ -634,9 +622,9 @@ function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
     is_sparse = isnothing(M_Emi)
 
     name_list = PhaseSpace.name_list
-    x_num = Space.x_num
-    y_num = Space.y_num
-    z_num = Space.z_num
+    x_num = Spacetime.x_num
+    y_num = Spacetime.y_num
+    z_num = Spacetime.z_num
     px_num_list = Momentum.px_num_list
     py_num_list = Momentum.py_num_list
     pz_num_list = Momentum.pz_num_list
@@ -652,7 +640,7 @@ function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
 
     for px in 1:px_num, py in 1:py_num, pz in 1:pz_num
 
-        a = GlobalIndices_To_StateIndex(x,y,z,px,py,pz,name,PhaseSpace)
+        a = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px,py,pz,name) # M_Emi now stored in vector of M_Emi for each location
         b = a 
         pzp = pz+1
         pzm = pz-1
@@ -671,8 +659,8 @@ function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
             end
         end
 
-        bp = GlobalIndices_To_StateIndex(x,y,z,px,py,pzp,name,PhaseSpace)
-        bm = GlobalIndices_To_StateIndex(x,y,z,px,py,pzm,name,PhaseSpace)
+        bp = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px,py,pzp,name)
+        bm = GlobalIndicesToStateIndex(PhaseSpace,1,1,1,px,py,pzm,name)
 
         # integration sign introduced here, opposite sign compared to KFluxFunction as K_Flux is on left hand side of transport equation but M_Emi is on the right hand side.
         K_plus = -KFluxFunction(Force,PhaseSpace,name,"plus",1,x,y,z,px,py,pz)
@@ -720,44 +708,44 @@ function Fill_K_Emi!(PhaseSpace::PhaseSpaceStruct,Force::ForceType,x_idx::Int64,
 
         if b != bp
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,bp)
-                push!(M_Emi_V,convert(T,(K_plus * h_plus_right) / Mom_Normp))
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(K_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(bp))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_plus * h_plus_right) / Mom_Normp))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,bp] += convert(T,(K_plus * h_plus_right) / Mom_Normp) 
-                M_Emi[a,b] += convert(T,(K_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,bp] += convert(eltype(M_Emi),(K_plus * h_plus_right) / Mom_Normp) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(K_plus * h_plus_left) / Mom_Norm) 
             end
         elseif BCp isa Open # b=bp
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(K_plus * h_plus_left) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_plus * h_plus_left) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(K_plus * h_plus_left) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(K_plus * h_plus_left) / Mom_Norm) 
             end
         end
         if b != bm
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,bm)
-                push!(M_Emi_V,convert(T,(K_minus * h_minus_left) / Mom_Normm))
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(K_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(bm))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_minus * h_minus_left) / Mom_Normm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(K_minus * h_minus_right) / Mom_Norm) 
-                M_Emi[a,bm] += convert(T,(K_minus * h_minus_left) / Mom_Normm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(K_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,bm] += convert(eltype(M_Emi),(K_minus * h_minus_left) / Mom_Normm) 
             end
         elseif BCm isa Open # b=bm
             if is_sparse
-                push!(M_Emi_I,a)
-                push!(M_Emi_J,b)
-                push!(M_Emi_V,convert(T,(K_minus * h_minus_right) / Mom_Norm))
+                push!(M_Emi_I,Int32(a))
+                push!(M_Emi_J,Int32(b))
+                push!(M_Emi_V,convert(eltype(M_Emi_V),(K_minus * h_minus_right) / Mom_Norm))
             else
-                M_Emi[a,b] += convert(T,(K_minus * h_minus_right) / Mom_Norm) 
+                M_Emi[a,b] += convert(eltype(M_Emi),(K_minus * h_minus_right) / Mom_Norm) 
             end
         end
                 

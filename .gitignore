@@ -1,4 +1,6 @@
-#/Manifest.toml
+/Manifest.toml
+/test/Manifest.toml
+LocalPreferences.toml
 
 Setup_test.jl
 

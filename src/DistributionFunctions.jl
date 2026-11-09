@@ -72,37 +72,179 @@ function BlackBody_Distribution(PhaseSpace::PhaseSpaceStruct,species::String,T::
 
 end
 
-function Wien_Distribution(PhaseSpace::PhaseSpaceStruct,species::String,T::Float64;n::Float64=1e0)
-    # Generates the height of the BB distribution at positions of the mean momentum per bin
 
-    name_list = PhaseSpace.name_list
-    Momentum = PhaseSpace.Momentum
-    Grids = PhaseSpace.Grids
 
-    species_index = findfirst(x->x==species,name_list)
 
-    dp = Grids.dpx_list[species_index]
-    #du = Grids.dpy_list[species_index] # angle averaged therefore not used and dudh = 4π
-    #dh = Grids.dpz_list[species_index]
-    meanp = Grids.mpx_list[species_index]
-    mass = Grids.mass_list[species_index]
+
+### ============================================================ ###
+# inline Distribution functions for different distributions in the form f(vec{p}) for integration with trapezium rule
+
+"""
+    Distribution_MaxwellJuttner(px,py,pz,T,m)
+
+Generates a Maxwell-Juttner distribution f(\vec{p}): 
+```math
+f(\\vec{p})} = \\frac{1}{4π m^3c^3θK_2(1/θ)}e^{-γ(p)/θ}
+```
+where ``γ(p) = \\sqrt{1+(p/mc)^2}`` and ``1/θ = m c^2/(k_B T)``, and f is normalised by (mEle c)^3
+"""
+@inline function Distribution_MaxwellJuttner(px::Float64,py::Float64,pz::Float64,T::Float64,m::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0)
 
     mEle = 9.11e-31
     c = 3e8
     kb = 1.38e-23
-    h = 6.62607015e-34
 
-    WienPoints = zeros(Float64,size(meanp))
-    invtheta = mEle*c^2/(kb*T)
-    @. WienPoints = (meanp^2) / (exp(meanp*invtheta)) * dp
+    if (py >= umin && py <= umax) && (pz >= hmin*pi && pz <= hmax*pi)
+        # calculate only if within angular bounds
+        # besselk doesn't do well with small T besselkx = besselk * e^x does better.
+        invtheta = m*mEle*c^2/(kb*T)
+        return (invtheta/(4*pi*m^3)) * (1/besselkx(2,invtheta)) * exp((1-sqrt(1+(px/m)^2))*invtheta)
+    end
 
-    num = sum(WienPoints)
-    WienPoints = WienPoints ./ num .*n # scale to number density
-
-    return WienPoints
+    return 0.0
 
 end
 
+"""
+    Distribution_KappaExpDecay(px,py,pz,κ,p_max,m)
+
+Generates a Kappa distribution with exponential decay f(\vec{p}): 
+```math
+f(\\vec{p})} = \\left(1+\\frac{\\gamma(p)-1}{κθ}\\right)^{-(κ+1)}e^{-E/Emax}
+```
+where ``γ(p) = \\sqrt{1+(p/mc)^2}`` and ``1/θ = m c^2/(k_B T)``. 
+"""
+@inline function Distribution_KappaExpDecay(px::Float64,py::Float64,pz::Float64,κ::Float64,T::Float64,p_max::Float64,m::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0,p_cut::Float64=1e2*p_max)
+
+    mEle = 9.11e-31
+    c = 3e8
+    kb = 1.38e-23
+
+    if px <= p_cut && (py >= umin && py <= umax) && (pz >= hmin*pi && pz <= hmax*pi)
+        # added 1e2 above is cut for exponential tail
+        E = sqrt(m^2 + px^2)
+        θ = (kb*T)/(m*mEle*c^2)
+        return (1+(E/m-1)/(κ*θ))^(-κ-1) * exp(-E/sqrt(m^2+p_max^2)) 
+    end
+
+    return 0.0
+
+end
+
+"""
+    Distribution_Kappa(px,py,pz,κ,p_max,m)
+
+Generates a Kappa distribution f(\vec{p}): 
+```math
+f(\\vec{p})} = \\left(1+\\frac{\\gamma(p)-1}{κθ}\\right)^{-(κ+1)}e^{-E/Emax}
+```
+where ``γ(p) = \\sqrt{1+(p/mc)^2}`` and ``1/θ = m c^2/(k_B T)``. 
+"""
+@inline function Distribution_Kappa(px::Float64,py::Float64,pz::Float64,κ::Float64,T::Float64,p_max::Float64,m::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0)
+
+    mEle = 9.11e-31
+    c = 3e8
+    kb = 1.38e-23
+
+    if px <= p_max && (py >= umin && py <= umax) && (pz >= hmin*pi && pz <= hmax*pi)
+        # added 1e2 above is cut for exponential tail
+        E = sqrt(m^2 + px^2)
+        θ = (kb*T)/(m*mEle*c^2)
+        return (1+(E-1)/(κ*θ))^(-κ-1) 
+    end
+
+    return 0.0
+
+end
+
+@inline function Distribution_BlackBody(px::Float64,py::Float64,pz::Float64,T::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0)
+    # Generates the height of the BB distribution at positions of the mean momentum per bin
+
+    mEle = 9.11e-31
+    c = 3e8
+    kb = 1.38e-23
+    
+    if (py >= umin && py <= umax) && (pz >= hmin*pi && pz <= hmax*pi)
+        # calculate only if within angular bounds
+        # exp(x)-1 = expm1(x) does better for small x
+        invtheta = mEle*c^2/(kb*T)
+        return 1.0 / (expm1(px*invtheta))
+    end
+
+    return 0.0
+
+end
+
+"""
+    Distribution_PowerLaw(px,py,pz,index,p_min,p_max,m)
+
+Generates an isotropic Power-law distribution dN/dE ∝ E^(-index) ∴ f(\vec{p}): 
+```math
+f(\\vec{p})} \\propto \\frac{E^{(-index-1)}}{4π p}
+```
+where ``E(p) = \\sqrt{m^2+p^2}``. This power law is taken to start at momentum `p_min` and end at `p_max`.
+"""
+@inline function Distribution_PowerLaw(px::Float64,py::Float64,pz::Float64,index::Float64,p_min::Float64,p_max::Float64,m::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0)
+
+    if (px >= p_min && px <= p_max) && (py >= umin && py <= umax) && (pz >= hmin*pi && pz <= hmax*pi)
+        return (sqrt(m^2 + px^2))^(-index - 1) / (4 * pi * px)
+    end
+
+    return 0.0
+
+end
+
+"""
+    Distribution_PowerLawExpDecay(px,py,pz,index,p_min,p_max,m)
+
+Generates an isotropic Power-law distribution with exponential decay dN/dE ∝ E^(-index)exp(-E/Emax) ∴ f(\vec{p}): 
+```math
+f(\\vec{p})} \\propto \\frac{E^{(-index-1)}}{4π p}\\exp(-E/Emax)
+```
+where ``E(p) = \\sqrt{m^2+p^2}``. This power law is taken to start at momentum `p_min` and end at `p_max`.
+"""
+@inline function Distribution_PowerLawExpDecay(px::Float64,py::Float64,pz::Float64,index::Float64,p_min::Float64,p_max::Float64,m::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0)
+
+    if (px >= p_min && px <= p_max*1e2) && (py >= umin && py <= umax) && (pz >= hmin*pi && pz <= hmax*pi)
+        # added 1e2 above is cut for exponential tail
+        E = sqrt(m^2 + px^2)
+        return E^(-index - 1) / (4 * pi * px) * exp(-E/sqrt(m^2+p_max^2)) # here we take Emax = pmax for simplicity, as for highly relativistic particles E ~ p
+    end
+
+    return 0.0
+
+end
+
+"""
+    Distribution_Boosted(px,py,pz,Gamma,DistributionFunction,Parameters...)
+
+Generates an isotropic Power-law distribution dN/dE ∝ E^(-index) ∴ f(\vec{p}): 
+```math
+f(\\vec{p})} \\propto \\frac{E^{(-index-1)}}{4π p}
+```
+where ``E(p) = \\sqrt{m^2+p^2}``, and the power law is taken to start at momentum `p_min` and end at `p_max`. In one frame in which it is at rest, and boosts it by `Gamma` into the observer frame where it is moving along the local z-direction in momentum space.
+"""
+@inline function Distribution_Boosted(px::Float64,py::Float64,pz::Float64,Gamma::Float64,m::Float64,DistributionFunction,Parameters...;kwargs...)
+
+    cw::Float64 = Gamma
+    sw::Float64 = sqrt(Gamma^2 - 1.0)
+
+    E::Float64 = sqrt(px^2 + m^2)
+
+    E_prime::Float64 = cw*E - sw*px*py
+    pxpy_prime::Float64 = cw*px*py - sw*E  # p*u in boosted frame
+    px_prime::Float64 = sqrt(E_prime^2 - m^2)
+    py_prime::Float64 = pxpy_prime / px_prime # u in boosted frame
+    # pz unaffected by boost
+
+    return DistributionFunction(px_prime,py_prime,pz,Parameters...;kwargs...)
+
+end
+
+
+#### OLD METHODS
+
+#=
 """
     DistributionToDIP_TrapeziumIntegration(f::Array{Float64,3},DistributionFunction::Function,pxr::Vector{Float64},pyr::Vector{Float64},pzr::Vector{Float64},Parameters...)
 
@@ -115,7 +257,7 @@ function DistributionToDIP_TrapeziumIntegration!(f::Array{Float64,3},pxr::Vector
     # f is the 3D array to be filled with the distribution function values
     # DistributionFunction is a function that takes Parameters... and returns the distribution function f(vec{p})
 
-    samples::Int64 = 10 # number of samples per direction in momentum space per bin
+    samples::Int64 = 16 # number of samples per direction in momentum space per bin
 
     for px in 1:length(pxr)-1, py in 1:length(pyr)-1, pz in 1:length(pzr)-1
 
@@ -158,90 +300,11 @@ function DistributionToDIP_TrapeziumIntegration!(f::Array{Float64,3},pxr::Vector
 
     end
 
+    if sum(f) == 0.0
+        error("Distribution function integration revealed no non-zero values. Check parameters.")
+    end
+
     return nothing
 
 end
-
-### ============================================================ ###
-# Distribution functions for different distributions in the form f(vec{p}) for integration with trapezium rule
-
-"""
-    Distribution_MaxwellJuttner(px,py,pz,T,m)
-
-Generates a Maxwell-Juttner distribution f(\vec{p}): 
-```math
-f(\\vec{p})} = \\frac{1}{4π m^3c^3θK_2(1/θ)}e^{-γ(p)/θ}
-```
-where ``γ(p) = \\sqrt{1+(p/mc)^2}`` and ``1/θ = m c^2/(k_B T)``, and f is normalised by (mEle c)^3
-"""
-function Distribution_MaxwellJuttner(px::Float64,py::Float64,pz::Float64,T::Float64,m::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0)
-
-    mEle = 9.11e-31
-    c = 3e8
-    kb = 1.38e-23
-
-    MJ = 0.0
-    if (py >= umin && py <= umax) && (pz >= hmin*pi && pz <= hmax*pi)
-        # calculate only if within angular bounds
-        # besselk doesn't do well with small T besselkx = besselk * e^x does better.
-        invtheta = m*mEle*c^2/(kb*T)
-        MJ = (invtheta/(4*pi*m^3)) * (1/besselkx(2,invtheta)) * exp((1-sqrt(1^2+(px/m)^2))*invtheta)
-    end
-
-    return MJ
-
-end
-
-"""
-    Distribution_PowerLaw(px,py,pz,index,p_min,p_max,m)
-
-Generates an isotropic Power-law distribution dN/dE ∝ E^(-index) ∴ f(\vec{p}): 
-```math
-f(\\vec{p})} \\propto \\frac{E^{(-index-1)}}{4π p}
-```
-where ``E(p) = \\sqrt{m^2+p^2}``. This power law is taken to start at momentum `p_min` and end at `p_max`.
-"""
-function Distribution_PowerLaw(px::Float64,py::Float64,pz::Float64,index::Float64,p_min::Float64,p_max::Float64,m::Float64;umin::Float64=-1.0,umax::Float64=1.0,hmin::Float64=0.0,hmax::Float64=2.0)
-
-    if (px >= p_min && px <= p_max) && (py >= umin && py <= umax) && (pz >= hmin*pi && pz <= hmax*pi)
-
-        E = sqrt(m^2 + px^2)
-        PL = E^(-index - 1) / (4 * pi * px) 
-    else 
-        PL = 0.0
-    end
-
-    return PL
-
-end
-
-"""
-    Distribution_Boosted(px,py,pz,Gamma,DistributionFunction,Parameters...)
-
-Generates an isotropic Power-law distribution dN/dE ∝ E^(-index) ∴ f(\vec{p}): 
-```math
-f(\\vec{p})} \\propto \\frac{E^{(-index-1)}}{4π p}
-```
-where ``E(p) = \\sqrt{m^2+p^2}``, and the power law is taken to start at momentum `p_min` and end at `p_max`. In one frame in which it is at rest, and boosts it by `Gamma` into the observer frame where it is moving along the local z-direction in momentum space.
-"""
-function Distribution_Boosted(px::Float64,py::Float64,pz::Float64,Gamma::Float64,m::Float64,DistributionFunction::Function,Parameters...;kwargs...)
-
-    w::Float64 = acosh(Gamma) # rapidity
-    cw::Float64 = cosh(w) # Gamma
-    sw::Float64 = sinh(w) # Gamma*Beta
-
-    E::Float64 = sqrt(px^2 + m^2)
-
-    px_prime::Float64 = sqrt((cw*E - sw*px*py)^2 - m^2) # p in boosted frame
-    pxpy_prime::Float64 = cw*px*py-sw*E  # p*u in boosted frame
-    py_prime::Float64 = pxpy_prime / px_prime # u in boosted frame
-    pz_prime::Float64 = pz  # h in boosted frame
-    E_prime::Float64 = cw*E - sw*px*py
-
-    f::Float64 = DistributionFunction(px_prime,py_prime,pz_prime,Parameters...;kwargs...)
-
-    f_Boosted::Float64 = f# = cw*f*E_prime/E + sw*pxpy_prime*f/E but all these terms cancel to just give f'(p'(p)) in the boosted frame, which is just f here.
-
-    return f_Boosted
-
-end
+=#
