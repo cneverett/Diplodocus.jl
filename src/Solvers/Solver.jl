@@ -44,14 +44,10 @@ function Solve(method::AbstractSteppingMethod,dt_initial::T,t_save::Vector{T};pr
     
     dt::T = dt_initial
 
-    if method isa ExpRBKIOPSStruct 
+    if method isa ExponentialRosenbrockEulerKrylovStruct
         fill!(method.dt_guess,ldexp(dt_initial, -5)) # initial guess for dt is 1/32 of the initial dt
-    elseif method isa ERBEKrylovStruct
-        fill!(method.dt_guess,ldexp(dt_initial, -10)) # initial guess for dt is 1/32 of the initial dt
-    elseif method isa ExponentialRosenbrockEulerKrylovStruct
-        fill!(method.dt_guess,ldexp(dt_initial, -6)) # initial guess for dt is 1/32 of the initial dt
     elseif method isa ExponentialRosenbrockEulerKrylovMixedStruct
-        @. method.dt_guess = ldexp(dt_initial * method.momentum_step, -6) # initial guess for dt is 1/32 of the initial dt multiplied by the size of the local step allowed by X_flux
+        @. method.dt_guess = ldexp(dt_initial * method.momentum_step, -5) # initial guess for dt is 1/32 of the initial dt multiplied by the size of the local step allowed by X_flux
         # check dt <= dt_min from X_Flux 
         if dt > method.dt_min
             @warn "Chosen dt may lead to unstable space updates"
@@ -107,7 +103,10 @@ function Solve(method::AbstractSteppingMethod,dt_initial::T,t_save::Vector{T};pr
 
     end
 
-
+    if method isa ExponentialRosenbrockEulerKrylovMixedStruct
+        close_pool!(method.WorkerPool)
+    end
+    
     return output
 
 end

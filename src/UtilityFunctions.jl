@@ -8,6 +8,16 @@ function nextpow2_float(x::Real)
     return s == 1.0 ? ldexp(1.0, e) : ldexp(1.0, e + 1)
 end
 
+function prevpow2_float(x::Real)
+    x > 0 || throw(DomainError(x, "Input must be positive to find a power of 2."))
+    
+    s = significand(x)
+    e = exponent(x)
+    
+    # If it's already an exact power of 2, significand(x) will be exactly 1.0
+    return s = ldexp(1.0, e)
+end
+
 # to be removed in julia 1.13#
 function generic_lufact!(A::AbstractMatrix{T}, pivot::Union{RowMaximum,NoPivot,RowNonZero} = lupivottype(T), ipiv::AbstractVector{LinearAlgebra.BlasInt} = Vector{LinearAlgebra.BlasInt}(undef,min(size(A)...));check::Bool = true, allowsingular::Bool = false) where {T}
     

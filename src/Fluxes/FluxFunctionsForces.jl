@@ -82,7 +82,7 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
         z1 = Grids.zr[z_idx+1]
 
         @inline B_func(pos_local) = tetrad.Bfunction(pos_local,coordinates)
-        @inline SpaceIntegrand!(pos_local,SpaceMatrix_local) = LocalLorentzForceSpaceIntegrand!(pos_local,SpaceMatrix_local,metric,coordinates)
+        @inline SpaceIntegrand!(pos_local,SpaceMatrix_local) = LocalLorentzForceSpaceIntegrand!(pos_local,SpaceMatrix_local,metric,coordinates,B_func)
 
         # flux must have no dimensions
         flux_non_dimensional::T = CONST_c * Characteristic.CHAR_time / Characteristic.CHAR_length
@@ -96,13 +96,13 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
 
         # put a tolerance on integration to avoid small numerical errors causing a non-zero flux when the flux should be zero
         tolerance::T = 100*eps(T)
-        SMatForce[abs.(SMatForce) .< tolerance * max(abs.(SMatForce))] .= zero(T)
+        SMatForce[abs.(SMatForce) .< tolerance * maximum(abs.(SMatForce))] .= zero(T)
 
         SMatForce .*= flux_non_dimensional
 
     end
 
-    @inline function LocalLorentzForceSpaceIntegrand!(pos::MVector{4,T},SMatForce::MMatrix{4,4,T},metric::AbstractMetric,coordinates::AbstractCoordinates) where T
+    @inline function LocalLorentzForceSpaceIntegrand!(pos::MVector{4,T},SMatForce::MMatrix{4,4,T},metric::AbstractMetric,coordinates::AbstractCoordinates,B::Function) where T
 
         #= Lorentz force
 
@@ -118,14 +118,14 @@ Momentum3TensorForceFunction!(force,M3TenForce,PhaseSpace,x_idx,y_idx,z_idx) = e
         fill!(SMatForce, zero(T))
         χ::T = VolumeElement(pos,metric,coordinates)
 
-        SMatForce[1,2] = -χ * B_func(pos)
-        SMatForce[2,1] = χ * B_func(pos)
+        SMatForce[1,2] = -χ * B(pos)
+        SMatForce[2,1] = χ * B(pos)
         
         return nothing
 
     end
 
-    function MomentumMatrixForceFunction!(force::LocalLorentzForce,MMatForce::MArray{Tuple{3,4,4,2},T,3,96},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
+    function MomentumMatrixForceFunction!(force::LocalLorentzForce,MMatForce::MArray{Tuple{3,4,4,2},T,4,96},PhaseSpace::PhaseSpaceStruct,species_idx::Int64,px_idx::Int64,py_idx::Int64,pz_idx::Int64) where T
 
         #= Lorentz force
 

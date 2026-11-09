@@ -201,7 +201,7 @@ function GainMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,GainMatrix::ZArray,of
     for px2 in 1:px2_num, px1 in 1:px1_num
 
         r = CartesianIndices((1:(px3_num+2),1:py3_num,1:pz3_num,px1:px1,1:py1_num,1:pz1_num,px2:px2,1:py2_num,1:pz2_num))
-        Zarr.readblock!(ChunkGainMatrix,GainMatrix,r) # load chunk of Zarray
+        Zarr.ZarrCore.readblock!(ChunkGainMatrix,GainMatrix,r) # load chunk of Zarray
 
         #GainMatrixLocal .= GainMatrix[:,:,:,px1,:,:,px2,:,:] # load chunk of Zarray
         
@@ -369,7 +369,7 @@ function LossMatrix_to_M_Bin!(PhaseSpace::PhaseSpaceStruct,LossMatrix::ZArray,of
     for px2 in 1:px2_num, px1 in 1:px1_num
 
         r = CartesianIndices((px1:px1, 1:py1_num, 1:pz1_num, px2:px2, 1:py2_num, 1:pz2_num))
-        Zarr.readblock!(ChunkLossMatrix,LossMatrix,r) # load chunk of Zarray
+        Zarr.ZarrCore.readblock!(ChunkLossMatrix,LossMatrix,r) # load chunk of Zarray
 
         #LossMatrixLocal .= LossMatrix[px1,:,:,px2,:,:] # load chunk of Zarray
 
