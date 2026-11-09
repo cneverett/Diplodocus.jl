@@ -18,4 +18,4 @@
 
 Documentation, installation instructions and tutorials can be found [here](https://cneverett.github.io/Diplodocus.jl/). 
 
-This framework is being published as the DIPLODOCUS series of papers, the first two covering the theoretical background and numerical implementation can be found at [Paper I](https://doi.org/10.48550/arXiv.2508.13296) and [Paper II](https://doi.org/10.48550/arXiv.2510.12505).
+This framework is being published as the DIPLODOCUS series of papers, the first two covering the theoretical background, numerical implementation, and demonstration its capability via test cases relevant to micro-physical problems, can be found at [Paper I](https://doi.org/10.48550/arXiv.2508.13296) and [Paper II](https://doi.org/10.48550/arXiv.2510.12505).
