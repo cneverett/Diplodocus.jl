@@ -21,6 +21,9 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 
+[sources]
+DiplodocusCollisions = {path = "lib/DiplodocusCollisions"}
+
 [compat]
 Aqua = "0.8"
 Bessels = "0.2"
