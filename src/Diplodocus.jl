@@ -3,7 +3,7 @@ module Diplodocus
     using Reexport
 
     @reexport using DiplodocusCollisions
-    #using DiplodocusTransport
+    @reexport using DiplodocusTransport
     #using DiplodocusPlots
 
 end
