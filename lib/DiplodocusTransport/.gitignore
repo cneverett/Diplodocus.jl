@@ -1,0 +1,17 @@
+/Manifest.toml
+/test/Manifest.toml
+LocalPreferences.toml
+
+Setup_test.jl
+
+*.pdf
+*.png
+*.mp4
+*.json
+
+# mathematica files
+*.nb
+
+/Amsterdam/
+/TestingGround/
+/figures/
