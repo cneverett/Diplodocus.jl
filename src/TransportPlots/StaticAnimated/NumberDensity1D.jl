@@ -1,9 +1,26 @@
 """
-    NumberDensityPlot1D(type,PhaseSpace,sol,species,direction;...)
+    NumberDensityPlot1D(type,PhaseSpace,sol,species,x_dir,y_dir,z_dir;...)
 
-Returns a plot of the number density of all species as a function of time along a specific spatial coordinate `direction`.
+Returns a plot of the Number Density of `species` as a function of time along a single coordinate direction. The direction is dictated by the values of `x_dir`,`y_dir`, and `z_dir`. The coordinate direction to plot is set by specifying one of these three to be the string `dir`. The other two may then either be set to `sum` to sum average along these directions or a single coordinate index defining the surface along which the quantity is measured. 
+
+Arguments:
+- `type::PlotType` determines the type of plot to generate, it can be either `Static` or `Animated`.
+- `PhaseSpace::PhaseSpaceStruct` is the structure containing the phase space information of the simulation.
+- `sol::OutputStruct` is the solution object containing the distribution function of all particles and time stepping information of the simulation. 
+- `species::Vector{String}` is a vector of the abbreviated three letter names of the particle species to plot.
+- `x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int}` if `dir` then the plot will be along this coordinate direction, if `sum` then the plot will average along this direction, if `Int` then this coordinate will be kept constant at this coordinate index.
+
+Common keyword arguments: 
+- `theme=DiplodocusDark()`: the colour theme to use for the plot, can be either `DiplodocusDark()` for dark mode or `DiplodocusLight()` for light mode.
+- `TimeUnits::Tuple{Float64,String}=(1.0, "\\text{Code Units}")`: a tuple that converts the time given in code units to the desired units for plotting. The first entry is the conversion factor and the second is a string that will be converted into a LaTeX string for the time label.
+- `plot_limits=(nothing,nothing)`: the limits of the x and y axes, default sets the limits automatically based on the data.
+- `wide=false`: if `true`, the plot is generated in a wide format (double column 8:3 aspect ratio), if `false` (single column 4:3 aspect ratio).
+- `logt=false`: If `true` time will be converted to `log10` format for plotting.
 """
-function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},direction::String;fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+
+    @assert (x_dir != "dir" && y_dir != "dir") || (y_dir != "dir" && z_dir != "dir") || (x_dir != "dir" && z_dir != "dir") "More than one coordinate direction cannot be the plot direction"
+
     CairoMakie.activate!(inline=true) # plot in vs code window
 
     with_theme(theme) do
@@ -31,7 +48,7 @@ function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
     end
     ylab = L"$n\, [\text{Code Units}]$"
 
-    if direction == "x"
+    if x_dir == "dir"
         xlab = L"$x\, [\text{Code Units}]$"
         n_dir = x_num
         grid_type = Spacetime.x_grid
@@ -40,7 +57,7 @@ function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
         elseif grid_type == "l"
             mdir_plot = log10.(mx)
         end
-    elseif direction == "y"
+    elseif y_dir == "dir"
         xlab = L"$y\, [\text{Code Units}]$"
         n_dir = y_num
         grid_type = Spacetime.y_grid
@@ -49,7 +66,7 @@ function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
         elseif grid_type == "l"
             mdir_plot = log10.(my)
         end
-    elseif direction == "z"
+    elseif z_dir == "dir"
         xlab = L"$z\, [\text{Code Units}]$"
         n_dir = z_num
         grid_type = Spacetime.z_grid
@@ -117,20 +134,71 @@ function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
 
                     #println("n = $n at (x,y,z) = ($x,$y,$z)")
 
-                    if direction == "x"
-                        num[x] += n * dy[y] * dz[z] / (sum(dy)*sum(dz))
-                        if species== "All"
-                            num_total[x] += num[x]
+                    if x_dir == "dir" 
+                        if y_dir isa Int && z_dir isa Int
+                            if y != y_dir || z != z_dir 
+                                continue 
+                            else
+                                num[x] += n
+                            end
+                        elseif y_dir isa Int && !(z_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                num[x] += n * dz[z] / sum(dz) 
+                            end
+                        elseif !(y_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                num[x] += n * dy[y] / sum(dy) 
+                            end
+                        else
+                            num[x] += n * dy[y] * dz[z] / (sum(dy)*sum(dz))
                         end
-                    elseif direction == "y"
-                        num[y] += n * dx[x] * dz[z] / (sum(dx)*sum(dz))
-                        if species== "All"
-                            num_total[y] += num[y]
+                    elseif y_dir == "dir" 
+                        if x_dir isa Int && z_dir isa Int
+                            if x != x_dir || z != z_dir 
+                                continue 
+                            else
+                                num[y] += n 
+                            end
+                        elseif x_dir isa Int && !(z_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                num[y] += n * dz[z] / sum(dz) 
+                            end
+                        elseif !(x_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                num[y] += n * dx[x] / sum(dx) 
+                            end
+                        else
+                            num[y] += n * dx[x] * dz[z] / (sum(dx)*sum(dz))
                         end
-                    elseif direction == "z"
-                        num[z] += n * dx[x] * dy[y] / (sum(dx)*sum(dy))
-                        if species== "All"
-                            num_total[z] += num[z]
+                    elseif z_dir == "dir" 
+                        if x_dir isa Int && y_dir isa Int
+                            if x != x_dir || y != y_dir 
+                                continue 
+                            else
+                                num[z] += n 
+                            end
+                        elseif x_dir isa Int && !(y_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                num[z] += n * dy[y] / sum(dy) 
+                            end
+                        elseif !(x_dir isa Int) && (y_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                num[z] += n * dx[x] / sum(dx) 
+                            end
+                        else
+                            num[z] += n * dx[x] * dy[y] / (sum(dx)*sum(yz))
                         end
                     end
 
@@ -146,12 +214,13 @@ function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
        
     end # species loop 
 
-    t_unit_string = TimeUnits()
+    t_unit_string = TimeUnits[2]
+    t_unit_scale = TimeUnits[1]
 
     if logt
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(TimeUnits(sol.t[1]),sigdigits=5)),log10(round(TimeUnits(sol.t[end]),sigdigits=5))),label=L"$\log_{10}\left(t\,%$t_unit_string \right)$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(t_units_scale*sol.t[1],sigdigits=5)),log10(round(t_units_scale*sol.t[end],sigdigits=5))),label=L"$\log_{10}\left(t\,[%$t_unit_string] \right)$")
     else
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(TimeUnits(sol.t[1]),TimeUnits(sol.t[end])),label=L"$t\,$ $%$t_unit_string$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(sol.t[1] * t_unit_scale,sol.t[end] * t_unit_scale),label=L"$t\, [%$t_unit_string]$")
     end
     
     #axislegend(ax,position = :rb)
@@ -163,255 +232,3 @@ function NumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Outp
 end
 
 
-################# Plots that only work with Paraboloidal coordinates ############### 
-function EquatorialNumberDensityPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String};fig=nothing,theme=DiplodocusDark(),title=nothing,wide=false,plot_limits=(nothing,nothing),legend::Bool=true)
-
-    CairoMakie.activate!(inline=true) # plot in vs code window
-
-    with_theme(theme) do
-
-    name_list = PhaseSpace.name_list
-    Momentum = PhaseSpace.Momentum
-    Spacetime = PhaseSpace.Spacetime
-    Grids = PhaseSpace.Grids
-    x_num = Spacetime.x_num
-    y_num = Spacetime.y_num
-    z_num = Spacetime.z_num
-    dx = Grids.dx
-    dy = Grids.dy
-    dz = Grids.dz
-    mx = Grids.mx
-    my = Grids.my
-    mz = Grids.mz
-
-    CHAR_n = PhaseSpace.Characteristic.CHAR_number_density
-
-    if wide
-        fig = Figure(size=(576,234)) # double column 8:3 aspect ratio
-    else
-        fig = Figure() # default single column 4:3 aspect ratio
-    end
-    ylab = L"$\log_{10}\left(n\, \left[\text{m}^{-3}\right]\right)$"
-
-    xlab = L"$\log_{10}\left(\rho\, \left[r_\text{s}\right]\right)$"
-
-    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,aspect=DataAspect())
-    ax.limits = plot_limits
-
-    linestyles = [:solid,(:dash,:dense),(:dot),(:dashdot),(:dashdotdot)]
-
-    legend_elements = []
-    line_labels = []
-
-    num = zeros(Float64,y_num)
-    pos = zeros(Float64,y_num)
-
-    for (species_idx, species_name) in enumerate(species) 
-
-        species_index = findfirst(x->x==species_name,name_list)
-
-        p_num = Momentum.px_num_list[species_index]  
-        u_num = Momentum.py_num_list[species_index]
-        h_num = Momentum.pz_num_list[species_index]
-        pr = Grids.pxr_list[species_index]
-        ur = Grids.pyr_list[species_index]
-        hr = Grids.pzr_list[species_index]
-        mass = Grids.mass_list[species_index]
-
-        f1D = zeros(Float32,p_num*u_num*h_num)
-
-        for t_idx in [1,length(sol.t)] # only plot initial and final time steps
-
-            if t_idx == 1 
-                linestyle_idx = 1
-            elseif t_idx == length(sol.t)
-                linestyle_idx = 2
-            end
-
-            fill!(num,NaN)
-            fill!(pos,NaN)
-
-        for space_idx in 1:y_num
-
-            ρ = my[space_idx] * mz[space_idx] # radial coordinate
-
-            Nᵃ = Float64.(DiplodocusTransport.FourFlow(sol.f[t_idx],PhaseSpace,species_index;x_idx=1,y_idx=space_idx,z_idx=space_idx))
-            #Ua = HydroFourVelocity(Na)
-            Uₐ = [-1.0,0.0,0.0,0.0] # static observer
-            n = DiplodocusTransport.ScalarNumberDensity(Nᵃ,Uₐ) * CHAR_n
-
-            println("n = $n at space_idx = $space_idx, ρ = $ρ")
-
-            num[space_idx] = n == 0.0 ? NaN : log10(n)
-            pos[space_idx] = log10(ρ)
-
-        end
-        println(num)
-        println(pos)
-
-        replace!(num,0.0=>NaN)
-
-        scatterlines!(ax,pos,num,color = theme.textcolor[],markersize=5.0,linestyle=linestyles[linestyle_idx])
-
-        push!(legend_elements,LineElement(color = theme.textcolor[], linestyle = linestyles[linestyle_idx],linewidth = 2.0))
-        push!(line_labels,L"t=%$(sol.t[t_idx])")
-        
-        end # time loop
-       
-    end # species loop 
-
-    # analytic solution for comparison 
-
-    # Fiducual RIAF parameters of the M87 accretion flow
-    ne0 = 1e10 # m^-3
-    Te0 = 1e11 # K
-    αn = 1.5
-    αT = 0.84
-    num_Init = zeros(Float64,y_num)
-    fill!(num_Init,NaN)
-    for i in 3:y_num
-        ρ = PhaseSpace.Grids.yr[i]*PhaseSpace.Grids.zr[i]
-        num_Init[i] = log10(ne0 * (ρ/2)^(-αn))
-    end
-    scatterlines!(ax,pos,num_Init,color = theme.textcolor[],markersize=5.0,linestyle=linestyles[3])
-    push!(legend_elements,LineElement(color = theme.textcolor[], linestyle = linestyles[3],linewidth = 2.0))
-    push!(line_labels,L"\text{Eq.}\,5.8")
-
-    
-    if legend
-        axislegend(ax,legend_elements,line_labels,position = :rt)
-    end
-
-    end # with_theme
-
-    return fig
-
-end
-
-function EquatorialTemperaturePlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String};fig=nothing,theme=DiplodocusDark(),title=nothing,wide=false,plot_limits=(nothing,nothing),legend::Bool=true)
-
-    CairoMakie.activate!(inline=true) # plot in vs code window
-
-    with_theme(theme) do
-
-    name_list = PhaseSpace.name_list
-    Momentum = PhaseSpace.Momentum
-    Spacetime = PhaseSpace.Spacetime
-    Grids = PhaseSpace.Grids
-    x_num = Spacetime.x_num
-    y_num = Spacetime.y_num
-    z_num = Spacetime.z_num
-    dx = Grids.dx
-    dy = Grids.dy
-    dz = Grids.dz
-    mx = Grids.mx
-    my = Grids.my
-    mz = Grids.mz
-
-    CHAR_n = PhaseSpace.Characteristic.CHAR_number_density
-
-    if wide
-        fig = Figure(size=(576,234)) # double column 8:3 aspect ratio
-    else
-        fig = Figure() # default single column 4:3 aspect ratio
-    end
-    ylab = L"$\log_{10}\left(T\, \left[\text{K}\right]\right)$"
-
-    xlab = L"$\log_{10}\left(\rho\, \left[r_\text{s}\right]\right)$"
-
-    ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab,aspect=DataAspect())
-    ax.limits = plot_limits
-
-    linestyles = [:solid,(:dash,:dense),(:dot),(:dashdot),(:dashdotdot)]
-
-    legend_elements = []
-    line_labels = []
-
-    Temp = zeros(Float64,y_num)
-    pos = zeros(Float64,y_num)
-
-    for (species_idx, species_name) in enumerate(species) 
-
-        species_index = findfirst(x->x==species_name,name_list)
-
-        p_num = Momentum.px_num_list[species_index]  
-        u_num = Momentum.py_num_list[species_index]
-        h_num = Momentum.pz_num_list[species_index]
-        pr = Grids.pxr_list[species_index]
-        ur = Grids.pyr_list[species_index]
-        hr = Grids.pzr_list[species_index]
-        mass = Grids.mass_list[species_index]
-
-        f1D = zeros(Float32,p_num*u_num*h_num)
-
-        for t_idx in [1,length(sol.t)] # only plot initial and final time steps
-
-            if t_idx == 1 
-                linestyle_idx = 1
-            elseif t_idx == length(sol.t)
-                linestyle_idx = 2
-            end
-
-            fill!(Temp,NaN)
-            fill!(pos,NaN)
-
-        for space_idx in 1:y_num
-
-            ρ = my[space_idx] * mz[space_idx] # radial coordinate
-
-            Nᵃ = Float64.(DiplodocusTransport.FourFlow(sol.f[t_idx],PhaseSpace,species_index;x_idx=1,y_idx=space_idx,z_idx=space_idx))
-            #Ua = HydroFourVelocity(Na)
-            Uₐ = [-1.0,0.0,0.0,0.0] # static observer
-            num = DiplodocusTransport.ScalarNumberDensity(Nᵃ,Uₐ) * CHAR_n
-            Δab = ProjectionTensor(Uₐ)
-            Tᵃᵇ = Float64.(StressEnergyTensor(sol.f[t_idx],PhaseSpace,species_index;x_idx=1,y_idx=space_idx,z_idx=space_idx))
-            Pressure = ScalarPressure(Tᵃᵇ,Δab)
-            Temperature = ScalarTemperature(Pressure,num)
-
-            println("T = $Temperature at space_idx = $space_idx, ρ = $ρ")
-
-            Temp[space_idx] = Temperature == 0.0 ? NaN : log10(Temperature)
-            pos[space_idx] = log10(ρ)
-
-        end
-        println(Temp)
-        println(pos)
-
-        replace!(Temp,0.0=>NaN)
-
-        scatterlines!(ax,pos,Temp,color = theme.textcolor[],markersize=5.0,linestyle=linestyles[linestyle_idx])
-
-        push!(legend_elements,LineElement(color = theme.textcolor[], linestyle = linestyles[linestyle_idx],linewidth = 2.0))
-        push!(line_labels,L"t=%$(sol.t[t_idx])")
-        
-        end # time loop
-       
-    end # species loop 
-
-    # analytic solution for comparison 
-
-    # Fiducual RIAF parameters of the M87 accretion flow
-    ne0 = 1e10 # m^-3
-    Te0 = 1e11 # K
-    αn = 1.5
-    αT = 0.84
-    T_Init = zeros(Float64,y_num)
-    fill!(T_Init,NaN)
-    for i in 3:y_num
-        ρ = PhaseSpace.Grids.yr[i]*PhaseSpace.Grids.zr[i]
-        T_Init[i] = log10(Te0 * (ρ/2)^(-αT))
-    end
-    scatterlines!(ax,pos,T_Init,color = theme.textcolor[],markersize=5.0,linestyle=linestyles[3])
-    push!(legend_elements,LineElement(color = theme.textcolor[], linestyle = linestyles[3],linewidth = 2.0))
-    push!(line_labels,L"\text{Eqs.}\,5.8\text{ and }5.9")
-
-    
-    if legend
-        axislegend(ax,legend_elements,line_labels,position = :rt)
-    end
-
-    end # with_theme
-
-    return fig
-
-end

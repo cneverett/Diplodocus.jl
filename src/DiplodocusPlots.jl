@@ -14,6 +14,7 @@ module DiplodocusPlots
 
     # 1D plots
     export VelocityZPlot1D, PressurePlot1D, TemperaturePlot1D
+    export NumberPlot1D, NumberDensityPlot1D
     #export MomentumDistributionPlot1D, NumberDensityPlot1D, NumberPlot1D
 
     # 2D plots
@@ -23,6 +24,10 @@ module DiplodocusPlots
     #export IsThermalPlot, IsIsotropicPlot, 
     export CodeToSIUnitsTime, CodeToCodeUnitsTime, SIToCodeUnitsTime, SyncToCodeUnitsTime, CodeToSyncUnitsTime
     # export ObserverFluxPlot
+
+    # Not currently exported plots from papers etc.
+    # export EquatorialNumberDensityPlot1D
+    # export EquatorialTemperaturePlot1D
 
     using CairoMakie
     using GLMakie
@@ -67,5 +72,8 @@ module DiplodocusPlots
     include("TransportPlots/StaticAnimated/Magnetisation2D.jl")
     include("TransportPlots/StaticAnimated/ElectroMagneticEnergyDensity2D.jl")
     include("TransportPlots/StaticAnimated/ElectroMagneticField2D.jl")
+
+    # paper specific plots are not exported 
+    include("TransportPlots/PaperSpecificPlots.jl")
 
 end

@@ -1,9 +1,26 @@
 """
-    NumberPlot1D(type,PhaseSpace,sol,species,direction;...)
+    NumberPlot1D(type,PhaseSpace,sol,species,x_dir,y_dir,z_dir;...)
 
-Returns a plot of the number of all species as a function of time along a specific spatial coordinate `direction`.
+Returns a plot of the Number of particles of `species` as a function of time along a single coordinate direction. The direction is dictated by the values of `x_dir`,`y_dir`, and `z_dir`. The coordinate direction to plot is set by specifying one of these three to be the string `dir`. The other two may then either be set to `sum` to sum average along these directions or a single coordinate index defining the surface along which the quantity is measured. 
+
+Arguments:
+- `type::PlotType` determines the type of plot to generate, it can be either `Static` or `Animated`.
+- `PhaseSpace::PhaseSpaceStruct` is the structure containing the phase space information of the simulation.
+- `sol::OutputStruct` is the solution object containing the distribution function of all particles and time stepping information of the simulation. 
+- `species::Vector{String}` is a vector of the abbreviated three letter names of the particle species to plot.
+- `x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int}` if `dir` then the plot will be along this coordinate direction, if `sum` then the plot will average along this direction, if `Int` then this coordinate will be kept constant at this coordinate index.
+
+Common keyword arguments: 
+- `theme=DiplodocusDark()`: the colour theme to use for the plot, can be either `DiplodocusDark()` for dark mode or `DiplodocusLight()` for light mode.
+- `TimeUnits::Tuple{Float64,String}=(1.0, "\\text{Code Units}")`: a tuple that converts the time given in code units to the desired units for plotting. The first entry is the conversion factor and the second is a string that will be converted into a LaTeX string for the time label.
+- `plot_limits=(nothing,nothing)`: the limits of the x and y axes, default sets the limits automatically based on the data.
+- `wide=false`: if `true`, the plot is generated in a wide format (double column 8:3 aspect ratio), if `false` (single column 4:3 aspect ratio).
+- `logt=false`: If `true` time will be converted to `log10` format for plotting.
 """
-function NumberPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},direction::String;fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+function NumberPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+
+    @assert (x_dir != "dir" && y_dir != "dir") || (y_dir != "dir" && z_dir != "dir") || (x_dir != "dir" && z_dir != "dir") "More than one coordinate direction cannot be the plot direction"
+
     CairoMakie.activate!(inline=true) # plot in vs code window
 
     with_theme(theme) do
@@ -32,7 +49,7 @@ function NumberPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruc
     end
     ylab = L"$num.$"
 
-    if direction == "x"
+    if x_dir == "dir"
         xlab = L"$x\,[\text{Code Units}]$"
         n_dir = x_num
         grid_type = Spacetime.x_grid
@@ -41,7 +58,7 @@ function NumberPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruc
         elseif grid_type == "l"
             mdir_plot = log10.(mx)
         end
-    elseif direction == "y"
+    elseif y_dir == "dir"
         xlab = L"$y\,[\text{Code Units}]$"
         n_dir = y_num
         grid_type = Spacetime.y_grid
@@ -50,7 +67,7 @@ function NumberPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruc
         elseif grid_type == "l"
             mdir_plot = log10.(my)
         end
-    elseif direction == "z"
+    elseif z_dir == "dir"
         xlab = L"$z\,[\text{Code Units}]$"
         n_dir = z_num
         grid_type = Spacetime.z_grid
@@ -120,20 +137,71 @@ function NumberPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruc
 
                     #println("n = $n at (x,y,z) = ($x,$y,$z)")
 
-                    if direction == "x"
-                        num[x] += N #* dy[y] * dz[z] / (sum(dy)*sum(dz))
-                        if species== "All"
-                            num_total[x] += num[x]
+                    if x_dir == "dir" 
+                        if y_dir isa Int && z_dir isa Int
+                            if y != y_dir || z != z_dir 
+                                continue 
+                            else
+                                num[x] += N 
+                            end
+                        elseif y_dir isa Int && !(z_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                num[x] += N * dz[z] / sum(dz) 
+                            end
+                        elseif !(y_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                num[x] += N * dy[y] / sum(dy) 
+                            end
+                        else
+                            num[x] += N * dy[y] * dz[z] / (sum(dy)*sum(dz))
                         end
-                    elseif direction == "y"
-                        num[y] += N #* dx[x] * dz[z] / (sum(dx)*sum(dz))
-                        if species== "All"
-                            num_total[y] += num[y]
+                    elseif y_dir == "dir" 
+                        if x_dir isa Int && z_dir isa Int
+                            if x != x_dir || z != z_dir 
+                                continue 
+                            else
+                                num[y] += N 
+                            end
+                        elseif x_dir isa Int && !(z_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                num[y] += N * dz[z] / sum(dz) 
+                            end
+                        elseif !(x_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                num[y] += N * dx[x] / sum(dx) 
+                            end
+                        else
+                            num[y] += N * dx[x] * dz[z] / (sum(dx)*sum(dz))
                         end
-                    elseif direction == "z"
-                        num[z] += N #* dx[x] * dy[y] / (sum(dx)*sum(dy))
-                        if species== "All"
-                            num_total[z] += num[z]
+                    elseif z_dir == "dir" 
+                        if x_dir isa Int && y_dir isa Int
+                            if x != x_dir || y != y_dir 
+                                continue 
+                            else
+                                num[z] += N 
+                            end
+                        elseif x_dir isa Int && !(y_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                num[z] += N * dy[y] / sum(dy) 
+                            end
+                        elseif !(x_dir isa Int) && (y_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                num[z] += N * dx[x] / sum(dx) 
+                            end
+                        else
+                            num[z] += N * dx[x] * dy[y] / (sum(dx)*sum(yz))
                         end
                     end
 
@@ -149,12 +217,13 @@ function NumberPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruc
        
     end # species loop 
 
-    t_unit_string = TimeUnits()
+    t_unit_string = TimeUnits[2]
+    t_unit_scale = TimeUnits[1]
 
     if logt
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(TimeUnits(sol.t[1]),sigdigits=5)),log10(round(TimeUnits(sol.t[end]),sigdigits=5))),label=L"$\log_{10}\left(t\,%$t_unit_string \right)$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(t_units_scale*sol.t[1],sigdigits=5)),log10(round(t_units_scale*sol.t[end],sigdigits=5))),label=L"$\log_{10}\left(t\,[%$t_unit_string] \right)$")
     else
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(TimeUnits(sol.t[1]),TimeUnits(sol.t[end])),label=L"$t\,$ $%$t_unit_string$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(sol.t[1] * t_unit_scale,sol.t[end] * t_unit_scale),label=L"$t\, [%$t_unit_string]$")
     end
     
     #axislegend(ax,position = :rb)
