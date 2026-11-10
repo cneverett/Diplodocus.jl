@@ -502,7 +502,6 @@ function BulkGamma3SolPlot2D(type::Static,PhaseSpaces::Tuple{PhaseSpaceStruct,Ph
 
 end
 
-
 function BulkGammaDecomp3SolPlot2D(type::Static,PhaseSpaces::Tuple{PhaseSpaceStruct,PhaseSpaceStruct,PhaseSpaceStruct},sols::Tuple{OutputStruct,OutputStruct,OutputStruct},species::String,coordinates::AbstractCoordinates,surface::Tuple{String,Int64},time_idx::Int64;fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,wide=false,plot_limits=(nothing,nothing),gamma_sign::Bool=true,gamma_z::Bool=false,obs_frame::Bool=false,figsize::Tuple{Int64,Int64}=(576,216),x_units::String="\\text{Code Units}",y_units::String="\\text{Code Units}")
 
     surface_string = surface[1]

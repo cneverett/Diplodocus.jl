@@ -13,7 +13,8 @@ module DiplodocusPlots
     export IsThermalAndIsotropicPlot0D
 
     # 1D plots
-    export MomentumDistributionPlot1D, NumberDensityPlot1D, NumberPlot1D
+    export VelocityZPlot1D, PressurePlot1D, TemperaturePlot1D
+    #export MomentumDistributionPlot1D, NumberDensityPlot1D, NumberPlot1D
 
     # 2D plots
     export NumberDensityPlot2D, NumberPlot2D, BulkGammaPlot2D, EnergyDensityPlot2D
@@ -39,10 +40,9 @@ module DiplodocusPlots
     include("CollisionPlots/Interactive/GainLossAnalysis.jl")
 
     # Transport Plots
-    #Interactive Plots
-    #include("TransportPlots/Interactive/ObserverFlux.jl")
+    
     # Static Plots
-    include("TransportPlots/StaticAnimated/ObserverFlux.jl")
+    include("TransportPlots/Experimental/ObserverFlux.jl")
     include("TransportPlots/StaticAnimated/TimeScale.jl")
 
     # 0D (space) plots

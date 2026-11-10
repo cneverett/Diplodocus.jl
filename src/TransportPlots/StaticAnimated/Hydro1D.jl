@@ -1,9 +1,25 @@
 """
-    VelocityZPlot1D(type,sol,PhaseSpace,direction,species;...)
+    VelocityZPlot1D(type,PhaseSpace,sol,species,x_dir,y_dir,z_dir;...)
 
-Returns a plot of the velocity in the local z-direction of all species as a function of time along a specific spatial coordinate `direction`.
+Returns a plot of the velocity in the local z-direction of `species` as a function of time along a single coordinate direction. The direction is dictated by the values of `x_dir`,`y_dir`, and `z_dir`. The coordinate direction to plot is set by specifying one of these three to be the string `dir`. The other two may then either be set to `sum` to sum average along these directions or a single coordinate index defining the surface along which the quantity is measured. 
+
+Arguments:
+- `type::PlotType` determines the type of plot to generate, it can be either `Static` or `Animated`.
+- `PhaseSpace::PhaseSpaceStruct` is the structure containing the phase space information of the simulation.
+- `sol::OutputStruct` is the solution object containing the distribution function of all particles and time stepping information of the simulation. 
+- `species::Vector{String}` is a vector of the abbreviated three letter names of the particle species to plot.
+- `x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int}` if `dir` then the plot will be along this coordinate direction, if `sum` then the plot will average along this direction, if `Int` then this coordinate will be kept constant at this coordinate index.
+
+Common keyword arguments: 
+- `theme=DiplodocusDark()`: the colour theme to use for the plot, can be either `DiplodocusDark()` for dark mode or `DiplodocusLight()` for light mode.
+- `TimeUnits::Tuple{Float64,String}=(1.0, "\\text{Code Units}")`: a tuple that converts the time given in code units to the desired units for plotting. The first entry is the conversion factor and the second is a string that will be converted into a LaTeX string for the time label.
+- `plot_limits=(nothing,nothing)`: the limits of the x and y axes, default sets the limits automatically based on the data.
+- `wide=false`: if `true`, the plot is generated in a wide format (double column 8:3 aspect ratio), if `false` (single column 4:3 aspect ratio).
+- `logt=false`: If `true` time will be converted to `log10` format for plotting.
 """
-function VelocityZPlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStruct,direction::String,species::Vector{String};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+function VelocityZPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+
+    @assert (x_dir != "dir" && y_dir != "dir") || (y_dir != "dir" && z_dir != "dir") || (x_dir != "dir" && z_dir != "dir") "More than one coordinate direction cannot be the plot direction"
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
@@ -30,7 +46,7 @@ function VelocityZPlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceSt
     end
     ylab = L"$v_z\, [\text{Code Units}]$"
 
-    if direction == "x"
+    if x_dir == "dir"
         xlab = L"$\left(x\,[\text{Code Units}]\right)$"
         n_dir = x_num
         grid_type = Spacetime.x_grid
@@ -39,7 +55,7 @@ function VelocityZPlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceSt
         elseif grid_type == "l"
             mdir_plot = log10.(mx)
         end
-    elseif direction == "y"
+    elseif y_dir == "dir"
         xlab = L"$\left(y\,[\text{Code Units}]\right)$"
         n_dir = y_num
         grid_type = Spacetime.y_grid
@@ -48,7 +64,7 @@ function VelocityZPlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceSt
         elseif grid_type == "l"
             mdir_plot = log10.(my)
         end
-    elseif direction == "z"
+    elseif z_dir == "dir" 
         xlab = L"$\left(z\,[\text{Code Units}]\right)$"
         n_dir = z_num
         grid_type = Spacetime.z_grid
@@ -96,7 +112,6 @@ function VelocityZPlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceSt
             if (i in values || i == 1 || i == 2) # plot first step for initial conds, second for kernel 
 
                 t = sol.t[i]
-                #println("t=$(CodeToSIUnitsTime(t))")
                 if logt
                     color = theme.colormap[][(log10(t) - log10(t_min)) / (log10(t_max) - log10(t_min))]
                 else
@@ -115,21 +130,72 @@ function VelocityZPlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceSt
 
                     #println("n = $n at (x,y,z) = ($x,$y,$z)")
 
-                    if direction == "x"
-                        vz[x] += Vz_local * dy[y] * dz[z] / (sum(dy)*sum(dz))
-                        #if species== "All"
-                        #    num_total[x] += num[x]
-                        #end
-                    elseif direction == "y"
-                        vz[y] += Vz_local * dx[x] * dz[z] / (sum(dx)*sum(dz))
-                        #if species== "All"
-                        #    num_total[y] += num[y]
-                        #end
-                    elseif direction == "z"
-                        vz[z] += Vz_local * dx[x] * dy[y] / (sum(dx)*sum(dy))
-                        #if species== "All"
-                        #    num_total[z] += num[z]
-                        #end
+                    if x_dir == "dir" 
+                        if y_dir isa Int && z_dir isa Int
+                            if y != y_dir || z != z_dir 
+                                continue 
+                            else
+                                vz[x] += Vz_local 
+                            end
+                        elseif y_dir isa Int && !(z_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                vz[x] += Vz_local * dz[z] / sum(dz) 
+                            end
+                        elseif !(y_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                vz[x] += Vz_local * dy[y] / sum(dy) 
+                            end
+                        else
+                            vz[x] += Vz_local * dy[y] * dz[z] / (sum(dy)*sum(dz))
+                        end
+                    elseif y_dir == "dir" 
+                        if x_dir isa Int && z_dir isa Int
+                            if x != x_dir || z != z_dir 
+                                continue 
+                            else
+                                vz[y] += Vz_local 
+                            end
+                        elseif x_dir isa Int && !(z_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                vz[y] += Vz_local * dz[z] / sum(dz) 
+                            end
+                        elseif !(x_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                vz[y] += Vz_local * dx[x] / sum(dx) 
+                            end
+                        else
+                            vz[y] += Vz_local * dx[x] * dz[z] / (sum(dx)*sum(dz))
+                        end
+                    elseif z_dir == "dir" 
+                        if x_dir isa Int && y_dir isa Int
+                            if x != x_dir || y != y_dir 
+                                continue 
+                            else
+                                vz[z] += Vz_local 
+                            end
+                        elseif x_dir isa Int && !(y_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                vz[z] += Vz_local * dy[y] / sum(dy) 
+                            end
+                        elseif !(x_dir isa Int) && (y_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                vz[z] += Vz_local * dx[x] / sum(dx) 
+                            end
+                        else
+                            vz[z] += Vz_local * dx[x] * dy[y] / (sum(dx)*sum(yz))
+                        end
                     end
 
                 end
@@ -144,12 +210,13 @@ function VelocityZPlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceSt
        
     end # species loop 
 
-    t_unit_string = TimeUnits()
+    t_unit_string = TimeUnits[2]
+    t_unit_scale = TimeUnits[1]
 
     if logt
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(TimeUnits(sol.t[1]),sigdigits=5)),log10(round(TimeUnits(sol.t[end]),sigdigits=5))),label=L"$\log_{10}\left(t\,%$t_unit_string \right)$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(t_units_scale*sol.t[1],sigdigits=5)),log10(round(t_units_scale*sol.t[end],sigdigits=5))),label=L"$\log_{10}\left(t\,[%$t_unit_string] \right)$")
     else
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(TimeUnits(sol.t[1]),TimeUnits(sol.t[end])),label=L"$t\,$ $%$t_unit_string$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(sol.t[1] * t_unit_scale,sol.t[end] * t_unit_scale),label=L"$t\, [%$t_unit_string]$")
     end
     
     #axislegend(ax,position = :rb)
@@ -160,13 +227,28 @@ function VelocityZPlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceSt
 
 end
 
-
 """
-    PressurePlot1D(type,sol,PhaseSpace,direction,species;...)
+    PressurePlot1D(type,PhaseSpace,sol,species,x_dir,y_dir,z_dir;...)
 
-Returns a plot of the pressure of all `species` as a function of time along a specific spatial coordinate `direction`.
+Returns a plot of the pressure of `species` as a function of time along a single coordinate direction. The direction is dictated by the values of `x_dir`,`y_dir`, and `z_dir`. The coordinate direction to plot is set by specifying one of these three to be the string `dir`. The other two may then either be set to `sum` to sum average along these directions or a single coordinate index defining the surface along which the quantity is measured. 
+
+Arguments:
+- `type::PlotType` determines the type of plot to generate, it can be either `Static` or `Animated`.
+- `PhaseSpace::PhaseSpaceStruct` is the structure containing the phase space information of the simulation.
+- `sol::OutputStruct` is the solution object containing the distribution function of all particles and time stepping information of the simulation. 
+- `species::Vector{String}` is a vector of the abbreviated three letter names of the particle species to plot.
+- `x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int}` if `dir` then the plot will be along this coordinate direction, if `sum` then the plot will average along this direction, if `Int` then this coordinate will be kept constant at this coordinate index.
+
+Common keyword arguments: 
+- `theme=DiplodocusDark()`: the colour theme to use for the plot, can be either `DiplodocusDark()` for dark mode or `DiplodocusLight()` for light mode.
+- `TimeUnits::Tuple{Float64,String}=(1.0, "\\text{Code Units}")`: a tuple that converts the time given in code units to the desired units for plotting. The first entry is the conversion factor and the second is a string that will be converted into a LaTeX string for the time label.
+- `plot_limits=(nothing,nothing)`: the limits of the x and y axes, default sets the limits automatically based on the data.
+- `wide=false`: if `true`, the plot is generated in a wide format (double column 8:3 aspect ratio), if `false` (single column 4:3 aspect ratio).
+- `logt=false`: If `true` time will be converted to `log10` format for plotting.
 """
-function PressurePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStruct,direction::String,species::Vector{String};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+function PressurePlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+
+    @assert (x_dir != "dir" && y_dir != "dir") || (y_dir != "dir" && z_dir != "dir") || (x_dir != "dir" && z_dir != "dir") "More than one coordinate direction cannot be the plot direction"
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
@@ -194,7 +276,7 @@ function PressurePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStr
     end
     ylab = L"$P\, [\text{Code Units}]$"
 
-    if direction == "x"
+    if x_dir == "dir"
         xlab = L"$\left(x\,[\text{Code Units}]\right)$"
         n_dir = x_num
         grid_type = Space.x_grid
@@ -203,7 +285,7 @@ function PressurePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStr
         elseif grid_type == "l"
             mdir_plot = log10.(mx)
         end
-    elseif direction == "y"
+    elseif y_dir == "dir"
         xlab = L"$\left(y\,[\text{Code Units}]\right)$"
         n_dir = y_num
         grid_type = Space.y_grid
@@ -212,7 +294,7 @@ function PressurePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStr
         elseif grid_type == "l"
             mdir_plot = log10.(my)
         end
-    elseif direction == "z"
+    elseif z_dir == "dir"
         xlab = L"$\left(z\,[\text{Code Units}]\right)$"
         n_dir = z_num
         grid_type = Space.z_grid
@@ -281,21 +363,72 @@ function PressurePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStr
 
                     #println("n = $n at (x,y,z) = ($x,$y,$z)")
 
-                    if direction == "x"
-                        P[x] += P_local * dy[y] * dz[z] / (sum(dy)*sum(dz))
-                        #if species== "All"
-                        #    num_total[x] += num[x]
-                        #end
-                    elseif direction == "y"
-                        P[y] += P_local * dx[x] * dz[z] / (sum(dx)*sum(dz))
-                        #if species== "All"
-                        #    num_total[y] += num[y]
-                        #end
-                    elseif direction == "z"
-                        P[z] += P_local * dx[x] * dy[y] / (sum(dx)*sum(dy))
-                        #if species== "All"
-                        #    num_total[z] += num[z]
-                        #end
+                    if x_dir == "dir" 
+                        if y_dir isa Int && z_dir isa Int
+                            if y != y_dir || z != z_dir 
+                                continue 
+                            else
+                                P[x] += P_local 
+                            end
+                        elseif y_dir isa Int && !(z_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                P[x] += P_local * dz[z] / sum(dz) 
+                            end
+                        elseif !(y_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                P[x] += P_local * dy[y] / sum(dy) 
+                            end
+                        else
+                            P[x] += P_local * dy[y] * dz[z] / (sum(dy)*sum(dz))
+                        end
+                    elseif y_dir == "dir" 
+                        if x_dir isa Int && z_dir isa Int
+                            if x != x_dir || z != z_dir 
+                                continue 
+                            else
+                                P[y] += P_local 
+                            end
+                        elseif x_dir isa Int && !(z_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                P[y] += P_local * dz[z] / sum(dz) 
+                            end
+                        elseif !(x_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                P[y] += P_local * dx[x] / sum(dx) 
+                            end
+                        else
+                            P[y] += P_local * dx[x] * dz[z] / (sum(dx)*sum(dz))
+                        end
+                    elseif z_dir == "dir" 
+                        if x_dir isa Int && y_dir isa Int
+                            if x != x_dir || y != y_dir 
+                                continue 
+                            else
+                                P[z] += P_local 
+                            end
+                        elseif x_dir isa Int && !(y_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                P[z] += P_local * dy[y] / sum(dy) 
+                            end
+                        elseif !(x_dir isa Int) && (y_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                P[z] += P_local * dx[x] / sum(dx) 
+                            end
+                        else
+                            P[z] += P_local * dx[x] * dy[y] / (sum(dx)*sum(yz))
+                        end
                     end
 
                 end
@@ -310,12 +443,13 @@ function PressurePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStr
        
     end # species loop 
 
-    t_unit_string = TimeUnits()
+    t_unit_string = TimeUnits[2]
+    t_unit_scale = TimeUnits[1]
 
     if logt
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(TimeUnits(sol.t[1]),sigdigits=5)),log10(round(TimeUnits(sol.t[end]),sigdigits=5))),label=L"$\log_{10}\left(t\,%$t_unit_string \right)$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(t_units_scale*sol.t[1],sigdigits=5)),log10(round(t_units_scale*sol.t[end],sigdigits=5))),label=L"$\log_{10}\left(t\,[%$t_unit_string] \right)$")
     else
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(TimeUnits(sol.t[1]),TimeUnits(sol.t[end])),label=L"$t\,$ $%$t_unit_string$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(sol.t[1] * t_unit_scale,sol.t[end] * t_unit_scale),label=L"$t\, [%$t_unit_string]$")
     end
     
     #axislegend(ax,position = :rb)
@@ -327,11 +461,27 @@ function PressurePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStr
 end
 
 """
-    TemperaturePlot1D(type,sol,PhaseSpace,direction,species;...)
+    TemperaturePlot1D(type,PhaseSpace,sol,species,x_dir,y_dir,z_dir;...)
 
-Returns a plot of the temperature of all `species` as a function of time along a specific spatial coordinate `direction`.
+Returns a plot of the pressure of `species` as a function of time along a single coordinate direction. The direction is dictated by the values of `x_dir`,`y_dir`, and `z_dir`. The coordinate direction to plot is set by specifying one of these three to be the string `dir`. The other two may then either be set to `sum` to sum average along these directions or a single coordinate index defining the surface along which the quantity is measured. 
+
+Arguments:
+- `type::PlotType` determines the type of plot to generate, it can be either `Static` or `Animated`.
+- `PhaseSpace::PhaseSpaceStruct` is the structure containing the phase space information of the simulation.
+- `sol::OutputStruct` is the solution object containing the distribution function of all particles and time stepping information of the simulation. 
+- `species::Vector{String}` is a vector of the abbreviated three letter names of the particle species to plot.
+- `x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int}` if `dir` then the plot will be along this coordinate direction, if `sum` then the plot will average along this direction, if `Int` then this coordinate will be kept constant at this coordinate index.
+
+Common keyword arguments: 
+- `theme=DiplodocusDark()`: the colour theme to use for the plot, can be either `DiplodocusDark()` for dark mode or `DiplodocusLight()` for light mode.
+- `TimeUnits::Tuple{Float64,String}=(1.0, "\\text{Code Units}")`: a tuple that converts the time given in code units to the desired units for plotting. The first entry is the conversion factor and the second is a string that will be converted into a LaTeX string for the time label.
+- `plot_limits=(nothing,nothing)`: the limits of the x and y axes, default sets the limits automatically based on the data.
+- `wide=false`: if `true`, the plot is generated in a wide format (double column 8:3 aspect ratio), if `false` (single column 4:3 aspect ratio).
+- `logt=false`: If `true` time will be converted to `log10` format for plotting.
 """
-function TemperaturePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpaceStruct,direction::String,species::Vector{String};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+function TemperaturePlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::Vector{String},x_dir::Union{String,Int},y_dir::Union{String,Int},z_dir::Union{String,Int};fig=nothing,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,step::Int=1,wide=false,logt::Bool=false,plot_limits=(nothing,nothing))
+
+    @assert (x_dir != "dir" && y_dir != "dir") || (y_dir != "dir" && z_dir != "dir") || (x_dir != "dir" && z_dir != "dir") "More than one coordinate direction cannot be the plot direction"
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
@@ -359,7 +509,7 @@ function TemperaturePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpace
     end
     ylab = L"$T\, [\text{K}]$"
 
-    if direction == "x"
+    if x_dir == "dir"
         xlab = L"$\left(x\,[\text{Code Units}]\right)$"
         n_dir = x_num
         grid_type = Space.x_grid
@@ -368,7 +518,7 @@ function TemperaturePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpace
         elseif grid_type == "l"
             mdir_plot = log10.(mx)
         end
-    elseif direction == "y"
+    elseif y_dir == "dir"
         xlab = L"$\left(y\,[\text{Code Units}]\right)$"
         n_dir = y_num
         grid_type = Space.y_grid
@@ -377,7 +527,7 @@ function TemperaturePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpace
         elseif grid_type == "l"
             mdir_plot = log10.(my)
         end
-    elseif direction == "z"
+    elseif z_dir == "dir"
         xlab = L"$\left(z\,[\text{Code Units}]\right)$"
         n_dir = z_num
         grid_type = Space.z_grid
@@ -449,21 +599,72 @@ function TemperaturePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpace
 
                     #println("n = $n at (x,y,z) = ($x,$y,$z)")
 
-                    if direction == "x"
-                        T[x] += T_local * dy[y] * dz[z] / (sum(dy)*sum(dz))
-                        #if species== "All"
-                        #    num_total[x] += num[x]
-                        #end
-                    elseif direction == "y"
-                        T[y] += T_local * dx[x] * dz[z] / (sum(dx)*sum(dz))
-                        #if species== "All"
-                        #    num_total[y] += num[y]
-                        #end
-                    elseif direction == "z"
-                        T[z] += T_local * dx[x] * dy[y] / (sum(dx)*sum(dy))
-                        #if species== "All"
-                        #    num_total[z] += num[z]
-                        #end
+                    if x_dir == "dir" 
+                        if y_dir isa Int && z_dir isa Int
+                            if y != y_dir || z != z_dir 
+                                continue 
+                            else
+                                T[x] += T_local 
+                            end
+                        elseif y_dir isa Int && !(z_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                T[x] += T_local * dz[z] / sum(dz) 
+                            end
+                        elseif !(y_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                T[x] += T_local * dy[y] / sum(dy) 
+                            end
+                        else
+                            T[x] += T_local * dy[y] * dz[z] / (sum(dy)*sum(dz))
+                        end
+                    elseif y_dir == "dir" 
+                        if x_dir isa Int && z_dir isa Int
+                            if x != x_dir || z != z_dir 
+                                continue 
+                            else
+                                T[y] += T_local 
+                            end
+                        elseif x_dir isa Int && !(z_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                T[y] += T_local * dz[z] / sum(dz) 
+                            end
+                        elseif !(x_dir isa Int) && (z_dir isa Int)
+                            if z != z_dir 
+                                continue 
+                            else
+                                T[y] += T_local * dx[x] / sum(dx) 
+                            end
+                        else
+                            T[y] += T_local * dx[x] * dz[z] / (sum(dx)*sum(dz))
+                        end
+                    elseif z_dir == "dir" 
+                        if x_dir isa Int && y_dir isa Int
+                            if x != x_dir || y != y_dir 
+                                continue 
+                            else
+                                T[z] += T_local 
+                            end
+                        elseif x_dir isa Int && !(y_dir isa Int)
+                            if x != x_dir 
+                                continue 
+                            else
+                                T[z] += T_local * dy[y] / sum(dy) 
+                            end
+                        elseif !(x_dir isa Int) && (y_dir isa Int)
+                            if y != y_dir 
+                                continue 
+                            else
+                                T[z] += T_local * dx[x] / sum(dx) 
+                            end
+                        else
+                            T[z] += T_local * dx[x] * dy[y] / (sum(dx)*sum(yz))
+                        end
                     end
 
                 end
@@ -478,12 +679,13 @@ function TemperaturePlot1D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSpace
        
     end # species loop 
 
-    t_unit_string = TimeUnits()
+    t_unit_string = TimeUnits[2]
+    t_unit_scale = TimeUnits[1]
 
     if logt
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(TimeUnits(sol.t[1]),sigdigits=5)),log10(round(TimeUnits(sol.t[end]),sigdigits=5))),label=L"$\log_{10}\left(t\,%$t_unit_string \right)$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(log10(round(t_units_scale*sol.t[1],sigdigits=5)),log10(round(t_units_scale*sol.t[end],sigdigits=5))),label=L"$\log_{10}\left(t\,[%$t_unit_string] \right)$")
     else
-        Colorbar(fig[1,2],colormap = theme.colormap,limits=(TimeUnits(sol.t[1]),TimeUnits(sol.t[end])),label=L"$t\,$ $%$t_unit_string$")
+        Colorbar(fig[1,2],colormap = theme.colormap,limits=(sol.t[1] * t_unit_scale,sol.t[end] * t_unit_scale),label=L"$t\, [%$t_unit_string]$")
     end
     
     #axislegend(ax,position = :rb)

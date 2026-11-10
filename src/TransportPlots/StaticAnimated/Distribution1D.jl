@@ -598,8 +598,6 @@ function MomentumAndPolarAngleDistribution1DPlot(type::Static,sol,PhaseSpace::Ph
 end
 
 
-
-
 ################# Plots that only work with Paraboloidal coordinates ############### 
 function EquatorialPlaneMomentumDistributionPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol,species::Vector{String};theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,thermal=false,plot_limits=(nothing,nothing),wide=false,legend=true)
 
