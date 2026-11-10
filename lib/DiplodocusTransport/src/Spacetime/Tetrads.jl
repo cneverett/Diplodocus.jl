@@ -64,24 +64,28 @@ end
             return ΩF * (ρ0)^(b)
         end
 end
-@inline function ΩMcKinneyNarayan2007(ρ0;a=1.0,f=0.5,rtrans=3.0)
+@inline function ΩMcKinneyNarayan2007(ρ;a=1.0,f=0.5,rtrans=3.0)
 
-    # Implements a slightly modified rotation profile from McKinney & Narayan 2007, which is quadratic-cubic rather than linear-cubic, to maintain continuity of Ω and its first derivative. We also set their r0 to rH the horizon radius
+    #= Implements a slightly modified rotation profile from McKinney & Narayan 2007, which is quadratic-cubic rather than linear-cubic, to maintain continuity of Ω and its first derivative. 
+        - their r0 to rH the horizon radius
+        - it is assumed that spatial coordinates are normalised by the Horizon radius such that u=v=1=ρ corresponds to the horizon radius in the equatorial plane
+        - f is the ratio of ΩF=fΩH on the horizon
+    =#
 
-    rH = 1 + sqrt(1-a^2) # horizon radius in units of r_g
-    ΩH = 1/2 * a/(1+sqrt(1-a^2))  # ΩH = 1/2 * a/(1+sqrt(1-a^2)) where Ω has been normalised by c and r_g 
-    ΩFBH = f * ΩH # ΩF = f * ΩH for field lines threading the horizon in the force-free limit, where f is a fraction of ΩH
+    h = 1 + sqrt(1-a^2) # ratio of horizon radius to gravitational radius rH=h*rg
+    rH = 1.0 # assumed by the normalisation
+    ΩH = a/2 # where Ω has been normalised by c and r_H 
     L = rtrans - rH
-    D = 1/(rtrans^(3/2) - a) - f * ΩH
-    K = - 3*sqrt(rtrans) / (2 * (rtrans^(3/2)+a)^2)
+    D = h/((h*rtrans)^(3/2) + a) - f * ΩH
+    K = -3*h^(5/2)*sqrt(rtrans) / (2 * ((h*rtrans)^(3/2)+a)^2)
     A = (3D-K*L)/L^2
     B = (K*L-2D)/L^3
-    if ρ0 <= rH
-        return ΩFBH 
-    elseif ρ0 > rH && ρ0 <= rtrans
-        return f*ΩH + A*(ρ0-rH)^2 + B*(ρ0-rH)^3
+    if ρ <= 1.0
+        return f*ΩH 
+    elseif ρ > 1.0 && ρ <= rtrans
+        return f*ΩH + A*(ρ-rH)^2 + B*(ρ-rH)^3 # quadratic-cubic transition
     else
-        return 1/(ρ0^(3/2) + a)
+        return h/((h*ρ)^(3/2) + a) # Keplearian rotation angular frequency normalised by c/rH
     end
 end
 #=@inline function ΩBHPlusDisk(ρ0;ΩH=0.1) # legacy version of ΩBHPlusDisk with ΩH as a keyword argument
