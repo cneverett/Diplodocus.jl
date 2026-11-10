@@ -5,8 +5,8 @@ module DiplodocusPlots
     export InteractiveBinaryGainLossPlot, InteractiveEmissionGainLossPlot
 
     # OD plots
-    export MomentumDistributionPlot0D, MomentumAndPolarAngleDistributionPlot0D, MomentumComboAnimation0D
-    # export AngleDistributionPlot, MomentumAndAzimuthalAngleDistributionPlot, AzimuthalAngleDistributionPlot
+    export MomentumDistributionPlot0D, MomentumAndPolarAngleDistributionPlot0D, MomentumComboAnimation0D, MomentumAndAzimuthalAngleDistributionPlot0D, AzimuthalAngleDistributionPlot0D
+    #export AngleDistributionPlot,
     #export TimeScalePlot
     export NumberDensityPlot0D
     export EnergyDensityPlot0D
