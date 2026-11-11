@@ -4,12 +4,15 @@
 **D**istribution **I**n **PL**ateaux meth**ODO**logy for the **C**omp**U**tation of transport equation**S**
 
 [![][docs-latest-img]][docs-latest-url]
+[![][docs-dev-img]][docs-dev-url]
 [![Build Status][gha-img]][gha-url]
 [![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![ascl](https://img.shields.io/badge/ascl-2605.023-blue.svg?colorB=262255)](https://ascl.net/2605.023)
 
 [docs-latest-img]: https://img.shields.io/badge/Docs-Stable-lightgrey.svg
-[docs-latest-url]: https://cneverett.github.io/Diplodocus.jl/dev/
+[docs-latest-url]: https://cneverett.github.io/Diplodocus.jl/stable/
+[docs-dev-img]: https://img.shields.io/badge/Docs-Dev-lightgrey.svg
+[docs-dev-url]: https://cneverett.github.io/Diplodocus.jl/dev/
 
 [gha-img]: https://github.com/cneverett/Diplodocus.jl/actions/workflows/CI.yml/badge.svg?branch=main
 [gha-url]: https://github.com/cneverett/Diplodocus.jl/actions/workflows/CI.yml?query=branch%3Amain
