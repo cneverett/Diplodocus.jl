@@ -379,7 +379,7 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
         MBinMulStep::Vector{DMT}           # on device, temporary array for matrix multiplication of binary terms
         MBinMulStepReshape::Vector{DVT}    # on device, temporary array for reshaped matrix multiplication of binary terms
         f_init::HVT      # on host, initial distribution function (used by solver to define output struct)
-        f_d::DVT         # on device, current distribution function
+        f::DVT           # on device, current distribution function (no _d to fit with Solver)
         fstep_d::DVT     # on device, distribution function after a step
         df::HVT          # on host, change in distribution function
         df_d::DVT        # on device, change in distribution function
@@ -415,6 +415,7 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
         KsL::Vector{KrylovSubspace{HT,HT,HT,HMT,HMT}}  # on host, Krylov subspace for exponential Rosenbrock method (higher precision for more accuracy)
         mB::Int64                        # dimension of Binary Krylov subspace
         mL::Int64                        # dimension of Linear Krylov subspace
+        ηKrylov::HT                      # error allowance for Krylov approximation   
         ϕcacheB::Vector{ExponentialUtilities.PhivCache{true,HT}} # on host, cache for ϕ functions for Binary terms
         ϕcacheL::Vector{ExponentialUtilities.PhivCache{true,HT}} # on host, cache for ϕ functions for Linear terms
 
@@ -531,7 +532,6 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
             fout = zeros(HostPrecision,n_momentum)
             fout_d = device_array(Backend,DevicePrecision,fout)
             δ = zeros(HostPrecision,n_momentum)
-            δ_d = device_array(Backend,DevicePrecision,δ)
             ϕ = zeros(HostPrecision,n_momentum,3)
 
             S = similar(Einv)
@@ -541,7 +541,7 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
             invA = zeros(HostPrecision,n_space)
             for off_space in 0:n_space-1
                 start_idx = n_momentum*off_space + 1
-                invA[off_space+1] = 1 / FluxM.Ap_Flux[star  t_idx]
+                invA[off_space+1] = 1 / FluxM.Ap_Flux[start_idx]
             end
 
             # Build new MEmi
@@ -755,7 +755,6 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
             self.fout = [similar(fout) for _ in 1:nworkers]
             self.fout_d = [similar(fout_d) for _ in 1:nworkers]
             self.δ = [similar(δ) for _ in 1:nworkers]
-            self.δ_d = [similar(δ_d) for _ in 1:nworkers]
 
             self.KsB = [KrylovSubspace{Float64,Float64,Array{Float64,2}}(n_momentum,mB) for _ in 1:nworkers]
             self.KsL = [KrylovSubspace{Float64,Float64,Array{Float64,2}}(n_momentum,mL) for _ in 1:nworkers]

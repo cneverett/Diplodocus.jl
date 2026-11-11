@@ -541,12 +541,12 @@ function update_momentum!(method::ExponentialRosenbrockEulerKrylovStruct,dt::T;e
 
         if method.LocalMomentumUpdate
             if every_step && momentum_step == 1 # evaluate momentum on every step if momentum_step = 1
-                dt_cell = HostPrecision(momentum_step * method.dt_min)
+                dt_cell = HostPrecision(momentum_step * method.dt_initial)
                 put!(WorkerPool.jobs,(off_space,dt_cell,done))
                 tasks_this_step += 1
             elseif !every_step && momentum_step > 1 && mod(method.step+Int(momentum_step / 2),momentum_step) == 0 # or halfway to every momentum_step if momentum_step > 1
                 # i.e. if momentum_step = 64, momentum should first be evaluated at step 32 for dt=64*dt and then on every 64 steps after that, i.e. 32, 96, 160 etc.
-                dt_cell = HostPrecision(momentum_step * method.dt_min)
+                dt_cell = HostPrecision(momentum_step * method.dt_initial)
                 put!(WorkerPool.jobs,(off_space,dt_cell,done))
                 tasks_this_step += 1
             end

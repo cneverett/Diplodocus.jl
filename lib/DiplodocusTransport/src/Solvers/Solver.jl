@@ -49,7 +49,7 @@ function Solve(method::AbstractSteppingMethod,dt_initial::T,t_save::Vector{T};pr
     elseif method isa ExponentialRosenbrockEulerKrylovMixedStruct
         @. method.dt_guess = ldexp(dt_initial * method.momentum_step, -5) # initial guess for dt is 1/32 of the initial dt multiplied by the size of the local step allowed by X_flux
         # check dt <= dt_min from X_Flux 
-        if dt > method.dt_min
+        if dt > method.dt_initial
             @warn "Chosen dt may lead to unstable space updates"
         end
         if !ispow2(dt)
@@ -60,12 +60,12 @@ function Solve(method::AbstractSteppingMethod,dt_initial::T,t_save::Vector{T};pr
         end
         # largest momentum step update 
         if method.LocalMomentumUpdate
-            max_dt = method.dt_min * maximum(method.momentum_step)
+            max_dt = method.dt_initial * maximum(method.momentum_step)
             # check end step is a multiple of max_dt 
             if mod(t_save[end],max_dt) != 0
                 @warn "simulation end time is not a multiple of the largest advection timescale, may result in inaccuracy"
             end
-            if dt != method.dt_min 
+            if dt != method.dt_initial
                 @assert "For this method dt_Initial: $(dt) must equal dt_min: $(method.dt_min)"
             end
         end
