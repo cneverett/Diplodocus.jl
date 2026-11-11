@@ -1,5 +1,12 @@
-#/Manifest.toml
-#/docs/Manifest.toml important for docs build
+/Manifest.toml
+/docs/Manifest.toml
+/test/Manifest.toml
+/lib/DiplodocusCollisions/Manifest.toml
+/lib/DiplodocusCollisions/test/Manifest.toml
+/lib/DiplodocusTransport/Manifest.toml
+/lib/DiplodocusTransport/test/Manifest.toml
+/lib/DiplodocusPlots/Manifest.toml
+/lib/DiplodocusPlots/test/Manifest.toml
 
 /docs/build/
 /docs/node_modules/
@@ -15,4 +22,6 @@ examples/
 /logo animation/
 /old_tutorial_files/
 
-release_notes.txt
+release_notes_0_2_0.txt
+release_notes_1_0_0.txt
+M87CPU_local_test.jl

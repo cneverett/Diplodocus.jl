@@ -1,0 +1,33 @@
+name = "DiplodocusCollisions"
+uuid = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
+version = "1.0.0"
+authors = ["Christopher Everett"]
+
+[deps]
+Bessels = "0e736298-9ec6-45e8-9647-e4fc86a2fe38"
+ChunkSplitters = "ae650224-84b6-46f8-82ea-d812ca08434e"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
+
+[compat]
+Bessels = "0.2"
+ChunkSplitters = "3.2"
+JLD2 = "0.6"
+LinearAlgebra = "1.12"
+ProgressMeter = "1.10"
+Random = "1.11"
+Statistics = "1.11"
+Zarr = "0.11"
+julia = "1.12"
+Aqua = "0.8"
+
+[extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Aqua", "Test"]

@@ -1,0 +1,59 @@
+All plotting functions should follow the following format:
+
+0D plots:
+    function(type,PhaseSpace,sol,species,keyparameters;kwargs)
+1D plots: 
+    function(type,PhaseSpace,sol,species,x_dir,y_dir,z_dir,keyparameters;kwargs)
+2D plots:
+    function(type,PhaseSpace,sol,species,coordinates,surface,keyparameters;kwargs)
+
+Plots Status:
+Distribution0D:
+    / MomentumDistributionPlot0D
+    - AngleDistributionPlot (moved to experimental)
+    / AzimuthalAngleDistributionPlot0D
+    / MomentumAndPolarAngleDistributionPlot0D
+    / MomentumAndAzimuthalAngleDistributionPlot
+    / MomentumComboAnimation0D
+NumberDensity0D:
+    / NumberDensityPlot0D
+    x FracNumberDensityPlot (combined into NumberDensityPlot0D)
+EnergyDensity0D:
+    / EnergyDensityPlot0D
+    x FracNumberDensityPlot (combined into NumberDensityPlot0D)
+ThermalAndIsotropic0D:
+    / IsThermalPlot0D
+    / IsIsotropicPlot0D
+    / IsThermalandIsotropicPlot0D
+Distribution1D
+    / MomentumDistribution1DPlot (moved to experimental and not exported)
+    / MomentumAndPolarAngleDistributionPlot1D (moved to experimental and not exported)
+    / EquatorialPlaneMomentumDistributionPlot1D (moved to paper specific plots and not exported)
+Hydro1D
+    / VelocityZPlot1D
+    / PressurePlot1D
+    / TemperaturePlot1D
+Number1D
+    / Number1D
+NumberDensity1D 
+    / NumberDensity1D 
+    / EquatorialNumberDensityPlot1D (moved to paper specific plots and not exported)
+    / EquatorialTemperaturePlot1D (moved to paper specific plots and not exported)
+ElectroMagneticEnergyDensity2D 
+    / MagneticEnergyDensityPlot2D
+ElectroMagneticField2D 
+    / MagneticFieldPlot2D
+EnergyDensity2D 
+    / EnergyDensityPlot2D 
+    / EquipartitionPlot2D
+Hydro2D 
+    / BulkGammaPlot2D 
+    / HydroZVelocityPlot2D
+Magnetisation2D 
+    / MagnetisationPlot2D
+Number2D
+    / NumberPlot2D
+NumberDensity2D 
+    / NumberDensityPlot2D
+    / GJMultiplicityPlot2D
+    / JetLoadingPlot2D (moved to paper specific plots and not exported)
