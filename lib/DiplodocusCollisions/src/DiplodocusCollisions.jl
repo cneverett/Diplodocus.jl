@@ -1,8 +1,8 @@
 module DiplodocusCollisions
 
-export BinaryInteractionIntegration, BinaryFileLoad_All, DoesConserve, BinaryFileLoad_Matrix
-export EmissionInteractionIntegration, EmissionFileLoad_Matrix, EmissionFileLoad_All
-export UserBinaryParameters, UserEmissionParameters
+    export BinaryInteractionIntegration, BinaryFileLoad_All, DoesConserve, BinaryFileLoad_Matrix
+    export EmissionInteractionIntegration, EmissionFileLoad_Matrix, EmissionFileLoad_All
+    export UserBinaryParameters, UserEmissionParameters
 
     using JLD2
     using Base.Threads

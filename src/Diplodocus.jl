@@ -4,6 +4,6 @@ module Diplodocus
 
     @reexport using DiplodocusCollisions
     @reexport using DiplodocusTransport
-    #using DiplodocusPlots
+    @reexport using DiplodocusPlots
 
 end

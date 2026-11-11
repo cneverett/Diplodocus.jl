@@ -5,6 +5,8 @@
 /lib/DiplodocusCollisions/test/Manifest.toml
 /lib/DiplodocusTransport/Manifest.toml
 /lib/DiplodocusTransport/test/Manifest.toml
+/lib/DiplodocusPlots/Manifest.toml
+/lib/DiplodocusPlots/test/Manifest.toml
 
 /docs/build/
 /docs/node_modules/
