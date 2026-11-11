@@ -1,0 +1,11 @@
+/Manifest.toml
+/test/Manifest.toml
+
+*.mp4
+*.gif
+*.png
+*.pdf
+*.svg
+
+TestingGround/
+v0.2PlotTesting.jl
