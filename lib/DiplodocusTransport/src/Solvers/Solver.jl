@@ -103,7 +103,7 @@ function Solve(method::AbstractSteppingMethod,dt_initial::T,t_save::Vector{T};pr
 
     end
 
-    if method isa ExponentialRosenbrockEulerKrylovMixedStruct
+    if method isa ExponentialRosenbrockEulerKrylovStruct
         close_pool!(method.WorkerPool)
     end
     
