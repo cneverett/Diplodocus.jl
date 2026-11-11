@@ -346,4 +346,3 @@ function HydroZVelocityPlot2D(type::Static,sol::OutputStruct,PhaseSpace::PhaseSp
     return fig
 
 end
-

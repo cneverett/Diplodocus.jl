@@ -20,8 +20,11 @@ module DiplodocusPlots
     # 2D plots
     #export NumberDensityPlot2D, NumberPlot2D, BulkGammaPlot2D
     export MagneticEnergyDensityPlot2D, MagneticFieldPlot2D
+    export MagnetisationPlot2D
     export EnergyDensityPlot2D, EquipartitionPlot2D
     export BulkGammaPlot2D, HydroZVelocityPlot2D
+    export NumberPlot2D
+    export NumberDensityPlot2D, GJMultiplicityPlot2D
 
     # Utilities 
     #export IsThermalPlot, IsIsotropicPlot, 

@@ -1,9 +1,24 @@
 """
-    NumberPlot2D(type,PhaseSpace,sol,species,surface;...)
+    NumberPlot2D(type,PhaseSpace,sol,coordinates,species,surface;...)
 
-Returns a density plot of the number of a `species` at a given `time_idx` on a specific spatial coordinate `surface`.
+Returns a density plot of the number of a `species` at a given `time_idx` on a 2D surface of spatial `coordinates` (These coordinates may or may not be the same coordinates used in a simulation). The surface is selected using the tuple `surface`, where the first entry indicates the surface e.g. `"xy"`, `"yz"` or `"xz"` and the second entry is an index defining the coordinate index of the coordinate remaining constant.
+
+Arguments:
+- `type::PlotType` determines the type of plot to generate, it can be either `Static` or `Animated`.
+- `PhaseSpace::PhaseSpaceStruct` is the structure containing the phase space information of the simulation.
+- `sol::OutputStruct` is the solution object containing the distribution function of all particles and time stepping information of the simulation. 
+- `species::String` is the abbreviated three letter name of the particle species to plot.
+- `coordinates::AbstractCoordinates` is the coordinate system for the plot to use (may or may not be the same as the simulation coordinates e.g. a simulation run in paraboloidal coordinates may be plotted in cylindrical coordinates).
+- `surface::Tuple{String,Int64}` the first entry is a string that defines which 2D coordinates are being plotted while the third defines the index of the third coordinate that remains constant on this surface.
+
+Common keyword arguments: 
+- `theme=DiplodocusDark()`: the colour theme to use for the plot, can be either `DiplodocusDark()` for dark mode or `DiplodocusLight()` for light mode.
+- `plot_limits=(nothing,nothing)`: the limits of the x and y axes, default sets the limits automatically based on the data.
+- `wide=false`: if `true`, the plot is generated in a wide format (double column 8:3 aspect ratio), if `false` (single column 4:3 aspect ratio).
+- `x_units::String="\\text{Code Units}"`: LaTeX string to be plotted as the x axis units
+- `y_units::String="\\text{Code Units}"`: LaTeX string to be plotted as the x axis units 
 """
-function NumberPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::String,coordinates::AbstractCoordinates,surface::Tuple{String,Int64};time_idx::Int64=1,theme=DiplodocusDark(),title=nothing,TimeUnits::Function=CodeToCodeUnitsTime,wide=false,plot_limits=(nothing,nothing))
+function NumberPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,species::String,coordinates::AbstractCoordinates,surface::Tuple{String,Int64};time_idx::Int64=1,theme=DiplodocusDark(),title=nothing,wide=false,plot_limits=(nothing,nothing),x_units::String="\\text{Code Units}",y_units::String="\\text{Code Units}")
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
@@ -32,7 +47,7 @@ function NumberPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruc
         fig = Figure() # default single column 4:3 aspect ratio
     end
 
-    xlab, ylab, nx_dir, ny_dir = SimToPlotGrid(PhaseSpace,surface,coordinates,sim_coordinates) 
+    xlab, ylab, nx_dir, ny_dir = SimToPlotGrid(PhaseSpace,surface,coordinates,sim_coordinates;x_units=x_units,y_units=y_units) 
 
     ax = Axis(fig[1,1],xlabel=xlab,ylabel=ylab)
     ax.limits = plot_limits
@@ -100,8 +115,6 @@ function NumberPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruc
 
     #hm = heatmap!(ax,xr_dir,yr_dir,num,colormap=theme.colormap_var)   
     hm = voronoiplot!(ax,x_points,y_points,num,colormap=theme.colormap_var,show_generators=false,strokewidth=0.1,nan_color=:transparent)      
-
-    t_unit_string = TimeUnits()
 
     Colorbar(fig[1,2],hm,label=L"$\text{num}$")
 
