@@ -1,5 +1,5 @@
 """
-    NumberPlot2D(type,PhaseSpace,sol,coordinates,species,surface;...)
+    NumberPlot2D(type,PhaseSpace,sol,species,coordinates,surface;...)
 
 Returns a density plot of the number of a `species` at a given `time_idx` on a 2D surface of spatial `coordinates` (These coordinates may or may not be the same coordinates used in a simulation). The surface is selected using the tuple `surface`, where the first entry indicates the surface e.g. `"xy"`, `"yz"` or `"xz"` and the second entry is an index defining the coordinate index of the coordinate remaining constant.
 

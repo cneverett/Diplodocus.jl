@@ -464,11 +464,3 @@ function GJMultiplicityPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::Out
     end # with_theme
 
 end
-
-
-
-
-######### Just for Thesis ##########
-
-# Jet loading plot 
-
