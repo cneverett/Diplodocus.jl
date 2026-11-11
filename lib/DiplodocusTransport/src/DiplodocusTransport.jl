@@ -28,7 +28,7 @@ module DiplodocusTransport
     export InitialiseInitialCondition, InitialConstant!, InitialMaxwellJuttner!, InitialPowerLaw!, InitialBoostedPowerLaw!, InitialBlackBody!, InitialPowerLawExpDecay!, InitialKappa!, InitialKappaExpDecay!
     export InitialiseInjectionCondition, InjectionConstant!, InjectionMaxwellJuttner!, InjectionPowerLaw!, InjectionBoostedPowerLaw!, InjectionBlackBody!, InjectionPowerLawExpDecay!, InjectionKappa!, InjectionKappaExpDecay!
     # Solvers 
-    export Solve, AbstractSteppingMethod, ImplicitSteppingMethod, ExplicitSteppingMethod, ForwardEulerStruct, ForwardSymplecticEulerStruct, ExponentialRosenbrockEulerKrylovStruct, ExponentialRosenbrockEulerKrylovMixedStruct
+    export Solve, AbstractSteppingMethod, ImplicitSteppingMethod, ExplicitSteppingMethod, ForwardEulerStruct, ForwardSymplecticEulerStruct, ExponentialRosenbrockEulerKrylovStruct
     export OutputStruct, SolutionFileLoad
     # Utilities
     export GlobalIndicesToStateIndex,LocationSpeciesToStateVector, CoordinateTransform!, CoordinateBasisTransform!, InclusiveDomainMask, ExclusiveDomainMask
