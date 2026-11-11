@@ -52,6 +52,8 @@ module DiplodocusPlots
 
     # Transport Plots
     
+    include("TransportPlots/StaticAnimated//PlotUtilities.jl")
+
     # Static Plots
     include("TransportPlots/Experimental/ObserverFlux.jl")
     include("TransportPlots/StaticAnimated/TimeScale.jl")
@@ -62,15 +64,15 @@ module DiplodocusPlots
     include("TransportPlots/StaticAnimated/EnergyDensity0D.jl")
     include("TransportPlots/StaticAnimated/Number0D.jl")
     include("TransportPlots/StaticAnimated/ThermalAndIsotropic0D.jl")
+    include("TransportPlots/Experimental/AngleDistribution.jl")
 
     # 1D (space) plots
-    include("TransportPlots/StaticAnimated/Distribution1D.jl")
+    include("TransportPlots/Experimental/Distribution1D.jl")
     include("TransportPlots/StaticAnimated/NumberDensity1D.jl")
     include("TransportPlots/StaticAnimated/Number1D.jl")
     include("TransportPlots/StaticAnimated/Hydro1D.jl")
 
     # 2D (space) plots
-    include("TransportPlots/StaticAnimated/2DPlotUtilities.jl")
     include("TransportPlots/StaticAnimated/NumberDensity2D.jl")
     include("TransportPlots/StaticAnimated/Hydro2D.jl")
     include("TransportPlots/StaticAnimated/Number2D.jl")

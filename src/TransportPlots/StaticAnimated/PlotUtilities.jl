@@ -1,3 +1,26 @@
+function find_closest(A::AbstractArray{T}, b::T) where {T<:Real}
+    if length(A) <= 1
+        return firstindex(A)
+    end
+
+    i = searchsortedfirst(A, b)
+
+    if i == firstindex(A)
+        return i
+    elseif i > lastindex(A)
+        return lastindex(A)
+    else
+        prev_dist = b - A[i-1]
+        next_dist = A[i] - b
+
+        if prev_dist < next_dist
+            return i - 1
+        else
+            return i
+        end
+    end
+end
+
 function SimToPlotGrid(PhaseSpace::PhaseSpaceStruct,surface::Tuple{String,Int64},plot_coordinates::AbstractCoordinates,sim_coordinates::AbstractCoordinates;x_units::String="\\text{Code Units}",y_units::String="\\text{Code Units}")
 
     surface_string = surface[1]
