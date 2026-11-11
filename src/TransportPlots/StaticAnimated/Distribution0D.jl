@@ -695,7 +695,7 @@ function AzimuthalAngleDistributionPlot0D(sol,species::Vector{String},PhaseSpace
         dNdphi = @lift begin
             f3D = zeros(Float32,p_num,u_num,h_num)
             f1D = zeros(Float32,p_num*u_num*h_num)
-            f1D .= copy(LocationSpeciesToStateVector(sol.f[i],PhaseSpace,species_index=species_index,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx))
+            f1D .= copy(LocationSpeciesToStateVector(sol.f[$time_idx],PhaseSpace,species_index=species_index,x_idx=x_idx,y_idx=y_idx,z_idx=z_idx))
             f3D .= reshape(f1D,(p_num,u_num,h_num))
             @. f3D = f3D*(f3D!=Inf)
             # scale by order

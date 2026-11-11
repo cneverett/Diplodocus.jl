@@ -1,5 +1,5 @@
 """
-    ImprovedTimeScalePlot(PhaseSpace, sol,species,t_idx,EmiInteractions,BinInteractions,Forces;advection=true,dt=1.0)
+    TimeScalePlot(PhaseSpace, sol,species,t_idx,EmiInteractions,BinInteractions,Forces;advection=true,dt=1.0)
 
 Function plots the time scales for gain and loss rates of a simulation given the system solution `sol` at a time index `t_idx` for a set of `species`, and the desired sets of emissive interactions `EmiInteractions`, binary interactions `BinInteractions`, and forces `Forces`, with an to also display the advection timescales and time step.
 
@@ -12,7 +12,7 @@ Optional arguments:
 - `rate`: default is `false`. The default of `false` plots the gain and loss timescales of the specified interactions (τ), if set to `true` the rate will be plotted instead (1/τ).
 - `p_timescale`: default is `false`. If `true`, the plot will show the timescale for momentum loss rather than that of number loss.
 """
-function ImprovedTimeScalePlot(PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,t_idx::Int64,species::Vector{String},DataDirectory::String;forces::Union{Nothing,Vector{AbstractForce}}=nothing,emissions::Union{Nothing,Vector{EmissiveInteraction}}=nothing,binaries::Union{Nothing,Vector{BinaryInteraction}}=nothing,advection=true,dt::Union{Nothing,Float64}=nothing,theme=DiplodocusDark(),x_idx::Int64=1,y_idx::Int64=1,z_idx::Int64=1,u_indices::Union{Nothing,Vector{Int64}}=nothing,y_limits_time=(nothing,nothing),y_limits_rate=(nothing,nothing),y_limits_dis=(nothing,nothing),p_timescale::Bool=false,net_rate::Bool=false,rate_order::Int64=2,figsize::Tuple{Int64,Int64}=(576,1080))
+function TimeScalePlot(PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,t_idx::Int64,species::Vector{String},DataDirectory::String;forces::Union{Nothing,Vector{AbstractForce}}=nothing,emissions::Union{Nothing,Vector{EmissiveInteraction}}=nothing,binaries::Union{Nothing,Vector{BinaryInteraction}}=nothing,advection=true,dt::Union{Nothing,Float64}=nothing,theme=DiplodocusDark(),x_idx::Int64=1,y_idx::Int64=1,z_idx::Int64=1,u_indices::Union{Nothing,Vector{Int64}}=nothing,y_limits_time=(nothing,nothing),y_limits_rate=(nothing,nothing),y_limits_dis=(nothing,nothing),p_timescale::Bool=false,net_rate::Bool=false,rate_order::Int64=2,figsize::Tuple{Int64,Int64}=(576,1080))
 
     CairoMakie.activate!(inline=true) # plot in vs code window
     with_theme(theme) do
