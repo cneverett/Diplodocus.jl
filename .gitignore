@@ -1,6 +1,10 @@
 /Manifest.toml
 /docs/Manifest.toml #important for docs build
 /test/Manifest.toml
+/lib/DiplodocusCollisions/Manifest.toml
+/lib/DiplodocusCollisions/test/Manifest.toml
+/lib/DiplodocusTransport/Manifest.toml
+/lib/DiplodocusTransport/test/Manifest.toml
 
 /docs/build/
 /docs/node_modules/
