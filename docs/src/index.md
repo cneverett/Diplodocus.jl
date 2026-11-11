@@ -29,11 +29,9 @@ hero:
 
 # What is Diplodocus.jl?
 
-Diplodocus.jl is a Julia package for modelling of high energy astrophysical sources such as jets from Active Galactic Nuclei, Gamma-Ray Bursts, and X-Ray Binaries. 
+Diplodocus.jl is a Julia package for modelling generalised phase-space transport. This means the evolution of particle distribution functions under the action of arbitrary forces, anisotropic particle interactions, and emissive processes on a curved spacetime background with options to add complex electromagnetic field structures. Therefore, Diplodocus.jl is well suited to the study of high-energy astrophysical sources such as jets from Active Galactic Nuclei, Gamma-Ray Bursts, and X-Ray Binaries, acting as a bridge between macro-scale simulations of spatial structure and dynamics (e.g. GRMHD) and micro-scale modelling of particle interactions an emissive processes (e.g. one-/multi-zone approaches); capable of including both regimes!
 
-It acts as a bridge between macro-scale simulations of spatial structure and dynamics (e.g. GRMHD) and micro-scale modelling of particle interactions an emissive processes (e.g. one-/multi-zone approaches); capable of including both regimes! Diplodocus.jl solves the phase-space transport of particle distribution functions, including: arbitrary forces and asymmetric interactions on a curved spacetime background with options to add complex electromagnetic field structures. 
-
-By evolving particles in space, momentum, and time, Diplodocus.jl captures of all the these multi-scale effects simultaneously and self-consistently, allowing the generation of multi-wavelength emission spectra and imaging through which the true physics of a wide range of astrophysical objects can be studied.      
+Through the simultaneous and self-consistent capture of a wide range of multi-scale effects, Diplodocus.jl can be used to generate multi-wavelength emission spectra and imaging through which the true physics of a wide range of astrophysical objects may be studied.      
 
 ## Citing Diplodocus.jl
 
