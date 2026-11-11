@@ -1,5 +1,5 @@
 /Manifest.toml
-/docs/Manifest.toml #important for docs build
+/docs/Manifest.toml
 /test/Manifest.toml
 /lib/DiplodocusCollisions/Manifest.toml
 /lib/DiplodocusCollisions/test/Manifest.toml
