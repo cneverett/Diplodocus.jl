@@ -1,9 +1,26 @@
 """
-    ElectroMagneticFieldPlot2D(type,PhaseSpace,sol,species,surface,time_idx;...)
+    MagneticFieldPlot2D(type,PhaseSpace,sol,species,coordinates,surface,time_idx;...)
 
-Returns a density plot of the electromagnetic field of a `species` at a given `time_idx` on a specific spatial coordinate `surface`.
+Returns a density plot of the electromagnetic field of a `species` at a given `time_idx` on a 2D surface of spatial `coordinates` (These coordinates may or may not be the same coordinates used in a simulation). The surface is selected using the tuple `surface`, where the first entry indicates the surface e.g. `"xy"`, `"yz"` or `"xz"` and the second entry is an index defining the coordinate index of the coordinate remaining constant.
+
+Arguments:
+- `type::PlotType` determines the type of plot to generate, it can be either `Static` or `Animated`.
+- `PhaseSpace::PhaseSpaceStruct` is the structure containing the phase space information of the simulation.
+- `sol::OutputStruct` is the solution object containing the distribution function of all particles and time stepping information of the simulation. 
+- `species::String` is the abbreviated three letter name of the particle species to plot.
+- `coordinates::AbstractCoordinates` is the coordinate system for the plot to use (may or may not be the same as the simulation coordinates e.g. a simulation run in paraboloidal coordinates may be plotted in cylindrical coordinates).
+- `surface::Tuple{String,Int64}` the first entry is a string that defines which 2D coordinates are being plotted while the third defines the index of the third coordinate that remains constant on this surface.
+
+Common keyword arguments: 
+- `theme=DiplodocusDark()`: the colour theme to use for the plot, can be either `DiplodocusDark()` for dark mode or `DiplodocusLight()` for light mode.
+- `plot_limits=(nothing,nothing)`: the limits of the x and y axes, default sets the limits automatically based on the data.
+- `wide=false`: if `true`, the plot is generated in a wide format (double column 8:3 aspect ratio), if `false` (single column 4:3 aspect ratio).
+- `x_units::String="\\text{Code Units}"`: LaTeX string to be plotted as the x axis units
+- `y_units::String="\\text{Code Units}"`: LaTeX string to be plotted as the x axis units
+- `log_B=false`: If `true` the Log10 of the magnetic will be plotted.
+- `BFieldUnits::Tuple{Float64,String}=(1.0,"\\text{Code Units}")`: A scale factor and LaTeX string with which to scale the magnetic field and dictate its units. 
 """
-function ElectroMagneticFieldPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,coordinates::AbstractCoordinates,surface::Tuple{String,Int64};time_idx::Int64=1,fig=nothing,theme=DiplodocusDark(),title=nothing,wide=false,plot_limits=(nothing,nothing),log_B=false,figsize::Tuple{Int64,Int64}=(576,216),x_units::String="\\text{Code Units}",y_units::String="\\text{Code Units}",BFieldUnits::Tuple{Float64,String}=(1.0,"\\text{Code Units}"))
+function MagneticFieldPlot2D(type::Static,PhaseSpace::PhaseSpaceStruct,sol::OutputStruct,coordinates::AbstractCoordinates,surface::Tuple{String,Int64};time_idx::Int64=1,fig=nothing,theme=DiplodocusDark(),title=nothing,wide=false,plot_limits=(nothing,nothing),log_B=false,figsize::Tuple{Int64,Int64}=(576,216),x_units::String="\\text{Code Units}",y_units::String="\\text{Code Units}",BFieldUnits::Tuple{Float64,String}=(1.0,"\\text{Code Units}"))
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
