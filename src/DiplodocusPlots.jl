@@ -10,12 +10,12 @@ module DiplodocusPlots
     export TimeScalePlot
     export NumberDensityPlot0D
     export EnergyDensityPlot0D
-    export IsThermalAndIsotropicPlot0D
+    export IsThermalAndIsotropicPlot0D, IsThermalPlot0D, IsIsotropicPlot0D
 
     # 1D plots
     export VelocityZPlot1D, PressurePlot1D, TemperaturePlot1D
     export NumberPlot1D, NumberDensityPlot1D
-    #export MomentumDistributionPlot1D, NumberDensityPlot1D, NumberPlot1D
+    #export MomentumDistributionPlot1D, MomentumAndPolarAngleDistributionPlot1D
 
     # 2D plots
     #export NumberDensityPlot2D, NumberPlot2D, BulkGammaPlot2D

@@ -1,5 +1,5 @@
 """
-    MomentumDistribution1DPlot(type,sol,species,PhaseSpace,time_idx;...)
+    MomentumDistributionPlot1D(type,PhaseSpace,sol,species,direction,time_idx;...)
 
 Plots the angle averaged distribution function of a given vector of particle `species` as a function of distance along a single spatial dimension given by `direction` at a given time (`t_idx`) given by the `sol` based on the conditions held in `PhaseSpace`. 
     
@@ -20,7 +20,7 @@ Animated arguments:
 - `figure`: default is `nothing`, which creates a new figure. If a figure is provided, the plot is added to that figure instead of creating a new one, this should be of the form of a tuple of `figure` and `time_idx` from the main plot.
 - `initial`: default is `false`, if `true` causes the initial distribution to remain on the plot
 """
-function MomentumDistribution1DPlot(type::Static,sol,species::Vector{String},PhaseSpace::PhaseSpaceStruct,direction::String,t_idx::Int64;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,thermal=false,plot_limits=(nothing,nothing),wide=false,legend=true)
+function MomentumDistributionPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol,species::Vector{String},direction::String,t_idx::Int64;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,thermal=false,plot_limits=(nothing,nothing),wide=false,legend=true)
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
@@ -239,7 +239,7 @@ function MomentumDistribution1DPlot(type::Static,sol,species::Vector{String},Pha
 
 end
 
-function MomentumDistributionPlot1D(type::Animated,sol,species::Vector{String},PhaseSpace::PhaseSpaceStruct,direction::String;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,thermal=false,plot_limits=(nothing,nothing),wide=false,legend=true,framerate=12,filename="MomentumDistribution1D.mp4",figure=nothing)
+function MomentumDistributionPlot1D(type::Animated,PhaseSpace::PhaseSpaceStruct,sol,species::Vector{String},direction::String;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime,thermal=false,plot_limits=(nothing,nothing),wide=false,legend=true,framerate=12,filename="MomentumDistribution1D.mp4",figure=nothing)
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
@@ -446,7 +446,7 @@ function MomentumDistributionPlot1D(type::Animated,sol,species::Vector{String},P
 end
 
 """
-    MomentumAndPolarAngleDistribution1DPlot(type,sol,PhaseSpace,species,coordinates,time_idx;...)
+    MomentumAndPolarAngleDistributionPlot1D(type,PhaseSpace,sol,species,coordinates,time_idx;...)
 
 Plots the distribution function given by `sol` of a given particle `species` as a function of momentum ``p`` and polar angle ``u`` at a given `time_idx` at three `coordinates` locations. 
 
@@ -465,7 +465,7 @@ Animated arguments:
 - `filename`: the name of the file to save the animation to, default is "MomentumAndPolarAngleDistribution.mp4".
 
 """
-function MomentumAndPolarAngleDistribution1DPlot(type::Static,sol,PhaseSpace::PhaseSpaceStruct,species::String,coordinates::Tuple{Tuple{Int64,Int64,Int64},Tuple{Int64,Int64,Int64},Tuple{Int64,Int64,Int64}},time_idx::Int64;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime)
+function MomentumAndPolarAngleDistributionPlot1D(type::Static,PhaseSpace::PhaseSpaceStruct,sol,species::String,coordinates::Tuple{Tuple{Int64,Int64,Int64},Tuple{Int64,Int64,Int64},Tuple{Int64,Int64,Int64}},time_idx::Int64;theme=DiplodocusDark(),order::Int64=1,TimeUnits::Function=CodeToCodeUnitsTime)
 
     CairoMakie.activate!(inline=true) # plot in vs code window
 
