@@ -118,14 +118,14 @@ DataDirectory = joinpath(pwd(),"Data")
 
 # Then we build three sets of matrices: `BinM` for the binary interactions, `EmiM` for the emissive interactions and `FluxM` for phase-space transport.
 
-BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false); # jl
-BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false) # md
+BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false); #jl
+BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false) #md
 
-EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true); # jl 
-EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true) # md
+EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true); #jl 
+EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true) #md
 
-FluxM = BuildFluxMatrices(PhaseSpace,Forces_list); # jl
-FluxM = BuildFluxMatrices(PhaseSpace,Forces_list) # md
+FluxM = BuildFluxMatrices(PhaseSpace,Forces_list); #jl
+FluxM = BuildFluxMatrices(PhaseSpace,Forces_list) #md
 
 # Here we have used the argument `Bin_corrected=true` to use the number and energy density correct binary collision matrices, and the argument `Bin_sparse=false` to define the binary collision matrix as a dense matrix.
 # The size of all these matrices is determined by the resolution of the phase-space grids and the sparsity of the interactions. The total size will be printed to the standard output once these matrices are built.

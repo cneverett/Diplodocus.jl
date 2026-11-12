@@ -4,7 +4,7 @@ version = "1.0.0"
 authors = ["Christopher Everett"]
 
 [workspace]
-projects = ["test", "lib/DiplodocusCollisions", "lib/DiplodocusTransport", "lib/DiplodocusPlots"]
+projects = ["lib/DiplodocusCollisions", "lib/DiplodocusTransport", "lib/DiplodocusPlots"]
 
 [deps]
 DiplodocusCollisions = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"

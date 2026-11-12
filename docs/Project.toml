@@ -1,6 +1,3 @@
-[compat]
-julia = "1.12"
-
 [deps]
 Diplodocus = "792d114c-f8c3-4b81-9580-cc03468a5b58"
 DiplodocusCollisions = "32d0d58a-4da0-4f8e-8b7e-c2816ac6e5cb"
@@ -12,17 +9,14 @@ DocumenterVitepress = "4710194d-e776-4893-9690-8d956a29c365"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"
 
+[sources]
+Diplodocus = {path = ".."}
+DiplodocusCollisions = {path = "../lib/DiplodocusCollisions"}
+DiplodocusPlots = {path = "../lib/DiplodocusPlots"}
+DiplodocusTransport = {path = "../lib/DiplodocusTransport"}
+
+[compat]
+julia = "1.12"
+
 [extras]
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
-
-[sources.Diplodocus]
-path = ".."
-
-[sources.DiplodocusCollisions]
-path = "../lib/DiplodocusCollisions"
-
-[sources.DiplodocusPlots]
-path = "../lib/DiplodocusPlots"
-
-[sources.DiplodocusTransport]
-path = "../lib/DiplodocusTransport"

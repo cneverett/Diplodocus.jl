@@ -139,14 +139,12 @@ DataDirectory = joinpath(pwd(),"Data")
 Then we build three sets of matrices: `BinM` for the binary interactions, `EmiM` for the emissive interactions and `FluxM` for phase-space transport.
 
 ````julia
-BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false); # jl
-BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false) # md
+BinM = BuildBinaryMatrices(PhaseSpace,Binary_list,Binary_Domain,DataDirectory;Bin_corrected=true,Bin_sparse=false)
 
-EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true); # jl
-EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true) # md
+EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true); #jl
+EmiM = BuildEmissionMatrices(PhaseSpace,Emission_list,DataDirectory;Emi_corrected=true,Emi_sparse=true)
 
-FluxM = BuildFluxMatrices(PhaseSpace,Forces_list); # jl
-FluxM = BuildFluxMatrices(PhaseSpace,Forces_list) # md
+FluxM = BuildFluxMatrices(PhaseSpace,Forces_list)
 ````
 
 Here we have used the argument `Bin_corrected=true` to use the number and energy density correct binary collision matrices, and the argument `Bin_sparse=false` to define the binary collision matrix as a dense matrix.
