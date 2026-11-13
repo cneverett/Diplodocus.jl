@@ -21,7 +21,7 @@ name4 = "Sph"
 
 # ## Momentum Space Grids
 # 
-# Next is to define how momentum space is to be discretised for each particle species. Given that spheres are the only species here, we only need to define the discretisation for them, this includes the upper and lower bounds of momentum magnitude ``p`` (upper and lower bounds for polar angle cosine ``u`` and azimuthal angle ``h`` are not requrired as they are assume to be bounded by ``[-1,1]`` and ``[0, 2\pi]``), grid types (see [Particles, Grids and Units](@ref)) and the number of grid bins. These must be of the format `p_low_name`, `p_low_name`, `p_grid_name`, `p_num_name`, `u_grid_name`, `u_num_name`, `h_grid_name` and  `h_num_name` where `name` is the abbreviated three letter name of the particle species.
+# Next is to define how momentum space is to be discretised for each particle species. Given that spheres are the only species here, we only need to define the discretisation for them, this includes the upper and lower bounds of momentum magnitude ``p`` (upper and lower bounds for polar angle cosine ``u`` and azimuthal angle ``h`` are not required as they are assume to be bounded by ``[-1,1]`` and ``[0, 2\pi]``), grid types (see [Particles, Grids and Units](@ref)) and the number of grid bins. These must be of the format `p_low_name`, `p_low_name`, `p_grid_name`, `p_num_name`, `u_grid_name`, `u_num_name`, `h_grid_name` and  `h_num_name` where `name` is the abbreviated three letter name of the particle species.
 # 
 # For this tutorial we will select the momenta ``p`` ranges from ``10^{-5}m_\text{Ele}c`` to ``10^{4}m_\text{Ele}c`` consisting of 72 bins, 9 uniformly sized bins in polar angle cosine and 1 uniformly sized bin in azimuthal angle (i.e. axisymmetric).
 
@@ -170,7 +170,7 @@ DoesConserve(Output)
 # 
 # The above raw 1% error in particle number and 1% error in energy before and after a collision is not bad, but over many timesteps this will to poor conservation of number and energy.
 # 
-# There are two ways to improve this: first is to just increase the sampling by re-running the integration as described above. The second is to apply a correction to the outgoing spectra to enforce conservation of number and energy. This latter method guarantees conservation to numerical precision and is already built into `DiplodocusCollisions`. In brief, it applies two corrective scalings, one to the entire spectrum and one to the highest momentum bins. This ensures that the total gain of outgoing particles and their energy matches that of what is lost from the incoming states, which maintaing the shape of the spectra as much as possible.
+# There are two ways to improve this: first is to just increase the sampling by re-running the integration as described above. The second is to apply a correction to the outgoing spectra to enforce conservation of number and energy. This latter method guarantees conservation to numerical precision and is already built into `DiplodocusCollisions`. In brief, it applies two corrective scalings, one to the entire spectrum and one to the highest momentum bins. This ensures that the total gain of outgoing particles and their energy matches that of what is lost from the incoming states, which maintains the shape of the spectra as much as possible.
 #
 # This corrective step is applied as part of the integration and the resulting collision matrices can be accessed by setting `corrected=true` as an option of `BinaryFileLoad_Matrix` e.g. 
 
