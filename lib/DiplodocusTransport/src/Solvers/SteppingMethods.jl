@@ -734,15 +734,15 @@ function worker!(method::ExponentialRosenbrockEulerKrylovStruct,worker::Int,jobs
                     continue
                 end
 
-                # Compute φ functions of H
-                phiv!(ϕ,k,KsB,2;cache=ϕcacheB,correct=correct,errest=false) # TODO: This allocates                  
+                #=phiv!(ϕ,k,KsB,2;cache=ϕcacheB,correct=correct,errest=false) # TODO: This allocates                  
                 @. δ = S * Einv * @view(ϕ[:,2]) * k
                 @. fout = fold + δ
-                
                 @. fout = ifelse(fout < zero(HostPrecision), zero(HostPrecision),fout)
+                =# # Not needed as no energy error est needed anymore
 
                 dt_old = dt_local
 
+                # Compute φ functions of H to find acceptable local step size k
                 kϕ = kϕold < 1.0 ? 1.0 + kϕold : 2.0
                 errest = Inf
                 while errest > ηKrylov # k from ϕv errestimate, can be more strict than energy error estimate
@@ -764,13 +764,10 @@ function worker!(method::ExponentialRosenbrockEulerKrylovStruct,worker::Int,jobs
                 end
                 k = dt_local / dt_old
 
-                if k != 1.0
-
-                    phiv!(ϕ,k,KsB,2;cache=ϕcacheB,correct=correct,errest=false) # TODO: This allocates
-                    @. δ = S * Einv * @view(ϕ[:,2]) * k
-                    @. fout = fold + δ
-
-                end
+                # update momentum with step size k
+                phiv!(ϕ,k,KsB,2;cache=ϕcacheB,correct=correct,errest=false) # TODO: This allocates
+                @. δ = S * Einv * @view(ϕ[:,2]) * k
+                @. fout = fold + δ
 
                 # number and energy cut 
                 @. fout = ifelse(fout < method.n_cut && fout * E < method.n_cut, zero(HostPrecision),fout)
@@ -795,7 +792,6 @@ function worker!(method::ExponentialRosenbrockEulerKrylovStruct,worker::Int,jobs
             dt_local = dt_guess #/ 2 # initial guess for local time step, can adjust based on desired accuracy and problem stiffness
             dt_old = dt_local
 
-            kE = 1.0
             kϕ = 1.0
             k = 1.0
 
@@ -859,7 +855,7 @@ function worker!(method::ExponentialRosenbrockEulerKrylovStruct,worker::Int,jobs
                 end
 
                 # Compute φ functions of H
-                if HasInjection 
+                #=if HasInjection 
                     if KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
                         phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
                         @. δ = S * Einv * @view(ϕ[:,2]) * k
@@ -871,32 +867,30 @@ function worker!(method::ExponentialRosenbrockEulerKrylovStruct,worker::Int,jobs
                     phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
                     @. fout = S * Einv * @view(ϕ[:,1])
                 end
-
-                # adaptive time stepping
-
                 @. fout = ifelse(fout < zero(HostPrecision), zero(HostPrecision),fout)
+                
+                =# # not needed as no energy error est
 
                 dt_old = dt_local
 
+                # Compute φ functions of H to find acceptable local step size k
                 kϕ = kϕold < 1.0 ? 1.0 + kϕold : 2.0
                 errest = Inf
-                if HasInjection && KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
-                    kϕ = kϕold < 1.0 ? 1.0 + kϕold : 2.0
-                    errest = Inf
+                #if HasInjection && KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
                     while errest > ηKrylov # k from ϕv errestimate, can be more strict than energy error estimate
                         _, errest = phiv!(ϕ,kϕ,KsL,2;cache=ϕcacheL,correct=correct,errest=true) # TODO: This allocates
                         if errest > ηKrylov
                             kϕ *= 0.77 * 0.5(tanh(log10(errest/ηKrylov)+1)+1)
                         end
                     end
-                else
+                #=else
                     while errest > ηKrylov # k from ϕv errestimate, can be more strict than energy error estimate
                         _, errest = phiv!(ϕ,kϕ,KsL,2;cache=ϕcacheL,correct=correct,errest=true) # TODO: This allocates
                         if errest > ηKrylov
                             kϕ *= 0.77 * 0.5(tanh(log10(errest/ηKrylov)+1)+1)
                         end
                     end
-                end
+                end=#
                 k = min(prevpow2_float(kϕ),2.0) # maximum increase of 2 and set to only 2^n values
 
                 dt_local = k*dt_old
@@ -910,20 +904,17 @@ function worker!(method::ExponentialRosenbrockEulerKrylovStruct,worker::Int,jobs
                 end
                 k = dt_local / dt_old
 
-                if k != 1.0
-                    if HasInjection 
-                        if KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
-                            phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
-                            @. δ = S * Einv * @view(ϕ[:,2]) * k
-                            @. fout = fold + δ
-                        else
-                            @. fout = fold + df_Inj * k * dtscale
-                        end
-                    else # no injection, just linear Jacobian so use exp over phi
+                if HasInjection 
+                    if KsL.m != 1 # only do ϕv error estimate if injection is present and J has entries
                         phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
-                        @. fout = S * Einv * @view(ϕ[:,1])
+                        @. δ = S * Einv * @view(ϕ[:,2]) * k
+                        @. fout = fold + δ
+                    else
+                        @. fout = fold + df_Inj * k * dtscale
                     end
-
+                else # no injection, just linear Jacobian so use exp over phi
+                    phiv!(ϕ,k,KsL,2;cache=ϕcacheL,correct=correct,errest=false) # TODO: This allocates
+                    @. fout = S * Einv * @view(ϕ[:,1])
                 end
 
                 @. fout = ifelse(fout < method.n_cut && fout * E < method.n_cut, zero(HostPrecision),fout)

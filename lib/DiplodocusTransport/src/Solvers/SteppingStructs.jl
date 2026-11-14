@@ -680,7 +680,10 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
             end
 
             dt_guess = zeros(HostPrecision, n_space)
-            fill!(dt_guess,ldexp(dt_min, -5)) # initial guess for dt is 1/64 of the initial dt
+            fill!(dt_guess,ldexp(dt_min, -5)) # initial guess for dt is 1/32 of the initial dt
+            if LocalMomentumUpdate 
+                @. dt_guess *= momentum_step # scale guess by how many dt_min before momentum update should be called.
+            end
 
             ###### Actually Build the Struct with Concrete Types ######
 

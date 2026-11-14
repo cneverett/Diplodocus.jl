@@ -45,9 +45,13 @@ function Solve(method::AbstractSteppingMethod,dt_initial::T,t_save::Vector{T};pr
     dt::T = dt_initial
 
     if method isa ExponentialRosenbrockEulerKrylovStruct
-        fill!(method.dt_guess,ldexp(dt_initial, -5)) # initial guess for dt is 1/32 of the initial dt
-    elseif method isa ExponentialRosenbrockEulerKrylovMixedStruct
-        @. method.dt_guess = ldexp(dt_initial * method.momentum_step, -5) # initial guess for dt is 1/32 of the initial dt multiplied by the size of the local step allowed by X_flux
+        # reset dt_guess
+        fill!(method.dt_guess,ldexp(method.dt_initial,-5)) # initial guess for dt is 1/32 of the initial dt
+        println(method.dt_guess[50])
+        if method.LocalMomentumUpdate 
+            @. method.dt_guess *= method.momentum_step # scale guess by how many dt_initial before momentum update should be called.
+        end
+        println(method.dt_guess[50])
         # check dt <= dt_min from X_Flux 
         if dt > method.dt_initial
             @warn "Chosen dt may lead to unstable space updates"
