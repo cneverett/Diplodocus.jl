@@ -46,8 +46,9 @@ module DiplodocusTransport
     using CUDA.cuSPARSE
     using HCubature
     using StaticArrays
-    using ForwardDiff, Preferences
-    set_preferences!(ForwardDiff, "nansafe_mode" => true) # safer 
+    using ForwardDiff
+    #using Preferences
+    #set_preferences!(ForwardDiff, "nansafe_mode" => true) # safer 
     using ExponentialUtilities
     using Zarr
 
