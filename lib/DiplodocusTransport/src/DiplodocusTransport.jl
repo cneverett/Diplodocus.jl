@@ -44,8 +44,6 @@ module DiplodocusTransport
     using SparseArrays
     using CUDA
     using CUDA.cuSPARSE
-    using MKL
-    using MKLSparse
     using HCubature
     using StaticArrays
     using ForwardDiff, Preferences
