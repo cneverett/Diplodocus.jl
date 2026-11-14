@@ -324,6 +324,7 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
     - `n_cut::Float64=1e-45`: cut off for the distribution function (number density in code units)
     - `nworkers::Int64=1`: number of threads to operate momentum updates of different spatial cells in parallel (only need 1 if there is only 1 spatial cell)
     - `LocalMomentumUpdate::Bool=false`: if `false` the momentum update for all spatial cells is computed every time step according to the global dt (`dt_initial`) which is set to the minimum advection time scale in the `ActiveDomain`. If `true` dt for momentum updates is chosen based on the local minimum advection time scale for each spatial cell, reducing computational demand.
+    - `nsubsteps::Int64=0`: To be used with `LocalMomentumUpdate=true` to reduce the default dt for a cell momentum updates based on the spatial CFL condition by 2^nsubsteps.
 
     Krylov Specific Keyword Arguments:
         - `mB::Int64=128`: the dimension of the Krylov subspace for momentum updates that include binary interactions
@@ -421,7 +422,9 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
 
         dt_guess::Vector{HT}             # guess for dt based on CFL condition
 
-        function ExponentialRosenbrockEulerKrylovStruct(PhaseSpace::PhaseSpaceStruct,Initial::Vector{Float64},Injection::Vector{Float64},BinM::BinaryMatricesStruct,EmiM::EmissionMatricesStruct,FluxM::FluxMatricesStruct;n_cut::Float64=1e-45,DistributionDomainMask::Union{Vector{Int64},Nothing}=nothing,DeltaDistributionDomainMask::Union{Vector{Int64},Nothing}=nothing,nworkers::Int64=1,LocalMomentumUpdate::Bool=false,mB::Int64=128,mL::Int64=64,etaKrylov::Float64=1e-8)
+        function ExponentialRosenbrockEulerKrylovStruct(PhaseSpace::PhaseSpaceStruct,Initial::Vector{Float64},Injection::Vector{Float64},BinM::BinaryMatricesStruct,EmiM::EmissionMatricesStruct,FluxM::FluxMatricesStruct;n_cut::Float64=1e-45,DistributionDomainMask::Union{Vector{Int64},Nothing}=nothing,DeltaDistributionDomainMask::Union{Vector{Int64},Nothing}=nothing,nworkers::Int64=1,LocalMomentumUpdate::Bool=false,mB::Int64=128,mL::Int64=64,etaKrylov::Float64=1e-8,nsubsteps::Int64=0)
+
+            @assert nsubsteps >= 0 "nsubsteps should be <= 0. Cannot make momentum update steps larger as this is inconsistent with solver method"
 
             Backend = getfield(Main,Symbol("Backend"))
             DevicePrecision = getfield(Main,Symbol("Precision"))
@@ -637,7 +640,8 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
                 println("minsteps: $min_steps")
                 # we now want to scale n -> n - nmin so that each n is a multiple of the smallest timestep 
                 momentum_step .-= min_steps 
-                @. momentum_step = ifelse(momentum_step > 0, momentum_step-1, momentum_step) # do twice the number of required steps if > 2^0
+                @. momentum_step -= nsubsteps # do 2^nsubsteps more steps than required by the spatial CFL condition
+                @. momentum_step = max(momentum_step,0) # smallest step allowed for momentum is 2^0
                 # now generate Δt intervals for each momentum step to be evaluated
                 momentum_step = 2 .^ momentum_step
                 # now when mod(method.step,momentum_steps) = 0 momentum update should be evaluated
