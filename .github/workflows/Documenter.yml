@@ -28,12 +28,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup Julia
-        uses: julia-actions/setup-julia@v1
+        uses: julia-actions/setup-julia@v3
       - name: Load Julia packages from cache
         id: julia-cache
-        uses: julia-actions/cache@v2
+        uses: julia-actions/cache@v3
       - name: Build and deploy
         uses: julia-actions/julia-docdeploy@v1
         with:
