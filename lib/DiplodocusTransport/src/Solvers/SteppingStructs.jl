@@ -308,7 +308,7 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
     end
 
     """
-        ExponentialRosenbrockEulerKrylov(PhaseSpace,Initial,Injection,BinM,EmiM,FluxM;...n_cut::Float64=1e-45,DistributionDomainMask::Union{Vector{Int64},Nothing}=nothing,DeltaDistributionDomainMask::Union{Vector{Int64},Nothing}=nothing,mB::Int64=128,mL::Int64=32,nworkers::Int64=8,LocalMomentumUpdate::Bool=false)
+        ExponentialRosenbrockEulerKrylov(PhaseSpace,Initial,Injection,BinM,EmiM,FluxM;...n_cut::Float64=1e-45,DistributionDomainMask::Union{Vector{Int64},Nothing}=nothing,DeltaDistributionDomainMask::Union{Vector{Int64},Nothing}=nothing,mB::Int64=128,mL::Int64=32,nworkers::Int64=1,LocalMomentumUpdate::Bool=false)
 
     2nd order Exponential integration time-stepping method for the transport equation.
 
@@ -333,8 +333,8 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
     """
     mutable struct ExponentialRosenbrockEulerKrylovStruct{HT<:AbstractFloat,DT<:AbstractFloat,HVT<:Vector{HT},DVT<:Union{Vector{DT},CuArray{DT,1,CUDACore.DeviceMemory}},HMT<:Matrix{HT},DMT<:Union{Matrix{DT},CuArray{DT,2,CUDACore.DeviceMemory}},HSMT<:SparseMatrixCSC{HT,Int32},DSMT<:Union{CuSparseMatrixCSR{DT,Int32},SparseMatrixCSC{DT,Int32}},BD<:Union{Vector{Int64},Nothing},FD<:Union{DVT,Nothing},DFD<:Union{DVT,Nothing}} <: ImplicitSteppingMethod
 
-        # mixed backend so only MBin multiplication is done on device and then transfered back to host for the rest of the calculations
-        # i.e. Jacobian and F are generated on device then transfered back if in a BinaryDomain, if not they are taken from the stored sparse arrays on host.
+        # mixed backend so only MBin multiplication is done on device and then transferred back to host for the rest of the calculations
+        # i.e. Jacobian and F are generated on device then transferred back if in a BinaryDomain, if not they are taken from the stored sparse arrays on host.
 
         # device refers to either on CPU if backend is `CPUBackend()` or on a GPU if for example backend is `CUDABackend()`
 
@@ -426,6 +426,11 @@ abstract type ExplicitSteppingMethod <: AbstractSteppingMethod end
             Backend = getfield(Main,Symbol("Backend"))
             DevicePrecision = getfield(Main,Symbol("Precision"))
             HostPrecision = Float64
+
+            # set BLAS threads to avoid multiple workers spawning their own BLAS threads
+            if nworkers != 1 
+                BLAS.set_num_threads(1)
+            end
 
             @assert DevicePrecision == Float32 || DevicePrecision == Float64 "Precision for device arrays must be either Float32 or Float64"
 
