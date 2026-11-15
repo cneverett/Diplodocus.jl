@@ -27,6 +27,12 @@ hero:
 
 ```
 
+::: warning
+
+The release of v1.0 of Diplodocus.jl brings major upgrades and improvements to the code, however, the documentation presented here has not yet been fully updated to include these modifications. As such, some of this documentation may be out of date and is being incrementally updated.
+
+:::
+
 # What is Diplodocus.jl?
 
 Diplodocus.jl is a Julia package for modelling generalised phase-space transport. This means the evolution of particle distribution functions under the action of arbitrary forces, anisotropic particle interactions, and emissive processes on a curved spacetime background with options to add complex electromagnetic field structures. Therefore, Diplodocus.jl is well suited to the study of high-energy astrophysical sources such as jets from Active Galactic Nuclei, Gamma-Ray Bursts, and X-Ray Binaries, acting as a bridge between macro-scale simulations of spatial structure and dynamics (e.g. GRMHD) and micro-scale modelling of particle interactions an emissive processes (e.g. one-/multi-zone approaches); capable of including both regimes!

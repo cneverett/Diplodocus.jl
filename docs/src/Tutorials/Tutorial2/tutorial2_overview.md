@@ -17,3 +17,8 @@ Raw julia scripts for each of these parts can be found in the Diplodocus.jl GitH
 juila> include("Tutorial2_binary_collisions.jl")
 
 ```
+
+## Reference
+```@bibliography
+Pages = ["tutorial2_overview.md"]
+```

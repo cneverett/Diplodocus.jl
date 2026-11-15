@@ -3,13 +3,11 @@
 Several tutorials have been designed to familiarise users with how to set up and run successful simulations using the *Diplodocus.jl* code.
 
 - [Tutorial 1: Evolution of a Population of Hard Spheres](@ref)
-- [Tutorial 2: Cooling of Electrons via Radiation Reaction](@ref)
-- [Tutorial 3: Synchrotron Emissions](@ref)
-- [Tutorial 4: Synchrotron Self Compton with Pair Production](@ref)
+- [Tutorial 2: Non-Linear Electron Cooling](@ref)
 
 ::: info
 
-These tutorials only cover systems which are homogenous in space. Tutorials covering spatial variation are in development
+These tutorials only cover systems which are homogenous in space. Tutorials covering spatial variation are in development.
 
 :::
 
