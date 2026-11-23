@@ -5,3 +5,12 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+  - package-ecosystem: "julia"
+    directories:
+    - "/"
+    - "/docs"
+    - "/lib/DiplodocusCollisions"
+    - "/lib/DiplodocusTransport"
+    - "/lib/DiplodocusPlots"
+    schedule: 
+      interval: "weekly"
