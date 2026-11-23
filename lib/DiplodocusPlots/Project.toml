@@ -18,7 +18,7 @@ DiplodocusCollisions = {path = "../DiplodocusCollisions"}
 DiplodocusTransport = {path = "../DiplodocusTransport"}
 
 [compat]
-CairoMakie = "0.13.7"
+CairoMakie = "0.13.7, 0.15"
 ColorSchemes = "3.31"
 DiplodocusCollisions = "1.0.0"
 DiplodocusTransport = "1.0.0"
