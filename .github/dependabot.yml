@@ -9,8 +9,5 @@ updates:
     directories:
     - "/"
     - "/docs"
-    - "/lib/DiplodocusCollisions"
-    - "/lib/DiplodocusTransport"
-    - "/lib/DiplodocusPlots"
     schedule: 
       interval: "weekly"
